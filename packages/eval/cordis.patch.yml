@@ -1,0 +1,6 @@
+# The dsh-eval bundle patch: mounts the eval command-line app over dsh-base.
+# The profile boots, the app parses `run <benchmark.yaml>` / `report <run.json>`,
+# and the plugin spawns one headless dsh per case trial.
+- insert:
+    - id: eval
+      name: '@deepseek-ai/dsh-eval'

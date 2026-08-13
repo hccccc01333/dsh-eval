@@ -1,0 +1,8 @@
+# The standalone dsh-eval workspace. The eval package lives at packages/eval;
+# harness/ is a junction to the local deepseek-harness checkout so the
+# @deepseek-ai/* packages resolve at workspace version 0.1.0-rc.5 instead of
+# the older npm rc.1 releases.
+packages:
+  - packages/eval
+  - harness/vendor/*
+  - harness/packages/*/*
