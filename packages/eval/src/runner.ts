@@ -19,8 +19,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { Benchmark, EvalRun, EvalTrialResult } from './types.ts'
 import type { EvalGrade, EvalRunGrading } from './types.ts'
+import { tryJudgeTrial, type JudgeChat } from './judge.ts'
 import { aggregateMetrics, computeMetrics } from './metrics.ts'
-import { findPrimarySessionLog, loadTrace } from './trace.ts'
+import { findSessionLogs, loadTrace, mergeTraces } from './trace.ts'
 
 /** Overlay forcing the harvested log to plain JSONL and the run to be non-interactive. */
 const EVAL_OVERLAY = `- id: session-persistence-jsonl
@@ -50,6 +51,8 @@ export interface RunOptions {
   trials?: number
   /** Root for trial directories; defaults to the platform temp dir. */
   tempRoot?: string
+  /** LLM-judge chat seam; required when the benchmark configures a judge. */
+  judgeChat?: JudgeChat
 }
 
 /** One child process's orthogonal outcome facts. */
@@ -131,9 +134,22 @@ function pooledRate(items: readonly EvalTrialResult[], select: (grade: EvalGrade
 function gradingOf(results: readonly EvalTrialResult[]): EvalRunGrading | null {
   const taskSuccessRate = pooledRate(results, grade => grade?.taskSuccess ?? null)
   const toolSelectionAccuracyRate = pooledRate(results, grade => grade?.toolSelectionAccuracy ?? null)
-  return taskSuccessRate === null && toolSelectionAccuracyRate === null
+  const finalScores = results
+    .map(result => result.judge?.finalAnswerScore ?? null)
+    .filter((value): value is number => value !== null)
+  const finalAnswerScore = finalScores.length === 0
     ? null
-    : { taskSuccessRate, toolSelectionAccuracyRate }
+    : finalScores.reduce((total, value) => total + value, 0) / finalScores.length
+  const hallucinated = results
+    .map(result => result.judge?.hallucination ?? null)
+    .filter((value): value is boolean => value !== null)
+  const hallucinationRate = hallucinated.length === 0
+    ? null
+    : hallucinated.filter(value => value).length / hallucinated.length
+  return taskSuccessRate === null && toolSelectionAccuracyRate === null
+      && finalAnswerScore === null && hallucinationRate === null
+    ? null
+    : { taskSuccessRate, toolSelectionAccuracyRate, finalAnswerScore, hallucinationRate }
 }
 
 /**
@@ -212,6 +228,7 @@ async function runCaseTrial(
   caseValue: Benchmark['cases'][number],
   trial: number,
   root: string,
+  judgeChat: JudgeChat | undefined,
 ): Promise<EvalTrialResult> {
   const trialDir = join(root, `${sanitizeSegment(caseValue.id)}-${trial}`)
   const workspace = join(trialDir, 'workspace')
@@ -240,8 +257,8 @@ async function runCaseTrial(
       timedOut: false,
     }
   }
-  const tracePath = await findPrimarySessionLog(dshHome)
-  if (tracePath === null) {
+  const tracePaths = await findSessionLogs(dshHome)
+  if (tracePaths.length === 0) {
     return {
       caseId: caseValue.id,
       trial,
@@ -252,26 +269,36 @@ async function runCaseTrial(
     }
   }
   try {
-    const trace = await loadTrace(tracePath)
+    const loaded: { path: string; trace: Awaited<ReturnType<typeof loadTrace>> }[] = []
+    for (const path of tracePaths) loaded.push({ path, trace: await loadTrace(path) })
+    loaded.sort((a, b) => a.trace.createdAt - b.trace.createdAt)
+    // tracePaths.length > 0 above guarantees a non-empty loaded list.
+    const primaryPath = loaded[0]!.path
+    const trace = mergeTraces(loaded.map(entry => entry.trace))
     const pricing = benchmark.pricing?.[benchmark.model]
     const metrics = computeMetrics(trace.events, pricing)
     const grade = await gradeTrial(caseValue, trace, workspace, benchmark.timeoutMs)
+    const judge = benchmark.judge === undefined || judgeChat === undefined
+      ? undefined
+      : await tryJudgeTrial(caseValue, trace, benchmark.judge, judgeChat)
     return {
       caseId: caseValue.id,
       trial,
       status: 'completed',
-      tracePath,
+      tracePath: primaryPath,
+      tracePaths: loaded.map(entry => entry.path),
       exitCode: outcome.exitCode,
       timedOut: outcome.timedOut,
       metrics,
       ...(grade.taskSuccess !== null || grade.toolSelectionAccuracy !== null ? { grade } : {}),
+      ...(judge !== undefined ? { judge } : {}),
     }
   } catch (error) {
     return {
       caseId: caseValue.id,
       trial,
       status: 'error',
-      error: `failed to read trace ${tracePath}: ${message(error)}`,
+      error: `failed to read trace: ${message(error)}`,
       exitCode: outcome.exitCode,
       timedOut: outcome.timedOut,
     }
@@ -285,6 +312,9 @@ async function runCaseTrial(
  * @returns the completed run record, written by the caller.
  */
 export async function runBenchmark(benchmark: Benchmark, options: RunOptions = {}): Promise<EvalRun> {
+  if (benchmark.judge !== undefined && options.judgeChat === undefined) {
+    throw new Error('eval: benchmark configures a judge but no LLM chat seam is available')
+  }
   const root = await mkdtemp(join(options.tempRoot ?? tmpdir(), 'dsh-eval-'))
   const trials = options.trials ?? benchmark.trials
   const effective: Benchmark = {
@@ -295,7 +325,7 @@ export async function runBenchmark(benchmark: Benchmark, options: RunOptions = {
   const results: EvalTrialResult[] = []
   for (const caseValue of effective.cases) {
     for (let trial = 1; trial <= trials; trial++) {
-      results.push(await runCaseTrial(effective, caseValue, trial, root))
+      results.push(await runCaseTrial(effective, caseValue, trial, root, options.judgeChat))
     }
   }
   const completed = results.filter(
@@ -309,6 +339,7 @@ export async function runBenchmark(benchmark: Benchmark, options: RunOptions = {
     trials,
     seed: benchmark.seed,
     pricing: benchmark.pricing?.[benchmark.model] ?? null,
+    ...(benchmark.judge !== undefined ? { judge: benchmark.judge } : {}),
     tempRoot: root,
     cases: results,
     aggregate: aggregateMetrics(completed.map(result => result.metrics)),

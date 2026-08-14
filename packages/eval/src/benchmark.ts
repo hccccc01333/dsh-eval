@@ -12,6 +12,13 @@ import { load } from 'js-yaml'
 import { z } from 'zod'
 import type { Benchmark, BenchmarkCase } from './types.ts'
 
+const judgeSchema = z.object({
+  provider: z.string().min(1).default('deepseek'),
+  model: z.string().min(1).optional(),
+  rubric: z.string().min(1).optional(),
+  maxScore: z.number().int().positive().default(10),
+}).strict()
+
 const pricingSchema = z.object({
   inputUsdPerMTokens: z.number().nonnegative(),
   cacheReadUsdPerMTokens: z.number().nonnegative(),
@@ -46,6 +53,7 @@ const benchmarkSchema = z.object({
   seed: z.number().int().default(0),
   cases: z.array(benchmarkCaseSchema).min(1),
   pricing: z.record(z.string().min(1), pricingSchema).optional(),
+  judge: judgeSchema.optional(),
 }).strict()
 
 /**
@@ -96,6 +104,7 @@ export async function parseBenchmark(text: string, baseDir: string): Promise<Ben
     cases.push(await resolveCase(caseValue, baseDir))
   }
   const pricing = parsed.pricing
+  const judge = parsed.judge
   return {
     name: parsed.name,
     model: parsed.model,
@@ -106,6 +115,9 @@ export async function parseBenchmark(text: string, baseDir: string): Promise<Ben
     seed: parsed.seed,
     cases,
     ...(pricing !== undefined ? { pricing } : {}),
+    ...(judge !== undefined
+      ? { judge: { provider: judge.provider, model: judge.model ?? parsed.model, ...(judge.rubric !== undefined ? { rubric: judge.rubric } : {}), maxScore: judge.maxScore } }
+      : {}),
     baseDir,
   }
 }

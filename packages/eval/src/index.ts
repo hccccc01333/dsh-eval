@@ -16,6 +16,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { loadBenchmark } from './benchmark.ts'
 import { applyEval, type EvalStartupValues } from './command.ts'
 import { compareRuns, renderCompareMarkdown } from './compare.ts'
+import { llmJudgeChat, type JudgeChat } from './judge.ts'
 import { renderMarkdownReport, writeRunReport, loadRunReport } from './report.ts'
 import { runBenchmark } from './runner.ts'
 
@@ -36,6 +37,17 @@ export const internals: EvalIo = {
   stderr: process.stderr,
 }
 
+/**
+ * Resolve the production judge chat seam from the mounted llm service, or
+ * undefined when the composition carries no llm service.
+ * @param ctx - the plugin context.
+ * @returns a chat seam over the llm stream, or undefined without llm.
+ */
+export function resolveJudgeChat(ctx: Context): JudgeChat | undefined {
+  const llm = ctx.get('llm')
+  return llm === undefined ? undefined : llmJudgeChat(llm.stream)
+}
+
 /** Aggregate-success sentence for the run summary line. */
 function summary(run: Awaited<ReturnType<typeof runBenchmark>>): string {
   const aggregate = run.aggregate
@@ -45,17 +57,26 @@ function summary(run: Awaited<ReturnType<typeof runBenchmark>>): string {
   const task = taskRate === null || taskRate === undefined
     ? ''
     : `, task success ${(taskRate * 100).toFixed(1)}%`
-  return `tool success ${rate}${task}, ${aggregate.steps.toFixed(1)} steps/trial`
+  const judgeScore = run.grading?.finalAnswerScore
+  const score = judgeScore === null || judgeScore === undefined
+    ? ''
+    : `, judge score ${judgeScore.toFixed(1)}`
+  return `tool success ${rate}${task}${score}, ${aggregate.steps.toFixed(1)} steps/trial`
 }
 
 /**
  * Execute one eval invocation to completion.
  * @param values - the resolved command-line invocation.
  * @param io - output streams for the report and diagnostics.
+ * @param services - injected runtime seams, e.g. the LLM-judge chat.
  * @returns the process exit code; nonzero for any failure or a run with no
  *   completed trials.
  */
-export async function executeEval(values: EvalStartupValues, io: EvalIo): Promise<number> {
+export async function executeEval(
+  values: EvalStartupValues,
+  io: EvalIo,
+  services: { judgeChat?: JudgeChat | undefined } = {},
+): Promise<number> {
   try {
     if (values.kind === 'report') {
       const run = await loadRunReport(values.runPath)
@@ -73,6 +94,7 @@ export async function executeEval(values: EvalStartupValues, io: EvalIo): Promis
       ...(values.trials !== undefined ? { trials: values.trials } : {}),
       ...(values.dshCommand !== undefined ? { command: values.dshCommand } : {}),
       ...(values.profile !== undefined ? { profile: values.profile } : {}),
+      ...(services.judgeChat !== undefined ? { judgeChat: services.judgeChat } : {}),
     })
     await writeRunReport(run, values.outPath)
     io.stdout.write(`Wrote ${values.outPath} (${run.cases.length} trials, ${summary(run)})\n`)
@@ -91,7 +113,8 @@ export async function executeEval(values: EvalStartupValues, io: EvalIo): Promis
 export function apply(ctx: Context): void {
   const exit = ctx.get('appExit')
   if (exit === undefined) throw new Error('eval: the launcher must provide ctx.appExit before the tree mounts')
+  const judgeChat = resolveJudgeChat(ctx)
   const values = applyEval(ctx)
   if (values === undefined) return
-  void executeEval(values, internals).then((code) => { exit(code) })
+  void executeEval(values, internals, { judgeChat }).then((code) => { exit(code) })
 }

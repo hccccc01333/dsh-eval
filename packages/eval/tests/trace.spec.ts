@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
-import { findPrimarySessionLog, loadTrace, parseSessionLog } from '../src/trace.ts'
+import { findPrimarySessionLog, findSessionLogs, loadTrace, mergeTraces, parseSessionLog } from '../src/trace.ts'
 
 const dirs: string[] = []
 
@@ -102,5 +102,61 @@ describe('dsh-eval primary-log discovery', () => {
     utimesSync(nested, new Date(3000), new Date(3000))
     utimesSync(top, new Date(1000), new Date(1000))
     expect(await findPrimarySessionLog(root)).toBe(nested)
+  })
+})
+
+describe('dsh-eval session-log merging', () => {
+  it('finds every session log in ascending mtime order', async () => {
+    expect(await findSessionLogs(join(tempDir(), 'absent'))).toEqual([])
+    const root = tempDir()
+    const firstDir = join(root, 'a')
+    const secondDir = join(root, 'b')
+    mkdirSync(firstDir, { recursive: true })
+    mkdirSync(secondDir, { recursive: true })
+    const first = join(firstDir, 'session.jsonl')
+    const second = join(secondDir, 'session.jsonl')
+    writeFileSync(first, `${HEADER}\n`)
+    writeFileSync(second, `${HEADER}\n`)
+    writeFileSync(join(root, 'stray.txt'), 'not a log')
+    utimesSync(first, new Date(1000), new Date(1000))
+    utimesSync(second, new Date(3000), new Date(3000))
+    expect(await findSessionLogs(root)).toEqual([first, second])
+  })
+
+  it('finds a flat top-level log', async () => {
+    const root = tempDir()
+    const top = join(root, 'session.jsonl')
+    writeFileSync(top, `${HEADER}\n`)
+    expect(await findSessionLogs(root)).toEqual([top])
+  })
+
+  it('merges traces into one timeline sorted by event time', () => {
+    const primary = parseSessionLog(
+      `${HEADER}\n{"seq":0,"type":"step/end","time":10,"data":{"turn":0,"step":0}}\n`,
+    )
+    const child = parseSessionLog(
+      '{"type":"session","version":0,"id":"child","createdAt":5,"delegationDepth":1}\n'
+      + '{"seq":0,"type":"step/end","time":20,"data":{"turn":0,"step":0}}\n',
+    )
+    const merged = mergeTraces([primary, child])
+    expect(String(merged.sessionId)).toBe('session-t')
+    expect(merged.createdAt).toBe(1)
+    expect(merged.events.map(event => event.time)).toEqual([10, 20])
+  })
+
+  it('breaks event-time ties by source order', () => {
+    const primary = parseSessionLog(
+      `${HEADER}\n{"seq":0,"type":"step/end","time":10,"data":{"turn":0,"step":0}}\n`,
+    )
+    const child = parseSessionLog(
+      '{"type":"session","version":0,"id":"child","createdAt":5,"delegationDepth":1}\n'
+      + '{"seq":0,"type":"step/end","time":10,"data":{"turn":1,"step":0}}\n',
+    )
+    const merged = mergeTraces([primary, child])
+    expect(merged.events.filter(event => event.type === 'step/end').map(event => event.data.turn)).toEqual([0, 1])
+  })
+
+  it('rejects merging zero traces', () => {
+    expect(() => mergeTraces([])).toThrow('requires at least one trace')
   })
 })

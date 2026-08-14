@@ -7,7 +7,7 @@ import Loader from '@deepseek-ai/cordis-plugin-loader'
 import Include from '@deepseek-ai/cordis-plugin-include'
 import { internals as cmdlineInternals, provideCmdline } from '@deepseek-ai/dsh-cmdline'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { apply, executeEval, internals } from '../src/index.ts'
+import { apply, executeEval, internals, resolveJudgeChat } from '../src/index.ts'
 import { writeRunReport } from '../src/report.ts'
 import type { EvalRun } from '../src/types.ts'
 
@@ -114,6 +114,46 @@ describe('dsh-eval command composition', () => {
     expect(observed.exits).toEqual([0])
     expect(observed.out).toContain(`Wrote ${outPath} (1 trials, tool success 100.0%, 1.0 steps/trial)`)
     expect(existsSync(outPath)).toBe(true)
+  })
+
+  it('includes judge score in the run summary through the chat seam', async () => {
+    const dir = tempDir()
+    const benchmarkPath = join(dir, 'judged.yml')
+    writeFileSync(benchmarkPath, [
+      'name: judged-smoke',
+      'model: deepseek-v4',
+      'judge:',
+      '  provider: deepseek',
+      '  model: judge-m',
+      'cases:',
+      '  - id: hello',
+      '    prompt: Say hello.',
+      '',
+    ].join('\n'))
+    const outPath = join(dir, 'judged-run.json')
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const out: string[] = []
+    const io = {
+      stdout: { write: (chunk: string) => { out.push(chunk); return true } },
+      stderr: { write: (chunk: string) => { out.push(chunk); return true } },
+    }
+    const code = await executeEval(
+      { kind: 'run', benchmarkPath, outPath, dshCommand: [process.execPath, FAKE_SCRIPT], trials: 1, profile: 'headless' },
+      io,
+      { judgeChat: async () => JSON.stringify({ finalAnswerScore: 8, hallucination: false }) },
+    )
+    expect(code).toBe(0)
+    expect(out.join('')).toContain('judge score 8.0')
+  })
+
+  it('resolves the judge chat seam only when llm is mounted', () => {
+    const withoutLlm = { get: () => undefined } as unknown as Context
+    expect(resolveJudgeChat(withoutLlm)).toBeUndefined()
+    const withLlm = {
+      get: (key: string) => key === 'llm' ? { stream: () => [] } : undefined,
+    } as unknown as Context
+    expect(resolveJudgeChat(withLlm)).toBeTypeOf('function')
   })
 
   it('renders a persisted run with the report subcommand', async () => {

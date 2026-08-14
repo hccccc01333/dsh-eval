@@ -55,9 +55,40 @@ pricing:
 | `cases[].expected` | absent | Scripted grading: `tool` is a substring matched against recorded tool-call names; `check` is a command run in the trial workspace after the agent exits (exit 0 = task success). At least one is required when present. |
 | `pricing` | absent | Per-million-token USD prices keyed by model id; absent models report `costUsd: null`. |
 
+### Judge
+
+`judge` enables LLM-judge scoring of final answers and hallucination:
+
+```yaml
+judge:
+  provider: deepseek
+  model: deepseek-v4
+  rubric: Prefer correct, concise fixes.
+  maxScore: 10
+```
+
+| Field | Default | Meaning |
+|---|---|---|
+| `provider` | `deepseek` | LLM provider route for the judge call. |
+| `model` | benchmark `model` | Judge model id. |
+| `rubric` | absent | Task rubric appended to the judging prompt. |
+| `maxScore` | `10` | Maximum final-answer score. |
+
+The judge builds a strict-JSON prompt from the case and the merged trace. A
+trial carries its verdict (`finalAnswerScore`, `hallucination`, `rationale`)
+when the reply parses; unusable output or a chat failure reads as null verdict
+fields, never as a failed trial. A run with a configured judge fails before
+starting when the host exposes no LLM chat seam.
+
 ## Metrics
 
 The metric fold computes the automatic metrics directly from the session log: `turns`, `steps`, `toolCalls`, `toolResults`, `toolSuccess` plus `toolSuccessRate`, `invalidToolCalls` (results carrying an internal failure identity), `retries` (`llm/retry`), disjoint token buckets and totals, billed context tokens, `llmMs`/`toolMs`/`ttftMs`/`latencyMs`, and `costUsd` when pricing is configured. Scripted grading adds per-trial `taskSuccess` (check-command exit 0) and `toolSelectionAccuracy` (expected-tool match) and pools them into run-level rates. LLM-judge metrics (final-answer score, hallucination) are deferred.
+
+Child session logs under the trial's DSH_HOME are merged into the trial trace
+before the fold, so delegated subagent work counts toward steps, tokens, tool
+calls, retries, and latency. LLM-judge verdicts add per-trial
+`finalAnswerScore` and `hallucination` and pool into run-level mean score and
+hallucination rate.
 
 ## Run report
 
@@ -65,11 +96,11 @@ The metric fold computes the automatic metrics directly from the session log: `t
 
 ## Comparison
 
-`dsh eval compare run-v1.json run-v2.json` renders both runs as a markdown table: benchmark/model identity, completed trials, steps, tool/task/tool-selection rates, invalid calls, retries, tokens, cost, and latency, with signed `B - A` deltas. Comparison is read-only over persisted runs; paired same-seed trials remain deferred.
+`dsh eval compare run-v1.json run-v2.json` renders both runs as a markdown table: benchmark/model identity, completed trials, steps, tool/task/tool-selection rates, invalid calls, retries, tokens, cost, and latency, with signed `B - A` deltas. When both runs complete the same case x trial keys, the table appends paired statistics: trial count, win/lose/tie on the first available metric (task success, tool selection accuracy, or final-answer score), and mean `B - A` deltas for steps, tokens, and judge score. The runs' `seed` is recorded provenance for the pairing, not a guarantee of identical model output.
 
 ## Extension points
 
-The runner is the only consumer today: `runBenchmark` takes a loaded benchmark and returns the run record, and the report module persists and renders it. Grader and comparison seams are deliberately deferred until a second consumer exists.
+The runner is the only consumer today: `runBenchmark` takes a loaded benchmark and returns the run record, and the report module persists and renders it. The judge chat seam is injected by the host (a dsh-llm stream) and stubbed in tests, keeping the suite keyless.
 
 ## Model Experience
 
@@ -81,9 +112,8 @@ None; this package neither assembles nor sends a provider request, so no request
 
 ## Known Limitations and Deferred Work
 
-- **LLM-judge metrics are deferred** — final-answer score and hallucination need an LLM judge provider; scripted task success and tool-selection accuracy are implemented.
-- **Paired comparison is deferred** — `dsh eval compare` compares persisted runs as-is; `seed` is validated but not yet used for deterministic paired trials, and per-arm leaderboards are not rendered.
-- **Primary session only** — child subagent logs under `session.<n>.jsonl` are not harvested; aggregate numbers omit delegated work.
+- **Judge output is best-effort** — a judge chat failure or unparsable reply yields null verdict fields, and judge calls consume model quota outside the trial's measured cost.
+- **Paired comparison pairs as-is** — trials pair by case id and trial index; `seed` is recorded provenance, not a deterministic guarantee of identical model output, and per-arm leaderboards are not rendered.
 - **Replay mode is deferred** — real runs need the model credentials the spawned harness resolves; llm-replay wiring for keyless CI is a later step.
 - **Direct-child timeout only** — a timed-out trial kills the direct dsh process; on Windows its descendants may survive.
 - **Windows launcher commands** — the spawned command runs without a shell, so `.cmd`/`.bat` shims need a direct executable or `node <path>` override (`--dsh "node C:/.../apps/cli/lib/bin.js"`).

@@ -92,3 +92,46 @@ export async function findPrimarySessionLog(root: string): Promise<string | null
   }
   return best?.path ?? null
 }
+
+/**
+ * Find every `session.jsonl` under a DSH_HOME tree, sorted by modification
+ * time ascending so the parent session (started first) comes first.
+ * @param root - the DSH_HOME directory to scan.
+ * @returns absolute log paths in ascending mtime order.
+ */
+export async function findSessionLogs(root: string): Promise<string[]> {
+  let entries
+  try {
+    entries = await readdir(root, { withFileTypes: true })
+  } catch {
+    return []
+  }
+  const found: { path: string; mtime: number }[] = []
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      for (const nested of await findSessionLogs(join(root, entry.name))) {
+        found.push({ path: nested, mtime: (await stat(nested)).mtimeMs })
+      }
+    } else if (entry.isFile() && entry.name === 'session.jsonl') {
+      found.push({ path: join(root, entry.name), mtime: (await stat(join(root, entry.name))).mtimeMs })
+    }
+  }
+  return found.sort((a, b) => a.mtime - b.mtime).map(entry => entry.path)
+}
+
+/**
+ * Merge traces into one timeline: events from every trace sorted by event
+ * time, ties broken by source order. The primary trace's header (session id
+ * and creation time) labels the merged trace.
+ * @param traces - harvested traces, primary first.
+ * @returns the merged trace.
+ */
+export function mergeTraces(traces: readonly EvalTrace[]): EvalTrace {
+  const primary = traces[0]
+  if (primary === undefined) throw new Error('mergeTraces requires at least one trace')
+  const events = traces
+    .flatMap((trace, source) => trace.events.map(event => ({ event, source })))
+    .sort((a, b) => a.event.time - b.event.time || a.source - b.source)
+    .map(entry => entry.event)
+  return { sessionId: primary.sessionId, createdAt: primary.createdAt, events }
+}

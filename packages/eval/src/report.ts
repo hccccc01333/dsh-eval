@@ -48,6 +48,11 @@ function formatGrade(value: boolean | null): string {
   return value === null ? '–' : value ? 'yes' : 'no'
 }
 
+/** Render a nullable score as `value/max` with a dash placeholder. */
+function formatScore(value: number | null, maxScore: number): string {
+  return value === null ? '–' : `${value.toFixed(1)}/${maxScore}`
+}
+
 /**
  * Render a run report as a markdown table: one row per trial plus the
  * aggregate row.
@@ -55,13 +60,20 @@ function formatGrade(value: boolean | null): string {
  * @returns the markdown text.
  */
 export function renderMarkdownReport(run: EvalRun): string {
-  const header = [
-    '| case | trial | status | steps | tools | success | invalid | retries | tokens | cost | latency ms | task | tool-acc |',
-    '|---|---|---|---|---|---|---|---|---|---|---|---|---|',
-  ]
+  const judge = run.judge
+  const judged = judge !== undefined
+  const header = judged
+    ? [
+      '| case | trial | status | steps | tools | success | invalid | retries | tokens | cost | latency ms | task | tool-acc | score | halluc |',
+      '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
+    ]
+    : [
+      '| case | trial | status | steps | tools | success | invalid | retries | tokens | cost | latency ms | task | tool-acc |',
+      '|---|---|---|---|---|---|---|---|---|---|---|---|---|',
+    ]
   const rows = run.cases.map((result) => {
     const metrics = result.metrics
-    const values = metrics === undefined
+    const base = metrics === undefined
       ? ['–', '–', '–', '–', '–', '–', '–', '–', '–', '–']
       : [
         String(metrics.steps),
@@ -75,20 +87,42 @@ export function renderMarkdownReport(run: EvalRun): string {
         formatGrade(result.grade?.taskSuccess ?? null),
         formatGrade(result.grade?.toolSelectionAccuracy ?? null),
       ]
-    return `| ${result.caseId} | ${result.trial} | ${result.status} | ${values.join(' | ')} |`
+    const judgeCells = judged
+      ? [
+        formatScore(result.judge?.finalAnswerScore ?? null, judge.maxScore),
+        formatGrade(result.judge?.hallucination ?? null),
+      ]
+      : []
+    return `| ${result.caseId} | ${result.trial} | ${result.status} | ${[...base, ...judgeCells].join(' | ')} |`
   })
   const aggregate = run.aggregate
-  const aggregateRow = aggregate === null
-    ? '| aggregate | – | no completed trials | – | – | – | – | – | – | – | – | – | – |'
-    : `| aggregate | – | completed | ${aggregate.steps.toFixed(1)} | ${aggregate.toolCalls.toFixed(1)} | `
-      + `${formatRate(aggregate.toolSuccessRate)} | ${aggregate.invalidToolCalls.toFixed(1)} | `
-      + `${aggregate.retries.toFixed(1)} | ${aggregate.totalTokens.toFixed(1)} | `
-      + `${formatUsd(aggregate.costUsd)} | ${aggregate.latencyMs.toFixed(1)} | `
-      + `${formatRate(run.grading?.taskSuccessRate ?? null)} | ${formatRate(run.grading?.toolSelectionAccuracyRate ?? null)} |`
+  const aggregateJudgeCells = judged
+    ? [
+      formatScore(run.grading?.finalAnswerScore ?? null, judge.maxScore),
+      formatRate(run.grading?.hallucinationRate ?? null),
+    ]
+    : []
+  const aggregateCells = aggregate === null
+    ? ['no completed trials', '–', '–', '–', '–', '–', '–', '–', '–', '–', '–']
+    : [
+      'completed',
+      aggregate.steps.toFixed(1),
+      aggregate.toolCalls.toFixed(1),
+      formatRate(aggregate.toolSuccessRate),
+      aggregate.invalidToolCalls.toFixed(1),
+      aggregate.retries.toFixed(1),
+      aggregate.totalTokens.toFixed(1),
+      formatUsd(aggregate.costUsd),
+      aggregate.latencyMs.toFixed(1),
+      formatRate(run.grading?.taskSuccessRate ?? null),
+      formatRate(run.grading?.toolSelectionAccuracyRate ?? null),
+    ]
+  const aggregateRow = `| aggregate | – | ${[...aggregateCells, ...aggregateJudgeCells].join(' | ')} |`
   return [
     `# Eval: ${run.benchmark}`,
     '',
     `- model: ${run.model}`,
+    ...(judged ? [`- judge: ${judge.model}`] : []),
     `- trials per case: ${run.trials}`,
     `- created: ${new Date(run.createdAt).toISOString()}`,
     `- traces: ${run.tempRoot}`,

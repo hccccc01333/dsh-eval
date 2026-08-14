@@ -114,6 +114,54 @@ describe('dsh-eval benchmark loading', () => {
     expect(checkOnly.cases[0]?.expected).toEqual({ check: './check.sh' })
   })
 
+  it('parses judge configuration with defaults', async () => {
+    const benchmark = await parseBenchmark([
+      'name: judged',
+      'model: deepseek-v4',
+      'judge:',
+      '  rubric: Be strict.',
+      '  maxScore: 5',
+      'cases:',
+      '  - id: a',
+      '    prompt: p',
+      '',
+    ].join('\n'), tempDir())
+    expect(benchmark.judge).toEqual({
+      provider: 'deepseek',
+      model: 'deepseek-v4',
+      rubric: 'Be strict.',
+      maxScore: 5,
+    })
+  })
+
+  it('keeps explicit judge provider and model', async () => {
+    const benchmark = await parseBenchmark([
+      'name: judged',
+      'model: deepseek-v4',
+      'judge:',
+      '  provider: other',
+      '  model: judge-x',
+      'cases:',
+      '  - id: a',
+      '    prompt: p',
+      '',
+    ].join('\n'), tempDir())
+    expect(benchmark.judge).toEqual({ provider: 'other', model: 'judge-x', maxScore: 10 })
+  })
+
+  it('rejects an invalid judge maxScore', async () => {
+    await expect(parseBenchmark([
+      'name: judged',
+      'model: m',
+      'judge:',
+      '  maxScore: 0',
+      'cases:',
+      '  - id: a',
+      '    prompt: p',
+      '',
+    ].join('\n'), tempDir())).rejects.toThrow()
+  })
+
   it.each([
     { name: 'empty', text: '', message: 'must be a YAML mapping' },
     { name: 'missing name', text: 'model: m\ncases:\n  - id: a\n    prompt: p\n', message: '' },

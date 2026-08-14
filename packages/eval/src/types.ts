@@ -40,6 +40,18 @@ export interface BenchmarkExpectation {
   check?: string
 }
 
+/** LLM-judge configuration: scores final answers and flags hallucinations. */
+export interface BenchmarkJudge {
+  /** Provider route for the judge call, e.g. `deepseek`. */
+  provider: string
+  /** Judge model id; defaults to the benchmark model when unset. */
+  model: string
+  /** Optional task rubric appended to the default judging instructions. */
+  rubric?: string
+  /** Maximum final-answer score; defaults to 10. */
+  maxScore: number
+}
+
 /** A validated benchmark document. */
 export interface Benchmark {
   /** Benchmark name; also the run record's `benchmark` field. */
@@ -60,6 +72,8 @@ export interface Benchmark {
   cases: readonly BenchmarkCase[]
   /** Pricing keyed by model id; an absent model reports `costUsd: null`. */
   pricing?: Readonly<Record<string, BenchmarkPricing>>
+  /** LLM-judge configuration, when final-answer scoring is enabled. */
+  judge?: BenchmarkJudge
   /** Directory the benchmark document was loaded from; relative paths resolve against it. */
   baseDir: string
 }
@@ -138,6 +152,8 @@ export interface EvalTrialResult {
   error?: string
   /** Absolute path of the harvested primary session log. */
   tracePath?: string
+  /** Absolute paths of every harvested session log, primary first. */
+  tracePaths?: readonly string[]
   /** The child process's exit code, or null when it was killed. */
   exitCode: number | null
   /** Whether the trial hit its timeout and killed the child. */
@@ -146,6 +162,8 @@ export interface EvalTrialResult {
   metrics?: EvalCaseMetrics
   /** Scripted grading outcome for `completed` trials with expectations. */
   grade?: EvalGrade
+  /** LLM-judge verdict for `completed` trials with a configured judge. */
+  judge?: EvalJudgeVerdict
 }
 
 /** Scripted grading outcome for one trial. */
@@ -156,12 +174,26 @@ export interface EvalGrade {
   toolSelectionAccuracy: boolean | null
 }
 
+/** LLM-judge verdict for one trial. */
+export interface EvalJudgeVerdict {
+  /** Final-answer score within the benchmark's `maxScore`, or null when the judge output was unusable. */
+  finalAnswerScore: number | null
+  /** Whether the judge flagged hallucinated content, or null when the judge output was unusable. */
+  hallucination: boolean | null
+  /** Judge rationale, when the model returned one. */
+  rationale?: string
+}
+
 /** Pooled grading rates over completed trials. */
 export interface EvalRunGrading {
   /** Pooled task-success rate, or null when no trial carried a check. */
   taskSuccessRate: number | null
   /** Pooled tool-selection-accuracy rate, or null when no trial carried an expected tool. */
   toolSelectionAccuracyRate: number | null
+  /** Mean final-answer score over judged trials, or null when nothing was judged. */
+  finalAnswerScore: number | null
+  /** Pooled hallucination rate over judged trials, or null when nothing was judged. */
+  hallucinationRate: number | null
 }
 
 /** A persisted eval run. */
@@ -178,6 +210,8 @@ export interface EvalRun {
   seed: number
   /** Resolved pricing for the benchmark model, or null without one. */
   pricing: BenchmarkPricing | null
+  /** The judge configuration the run used, when one was configured. */
+  judge?: BenchmarkJudge
   /** Root holding every trial's workspace, overlay, and harvested trace. */
   tempRoot: string
   /** Per-trial outcomes in execution order. */

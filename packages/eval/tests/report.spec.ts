@@ -139,7 +139,7 @@ describe('dsh-eval report persistence and rendering', () => {
           totalTokens: 1, contextTokens: 1, llmMs: 1, toolMs: 2, ttftMs: 3, latencyMs: 4, costUsd: null,
         },
       }],
-      grading: { taskSuccessRate: 1, toolSelectionAccuracyRate: 1 },
+      grading: { taskSuccessRate: 1, toolSelectionAccuracyRate: 1, finalAnswerScore: null, hallucinationRate: null },
       aggregate: {
         turns: 1, steps: 1, toolCalls: 1, toolResults: 1, toolSuccess: 1, toolSuccessRate: 1,
         invalidToolCalls: 0, retries: 0,
@@ -151,5 +151,79 @@ describe('dsh-eval report persistence and rendering', () => {
     expect(markdown).toContain('| graded | 1 | completed | 1 | 1 | 100.0% | 0 | 0 | 1 | – | 4 | yes | yes |')
     expect(markdown).toContain('| failed-grade | 1 | completed | 1 | 1 | 100.0% | 0 | 0 | 1 | – | 4 | no | no |')
     expect(markdown).toContain('| aggregate | – | completed | 1.0 | 1.0 | 100.0% | 0.0 | 0.0 | 1.0 | – | 4.0 | 100.0% | 100.0% |')
+  })
+
+  it('renders judge columns and pooled judge rates', () => {
+    const run = buildRun({
+      judge: { provider: 'deepseek', model: 'judge-m', maxScore: 10 },
+      cases: [{
+        caseId: 'judged',
+        trial: 1,
+        status: 'completed',
+        exitCode: 0,
+        timedOut: false,
+        judge: { finalAnswerScore: 8, hallucination: false, rationale: 'ok' },
+        metrics: {
+          turns: 1, steps: 1, toolCalls: 1, toolResults: 1, toolSuccess: 1, toolSuccessRate: 1,
+          invalidToolCalls: 0, retries: 0,
+          tokens: { inputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
+          totalTokens: 1, contextTokens: 1, llmMs: 1, toolMs: 2, ttftMs: 3, latencyMs: 4, costUsd: null,
+        },
+      }, {
+        caseId: 'unjudged',
+        trial: 1,
+        status: 'completed',
+        exitCode: 0,
+        timedOut: false,
+        judge: { finalAnswerScore: null, hallucination: null },
+        metrics: {
+          turns: 1, steps: 1, toolCalls: 1, toolResults: 1, toolSuccess: 1, toolSuccessRate: 1,
+          invalidToolCalls: 0, retries: 0,
+          tokens: { inputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
+          totalTokens: 1, contextTokens: 1, llmMs: 1, toolMs: 2, ttftMs: 3, latencyMs: 4, costUsd: null,
+        },
+      }],
+      grading: {
+        taskSuccessRate: null,
+        toolSelectionAccuracyRate: null,
+        finalAnswerScore: 8,
+        hallucinationRate: 0,
+      },
+      aggregate: {
+        turns: 1, steps: 1, toolCalls: 1, toolResults: 1, toolSuccess: 1, toolSuccessRate: 1,
+        invalidToolCalls: 0, retries: 0,
+        tokens: { inputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
+        totalTokens: 1, contextTokens: 1, llmMs: 1, toolMs: 2, ttftMs: 3, latencyMs: 4, costUsd: null,
+      },
+    })
+    const markdown = renderMarkdownReport(run)
+    expect(markdown).toContain('- judge: judge-m')
+    expect(markdown).toContain('| score | halluc |')
+    expect(markdown).toContain('| judged | 1 | completed | 1 | 1 | 100.0% | 0 | 0 | 1 | – | 4 | – | – | 8.0/10 | no |')
+    expect(markdown).toContain('| unjudged | 1 | completed | 1 | 1 | 100.0% | 0 | 0 | 1 | – | 4 | – | – | – | – |')
+    expect(markdown).toContain('8.0/10 | 0.0% |')
+  })
+
+  it('renders judge dashes when verdicts are missing', () => {
+    const run = buildRun({
+      judge: { provider: 'deepseek', model: 'judge-m', maxScore: 10 },
+      cases: [{
+        caseId: 'miss',
+        trial: 1,
+        status: 'completed',
+        exitCode: 0,
+        timedOut: false,
+        judge: { finalAnswerScore: null, hallucination: null },
+        metrics: {
+          turns: 1, steps: 1, toolCalls: 1, toolResults: 1, toolSuccess: 1, toolSuccessRate: 1,
+          invalidToolCalls: 0, retries: 0,
+          tokens: { inputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
+          totalTokens: 1, contextTokens: 1, llmMs: 1, toolMs: 2, ttftMs: 3, latencyMs: 4, costUsd: null,
+        },
+      }],
+    })
+    const markdown = renderMarkdownReport(run)
+    const dashes = ['–', '–', '–', '–', '–', '–', '–', '–', '–', '–', '–', '–'].join(' | ')
+    expect(markdown).toContain(`| aggregate | – | no completed trials | ${dashes} |`)
   })
 })

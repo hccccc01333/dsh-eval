@@ -153,7 +153,12 @@ describe('dsh-eval benchmark runner', () => {
       cases: [{ id: 'matched', prompt: 'p', expected: { tool: 'bash' } }],
     }), { tempRoot: tempDir() })
     expect(matched.cases[0]?.grade).toEqual({ taskSuccess: null, toolSelectionAccuracy: true })
-    expect(matched.grading).toEqual({ taskSuccessRate: null, toolSelectionAccuracyRate: 1 })
+    expect(matched.grading).toEqual({
+      taskSuccessRate: null,
+      toolSelectionAccuracyRate: 1,
+      finalAnswerScore: null,
+      hallucinationRate: null,
+    })
 
     const missed = await runBenchmark(buildBenchmark({
       trials: 1,
@@ -203,5 +208,60 @@ describe('dsh-eval benchmark runner', () => {
     expect(run.cases[1]?.status).toBe('completed')
     expect(existsSync(join(run.tempRoot, 'bad-id-..-1'))).toBe(true)
     expect(existsSync(join(run.tempRoot, 'case-1'))).toBe(true)
+  })
+
+  it('merges child session logs into the trial trace', async () => {
+    process.env.FAKE_DASH_MODE = 'merge'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const run = await runBenchmark(buildBenchmark({ trials: 1 }), { tempRoot: tempDir() })
+    const result = run.cases[0]
+    expect(result?.status).toBe('completed')
+    expect(result?.tracePaths).toHaveLength(2)
+    expect(result?.metrics?.steps).toBe(2)
+    expect(result?.metrics?.toolCalls).toBe(2)
+    expect(result?.metrics?.toolResults).toBe(2)
+    expect(result?.metrics?.retries).toBe(1)
+  })
+
+  it('runs the LLM judge seam and pools verdicts', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const run = await runBenchmark(buildBenchmark({
+      trials: 2,
+      judge: { provider: 'deepseek', model: 'judge-m', maxScore: 10 },
+    }), {
+      tempRoot: tempDir(),
+      judgeChat: async () => JSON.stringify({ finalAnswerScore: 8, hallucination: false, rationale: 'ok' }),
+    })
+    expect(run.judge).toEqual({ provider: 'deepseek', model: 'judge-m', maxScore: 10 })
+    for (const result of run.cases) {
+      expect(result.judge).toEqual({ finalAnswerScore: 8, hallucination: false, rationale: 'ok' })
+    }
+    expect(run.grading?.finalAnswerScore).toBe(8)
+    expect(run.grading?.hallucinationRate).toBe(0)
+  })
+
+  it('keeps a trial completed when the judge call fails', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const run = await runBenchmark(buildBenchmark({
+      trials: 1,
+      judge: { provider: 'deepseek', model: 'judge-m', maxScore: 10 },
+    }), {
+      tempRoot: tempDir(),
+      judgeChat: async () => { throw new Error('judge down') },
+    })
+    expect(run.cases[0]?.status).toBe('completed')
+    expect(run.cases[0]?.judge).toEqual({ finalAnswerScore: null, hallucination: null })
+    expect(run.grading).toBeNull()
+  })
+
+  it('rejects a judge benchmark without a chat seam', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    await expect(runBenchmark(buildBenchmark({
+      trials: 1,
+      judge: { provider: 'deepseek', model: 'judge-m', maxScore: 10 },
+    }), { tempRoot: tempDir() })).rejects.toThrow('no LLM chat seam')
   })
 })

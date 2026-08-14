@@ -30,9 +30,11 @@ pnpm install
 
 - `dsh eval run benchmark.yaml` —— benchmark 编排 + 自动指标 + 脚本化评分
   （`expected.tool` 工具选择准确率、`expected.check` 任务成功）。
+- LLM judge：`judge` 配置驱动最终答案得分与幻觉标记。
+- 子 agent trace 归并：子 session 日志合并进 trial 指标。
+- 配对 A/B：同 case 的 win/lose/tie 统计。
 - `dsh eval report run.json` —— markdown 报告，含评分列与聚合比率。
 - `dsh eval compare run-v1.json run-v2.json` —— 双 run 对比表，带 `B - A` 差值。
-- LLM judge（最终答案得分、幻觉）与同 seed 配对 trial 仍在规划中。
 
 常用命令（在 `D:\dsh-eval` 下）：
 

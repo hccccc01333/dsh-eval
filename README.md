@@ -12,12 +12,15 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - Trace harvesting from persisted session logs (everything a model sees is reconstructable from the log)
 - Automatic metrics: task success, tool success, tool-selection accuracy, steps, tokens, latency, cost, retry, invalid tool calls, context usage
 - Scripted grading: `expected.tool` (tool-selection accuracy) and `expected.check` (task success)
+- LLM judge: final-answer score and hallucination flags from a judge model
+- Subagent trace merging: child session logs fold into the trial metrics
+- Paired A/B: same-case win/lose/tie statistics across two runs
 - `dsh eval report run.json` — Markdown report with per-trial scores and pooled rates
 - `dsh eval compare v1.json v2.json` — signed `B - A` comparison table
 
 ## Status
 
-v0.2 · 68 tests · 100% branch/line coverage on `src` · typecheck clean.
+npm `0.2.0` · 99 tests · 100% branch/line coverage on `src` · typecheck clean.
 
 ## Quick start
 
@@ -104,7 +107,7 @@ Each trial runs in a private temp workspace with an isolated `DSH_HOME` and non-
 | Cost | per-model pricing table (`pricing`) |
 | Retry | `llm/retry` events |
 | Invalid tool call | tool results carrying an internal failure identity |
-| Final answer score / hallucination | LLM judge (roadmap) |
+| Final answer score / hallucination | LLM judge verdict from `judge` config |
 
 ## CLI
 
@@ -117,8 +120,6 @@ Each trial runs in a private temp workspace with an isolated `DSH_HOME` and non-
 ## Roadmap
 
 - LLM judge: final-answer score and hallucination
-- Same-seed paired trials for deterministic A/B comparisons
-- Subagent trace harvesting (child session logs)
 - Keyless replay mode for CI
 - Cross-harness trace import (Codex / Claude Code session logs)
 
