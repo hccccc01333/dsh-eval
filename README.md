@@ -2,6 +2,9 @@
 
 **Agent Evaluation Platform for [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness).**
 
+[![npm version](https://img.shields.io/npm/v/dsh-eval)](https://www.npmjs.com/package/dsh-eval)
+[![license](https://img.shields.io/github/license/hccccc01333/dsh-eval)](LICENSE)
+
 Run benchmarks against headless `dsh` profiles, harvest persisted session logs as traces, fold automatic metrics, grade task success and tool selection, and report or compare runs — one `benchmark.yaml` in, one JSON run + Markdown report out.
 
 > The dsh ecosystem already has observability and debugging tools (`dsh-trace`, `dsh-tps`, `dsh-context-doctor`). dsh-eval fills the missing slot: **an evaluation platform**.
