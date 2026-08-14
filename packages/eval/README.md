@@ -69,7 +69,7 @@ The metric fold computes the automatic metrics directly from the session log: `t
 
 ## Extension points
 
-The runner is the only consumer in v0.1: `runBenchmark` takes a loaded benchmark and returns the run record, and the report module persists and renders it. Grader and comparison seams are deliberately deferred until a second consumer exists.
+The runner is the only consumer today: `runBenchmark` takes a loaded benchmark and returns the run record, and the report module persists and renders it. Grader and comparison seams are deliberately deferred until a second consumer exists.
 
 ## Model Experience
 

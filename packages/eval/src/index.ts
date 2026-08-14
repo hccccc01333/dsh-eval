@@ -4,10 +4,10 @@
  * The eval bundle mounts this command-line plugin over dsh-base. It parses
  * `dsh --profile eval run <benchmark.yaml>` / `report <run.json>`, spawns one
  * headless dsh subprocess per case x trial, harvests each persisted session
- * log as a trace, folds automatic metrics, and writes a JSON run report.
- * Grader-based metrics (task success, final-answer score, hallucination, tool
- * selection accuracy) and cross-run comparison are deferred to later
- * milestones.
+ * log as a trace, folds automatic metrics, scripted grading (task success,
+ * tool-selection accuracy), and cross-run comparison, and writes a JSON run
+ * report. LLM-judge metrics (final-answer score, hallucination) and paired
+ * same-seed trials are deferred to later milestones.
  *
  * @module @deepseek-ai/dsh-eval
  */

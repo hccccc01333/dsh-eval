@@ -7,8 +7,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
-    "directory": "packages/eval/eval"
+    "url": "git+https://github.com/hccccc01333/dsh-eval.git"
   },
   "type": "module",
   "main": "lib/index.js",
@@ -35,15 +34,26 @@
     "lib/invariant.js",
     "cordis.patch.yml",
     "lib/types/**/*.js",
-    "lib/types/**/*.d.ts"
+    "lib/types/**/*.d.ts",
+    "src/**/*.ts"
   ],
   "license": "MIT",
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "agent-evaluation",
+    "benchmark",
+    "eval"
+  ],
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "pnpm run build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
