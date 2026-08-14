@@ -5,3 +5,4 @@ lib/
 coverage/
 *.tsbuildinfo
 *.log
+*.tgz
