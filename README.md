@@ -21,7 +21,14 @@ v0.2 · 68 tests · 100% branch/line coverage on `src` · typecheck clean.
 
 ## Quick start
 
-The package resolves `@deepseek-ai/*` peer packages from a local deepseek-harness checkout while the official npm packages are still pre-release. Clone this repo and link it to your checkout:
+Install the package directly:
+
+```sh
+pnpm add @deepseek-ai/dsh-eval
+dsh plugin --profile eval add @deepseek-ai/dsh-eval
+```
+
+The npm package targets the official `@deepseek-ai/*` releases (`0.1.0-rc.6` peers). For the source flow, clone this repo and link it to a deepseek-harness checkout:
 
 ```sh
 git clone https://github.com/hccccc01333/dsh-eval.git

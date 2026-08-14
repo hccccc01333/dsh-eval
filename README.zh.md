@@ -7,8 +7,24 @@ deepseek-harness 主仓的 WIP 隔离。
 
 - `packages/eval/` —— 插件本体（bundle + CLI app）。
 - `harness/` —— 指向本地 deepseek-harness 检出的 junction/symlink；pnpm
-  workspace 通过它解析 `@deepseek-ai/*` 源码包（0.1.0-rc.5），避免使用 npm 上
-  过旧的 rc.1 版本。
+  workspace 通过它解析 `@deepseek-ai/*` 源码包（0.1.0-rc.5）；npm 发布版则对齐
+  官方 `0.1.0-rc.6` peer 依赖，可直接安装。
+
+快速开始（npm 直装）：
+
+```sh
+pnpm add @deepseek-ai/dsh-eval
+dsh plugin --profile eval add @deepseek-ai/dsh-eval
+```
+
+源码流程：
+
+```sh
+git clone https://github.com/hccccc01333/dsh-eval.git
+cd dsh-eval
+New-Item -ItemType Junction -Path harness -Target D:\path\to\deepseek-harness
+pnpm install
+```
 
 当前能力（v0.2）：
 
