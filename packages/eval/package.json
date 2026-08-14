@@ -1,7 +1,7 @@
 {
   "name": "dsh-eval",
   "description": "Agent evaluation platform: benchmark YAML, headless run orchestration, trace-based metrics, and run reports",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publishConfig": {
     "access": "public"
   },

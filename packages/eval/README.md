@@ -98,6 +98,35 @@ hallucination rate.
 
 `dsh eval compare run-v1.json run-v2.json` renders both runs as a markdown table: benchmark/model identity, completed trials, steps, tool/task/tool-selection rates, invalid calls, retries, tokens, cost, and latency, with signed `B - A` deltas. When both runs complete the same case x trial keys, the table appends paired statistics: trial count, win/lose/tie on the first available metric (task success, tool selection accuracy, or final-answer score), and mean `B - A` deltas for steps, tokens, and judge score. The runs' `seed` is recorded provenance for the pairing, not a guarantee of identical model output.
 
+## Replay (keyless CI)
+
+A keyed run records every trial's session log under its `tempRoot`. Copy the
+recorded trial trees into a `replay.dir` and rerun without credentials: the
+spawned harness mounts `@deepseek-ai/dsh-llm-replay`, which reconstructs each
+model stream from the recorded `assistant/chunk` events.
+
+```yaml
+replay:
+  dir: ./recorded
+```
+
+The directory holds one tree per trial named `<caseId>-<trial>/`, with child
+logs riding alongside: `recorded/fix-tests-001-1/session.jsonl`. A missing
+fixture fails that trial, and `judge` cannot be combined with `replay` in one
+run. The npm release of the replay plugin lags the source workspace, so replay
+runs require a source-mode harness checkout.
+
+## Importing external traces
+
+`dsh eval import codex|claude-code <session.jsonl> --out run.json` imports a
+Codex or Claude Code session log as a one-trial run with folded metrics:
+
+- one synthesized turn (and step) per user message;
+- assistant text, tool calls, and tool results mapped into the trace vocabulary;
+- token usage is not part of either external format, so token and cost metrics stay zero.
+
+The imported run drops into the same `report`/`compare` pipeline.
+
 ## Extension points
 
 The runner is the only consumer today: `runBenchmark` takes a loaded benchmark and returns the run record, and the report module persists and renders it. The judge chat seam is injected by the host (a dsh-llm stream) and stubbed in tests, keeping the suite keyless.
@@ -114,7 +143,8 @@ None; this package neither assembles nor sends a provider request, so no request
 
 - **Judge output is best-effort** — a judge chat failure or unparsable reply yields null verdict fields, and judge calls consume model quota outside the trial's measured cost.
 - **Paired comparison pairs as-is** — trials pair by case id and trial index; `seed` is recorded provenance, not a deterministic guarantee of identical model output, and per-arm leaderboards are not rendered.
-- **Replay mode is deferred** — real runs need the model credentials the spawned harness resolves; llm-replay wiring for keyless CI is a later step.
+- **Replay binds by first-call order** — the replay plugin keys recorded scripts to live sessions by first-call order, so concurrent subagents replay non-deterministically.
+- **Imported traces lack token usage** — Codex and Claude Code logs do not record provider usage, so imported runs report zero tokens and no cost.
 - **Direct-child timeout only** — a timed-out trial kills the direct dsh process; on Windows its descendants may survive.
 - **Windows launcher commands** — the spawned command runs without a shell, so `.cmd`/`.bat` shims need a direct executable or `node <path>` override (`--dsh "node C:/.../apps/cli/lib/bin.js"`).
 - **No atomic report write** — the run JSON is written in place; a crash mid-write can truncate the report.

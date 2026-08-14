@@ -162,6 +162,37 @@ describe('dsh-eval benchmark loading', () => {
     ].join('\n'), tempDir())).rejects.toThrow()
   })
 
+  it('parses replay configuration and resolves its directory', async () => {
+    const dir = tempDir()
+    const benchmark = await parseBenchmark([
+      'name: replayed',
+      'model: m',
+      'replay:',
+      '  dir: ./replays',
+      'cases:',
+      '  - id: a',
+      '    prompt: p',
+      '',
+    ].join('\n'), dir)
+    expect(benchmark.replay).toEqual({ dir: join(dir, 'replays') })
+  })
+
+  it('keeps an absolute replay directory as-is', async () => {
+    const dir = tempDir()
+    const absolute = join(dir, 'replays')
+    const benchmark = await parseBenchmark([
+      'name: replayed',
+      'model: m',
+      'replay:',
+      `  dir: ${absolute}`,
+      'cases:',
+      '  - id: a',
+      '    prompt: p',
+      '',
+    ].join('\n'), dir)
+    expect(benchmark.replay).toEqual({ dir: absolute })
+  })
+
   it.each([
     { name: 'empty', text: '', message: 'must be a YAML mapping' },
     { name: 'missing name', text: 'model: m\ncases:\n  - id: a\n    prompt: p\n', message: '' },

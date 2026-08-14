@@ -16,6 +16,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { loadBenchmark } from './benchmark.ts'
 import { applyEval, type EvalStartupValues } from './command.ts'
 import { compareRuns, renderCompareMarkdown } from './compare.ts'
+import { importTraceFile } from './import.ts'
 import { llmJudgeChat, type JudgeChat } from './judge.ts'
 import { renderMarkdownReport, writeRunReport, loadRunReport } from './report.ts'
 import { runBenchmark } from './runner.ts'
@@ -78,6 +79,12 @@ export async function executeEval(
   services: { judgeChat?: JudgeChat | undefined } = {},
 ): Promise<number> {
   try {
+    if (values.kind === 'import') {
+      const run = await importTraceFile(values.format, values.path, values.caseId)
+      await writeRunReport(run, values.outPath)
+      io.stdout.write(`Wrote ${values.outPath} (1 imported trial, ${summary(run)})\n`)
+      return 0
+    }
     if (values.kind === 'report') {
       const run = await loadRunReport(values.runPath)
       io.stdout.write(renderMarkdownReport(run))

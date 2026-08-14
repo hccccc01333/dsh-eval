@@ -15,12 +15,14 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - LLM judge: final-answer score and hallucination flags from a judge model
 - Subagent trace merging: child session logs fold into the trial metrics
 - Paired A/B: same-case win/lose/tie statistics across two runs
+- Keyless replay: record once with a key, replay in CI from recorded logs
+- Cross-harness import: `dsh eval import codex|claude-code <log> --out run.json`
 - `dsh eval report run.json` — Markdown report with per-trial scores and pooled rates
 - `dsh eval compare v1.json v2.json` — signed `B - A` comparison table
 
 ## Status
 
-npm `0.2.0` · 99 tests · 100% branch/line coverage on `src` · typecheck clean.
+npm `0.3.0` · 113 tests · 100% branch/line coverage on `src` · typecheck clean.
 
 ## Quick start
 
@@ -65,6 +67,7 @@ dsh plugin --profile eval add dsh-eval
 dsh eval run benchmark.yaml --out eval-run.json
 dsh eval report eval-run.json
 dsh eval compare eval-v1.json eval-v2.json
+dsh eval import codex ~/.codex/sessions/.../session.jsonl --out codex-run.json
 ```
 
 ## Benchmark document
@@ -116,12 +119,13 @@ Each trial runs in a private temp workspace with an isolated `DSH_HOME` and non-
 | `dsh eval run benchmark.yaml --out run.json` | Execute the benchmark and write the JSON run |
 | `dsh eval report run.json` | Render a run as Markdown |
 | `dsh eval compare base.json candidate.json` | Compare two runs with signed `B - A` deltas |
+| `dsh eval import codex\|claude-code log.jsonl --out run.json` | Import an external session log as a one-trial run |
 
 ## Roadmap
 
-- LLM judge: final-answer score and hallucination
-- Keyless replay mode for CI
-- Cross-harness trace import (Codex / Claude Code session logs)
+- Per-arm leaderboards and significance testing over paired trials
+- Parallel trial execution across cases
+- Web UI dashboard for run reports and comparisons
 
 ## Repository layout
 

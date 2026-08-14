@@ -156,6 +156,27 @@ describe('dsh-eval command composition', () => {
     expect(resolveJudgeChat(withLlm)).toBeTypeOf('function')
   })
 
+  it('imports an external session log through the real Loader', async () => {
+    const dir = tempDir()
+    const path = join(dir, 'codex.jsonl')
+    writeFileSync(path, [
+      '{"timestamp":"2026-08-14T00:00:00Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Hi"}]}}',
+      '{"timestamp":"2026-08-14T00:00:01Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Hello"}]}}',
+      '',
+    ].join('\n'))
+    const outPath = join(dir, 'imported-run.json')
+    const observed = await bootEval(['import', 'codex', path, '--out', outPath])
+    expect(observed.exits).toEqual([0])
+    expect(observed.out).toContain('Wrote')
+    expect(existsSync(outPath)).toBe(true)
+  })
+
+  it('rejects an unknown import format', async () => {
+    const observed = await bootEval(['import', 'bogus', 'x.jsonl'])
+    expect(observed.exits).toEqual([1])
+    expect(observed.err).toContain('import format must be codex or claude-code')
+  })
+
   it('renders a persisted run with the report subcommand', async () => {
     const dir = tempDir()
     const runPath = join(dir, 'run.json')

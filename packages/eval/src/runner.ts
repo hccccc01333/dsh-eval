@@ -23,21 +23,6 @@ import { tryJudgeTrial, type JudgeChat } from './judge.ts'
 import { aggregateMetrics, computeMetrics } from './metrics.ts'
 import { findSessionLogs, loadTrace, mergeTraces } from './trace.ts'
 
-/** Overlay forcing the harvested log to plain JSONL and the run to be non-interactive. */
-const EVAL_OVERLAY = `- id: session-persistence-jsonl
-  config:
-    root: !!js dshHomePath('sessions')
-    packChunks: false
-    compression: none
-- id: sandbox-policy
-  config:
-    mode: workspace-write
-    workspaceRoot: !!js process.cwd()
-- id: approval
-  config:
-    policy: never
-`
-
 /** Cap per-stream child output so a runaway trial cannot exhaust memory. */
 const MAX_OUTPUT_BYTES = 512 * 1024
 
@@ -80,6 +65,39 @@ function message(error: unknown): string {
 function sanitizeSegment(value: string): string {
   const safe = value.replace(/[^A-Za-z0-9._-]/gu, '-').replace(/^-+|-+$/gu, '')
   return safe === '' ? 'case' : safe
+}
+
+/**
+ * Build the per-trial overlay: plain-JSONL persistence, non-interactive
+ * permissions, and the keyless replay plugin when recorded logs exist.
+ * @param replay - the replay primary log and child logs, or undefined.
+ * @returns the overlay YAML text.
+ */
+function evalOverlay(replay: { file: string; childFiles: readonly string[] } | undefined): string {
+  const lines = [
+    '- id: session-persistence-jsonl',
+    '  config:',
+    "    root: !!js dshHomePath('sessions')",
+    '    packChunks: false',
+    '    compression: none',
+    '- id: sandbox-policy',
+    '  config:',
+    '    mode: workspace-write',
+    '    workspaceRoot: !!js process.cwd()',
+    '- id: approval',
+    '  config:',
+    '    policy: never',
+  ]
+  if (replay !== undefined) {
+    lines.push(
+      '- id: llm-replay',
+      "  name: '@deepseek-ai/dsh-llm-replay'",
+      '  config:',
+      `    file: ${JSON.stringify(replay.file)}`,
+      ...(replay.childFiles.length === 0 ? [] : [`    childFiles: ${JSON.stringify(replay.childFiles)}`]),
+    )
+  }
+  return `${lines.join('\n')}\n`
 }
 
 /** Split a single command string into argv on whitespace. */
@@ -236,8 +254,27 @@ async function runCaseTrial(
   await mkdir(workspace, { recursive: true })
   await mkdir(dshHome, { recursive: true, mode: 0o700 })
   if (caseValue.workspace !== undefined) await cp(caseValue.workspace, workspace, { recursive: true })
+  const replayFixture = benchmark.replay === undefined
+    ? undefined
+    : join(benchmark.replay.dir, `${sanitizeSegment(caseValue.id)}-${trial}`)
+  let replay: { file: string; childFiles: string[] } | undefined
+  if (replayFixture !== undefined) {
+    const logs = await findSessionLogs(replayFixture)
+    if (logs.length === 0) {
+      return {
+        caseId: caseValue.id,
+        trial,
+        status: 'error',
+        error: `no replay fixture found at ${replayFixture}`,
+        exitCode: null,
+        timedOut: false,
+      }
+    }
+    const primary = logs[0]!
+    replay = { file: primary, childFiles: logs.slice(1) }
+  }
   const overlayPath = join(trialDir, 'eval.cordis.yml')
-  await writeFile(overlayPath, EVAL_OVERLAY, 'utf8')
+  await writeFile(overlayPath, evalOverlay(replay), 'utf8')
   let outcome: SpawnOutcome
   try {
     outcome = await runCommand(
@@ -314,6 +351,9 @@ async function runCaseTrial(
 export async function runBenchmark(benchmark: Benchmark, options: RunOptions = {}): Promise<EvalRun> {
   if (benchmark.judge !== undefined && options.judgeChat === undefined) {
     throw new Error('eval: benchmark configures a judge but no LLM chat seam is available')
+  }
+  if (benchmark.judge !== undefined && benchmark.replay !== undefined) {
+    throw new Error('eval: judge and replay cannot be combined in one run')
   }
   const root = await mkdtemp(join(options.tempRoot ?? tmpdir(), 'dsh-eval-'))
   const trials = options.trials ?? benchmark.trials

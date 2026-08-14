@@ -19,6 +19,10 @@ const judgeSchema = z.object({
   maxScore: z.number().int().positive().default(10),
 }).strict()
 
+const replaySchema = z.object({
+  dir: z.string().min(1),
+}).strict()
+
 const pricingSchema = z.object({
   inputUsdPerMTokens: z.number().nonnegative(),
   cacheReadUsdPerMTokens: z.number().nonnegative(),
@@ -54,6 +58,7 @@ const benchmarkSchema = z.object({
   cases: z.array(benchmarkCaseSchema).min(1),
   pricing: z.record(z.string().min(1), pricingSchema).optional(),
   judge: judgeSchema.optional(),
+  replay: replaySchema.optional(),
 }).strict()
 
 /**
@@ -105,6 +110,7 @@ export async function parseBenchmark(text: string, baseDir: string): Promise<Ben
   }
   const pricing = parsed.pricing
   const judge = parsed.judge
+  const replay = parsed.replay
   return {
     name: parsed.name,
     model: parsed.model,
@@ -117,6 +123,9 @@ export async function parseBenchmark(text: string, baseDir: string): Promise<Ben
     ...(pricing !== undefined ? { pricing } : {}),
     ...(judge !== undefined
       ? { judge: { provider: judge.provider, model: judge.model ?? parsed.model, ...(judge.rubric !== undefined ? { rubric: judge.rubric } : {}), maxScore: judge.maxScore } }
+      : {}),
+    ...(replay !== undefined
+      ? { replay: { dir: isAbsolute(replay.dir) ? replay.dir : resolve(baseDir, replay.dir) } }
       : {}),
     baseDir,
   }

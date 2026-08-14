@@ -10,6 +10,7 @@
 import { Command } from 'commander'
 import type { Context } from '@deepseek-ai/cordis'
 import { parseCmdline } from '@deepseek-ai/dsh-cmdline'
+import type { ImportFormat } from './import.ts'
 
 /** What the eval app resolved from its command line. */
 export type EvalStartupValues =
@@ -30,6 +31,13 @@ export type EvalStartupValues =
     runPathA: string
     runPathB: string
   }
+  | {
+    kind: 'import'
+    format: ImportFormat
+    path: string
+    outPath: string
+    caseId: string
+  }
 
 /** Options accepted by `eval run`. */
 interface RunCommandOptions {
@@ -37,6 +45,12 @@ interface RunCommandOptions {
   trials?: number
   dsh?: string
   profile?: string
+}
+
+/** Options accepted by `eval import`. */
+interface ImportCommandOptions {
+  out: string
+  caseId: string
 }
 
 /** Split a single `--dsh` value into argv on whitespace. */
@@ -97,6 +111,19 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     .argument('<run-b.json>', 'candidate run report')
     .action((runPathA: string, runPathB: string) => {
       publish({ kind: 'compare', runPathA, runPathB })
+    })
+  const importer = program.command('import').description('import an external harness session log as a run report')
+  importer
+    .argument('<format>', 'external harness format: codex or claude-code')
+    .argument('<session.jsonl>', 'path to the external session log')
+    .option('--out <path>', 'output run JSON path', 'imported-run.json')
+    .option('--case-id <id>', 'case id for the imported trial', 'imported')
+    .action((format: string, path: string, options: ImportCommandOptions) => {
+      if (format !== 'codex' && format !== 'claude-code') {
+        program.error('error: import format must be codex or claude-code')
+        return
+      }
+      publish({ kind: 'import', format, path, outPath: options.out, caseId: options.caseId })
     })
   return program
 }

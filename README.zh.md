@@ -33,6 +33,8 @@ pnpm install
 - LLM judge：`judge` 配置驱动最终答案得分与幻觉标记。
 - 子 agent trace 归并：子 session 日志合并进 trial 指标。
 - 配对 A/B：同 case 的 win/lose/tie 统计。
+- keyless replay：有 key 录一次，CI 里从录制日志免 key 复现。
+- 跨 harness 导入：`dsh eval import codex|claude-code <log> --out run.json`。
 - `dsh eval report run.json` —— markdown 报告，含评分列与聚合比率。
 - `dsh eval compare run-v1.json run-v2.json` —— 双 run 对比表，带 `B - A` 差值。
 

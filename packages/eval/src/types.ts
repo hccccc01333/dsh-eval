@@ -52,6 +52,16 @@ export interface BenchmarkJudge {
   maxScore: number
 }
 
+/** Keyless replay configuration: recorded session logs replayed instead of live model calls. */
+export interface BenchmarkReplay {
+  /**
+   * Directory holding one recorded-log tree per trial, named
+   * `<caseId>-<trial>/session.jsonl` (child logs ride alongside). A run with
+   * a key records these under its `tempRoot`.
+   */
+  dir: string
+}
+
 /** A validated benchmark document. */
 export interface Benchmark {
   /** Benchmark name; also the run record's `benchmark` field. */
@@ -74,6 +84,8 @@ export interface Benchmark {
   pricing?: Readonly<Record<string, BenchmarkPricing>>
   /** LLM-judge configuration, when final-answer scoring is enabled. */
   judge?: BenchmarkJudge
+  /** Keyless replay configuration, when model calls replay from recorded logs. */
+  replay?: BenchmarkReplay
   /** Directory the benchmark document was loaded from; relative paths resolve against it. */
   baseDir: string
 }

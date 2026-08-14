@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -263,5 +263,55 @@ describe('dsh-eval benchmark runner', () => {
       trials: 1,
       judge: { provider: 'deepseek', model: 'judge-m', maxScore: 10 },
     }), { tempRoot: tempDir() })).rejects.toThrow('no LLM chat seam')
+  })
+
+  it('mounts the keyless replay plugin from recorded logs', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const replayDir = tempDir()
+    const fixtureDir = join(replayDir, 'hello-1')
+    mkdirSync(fixtureDir, { recursive: true })
+    copyFileSync(FIXTURE_LOG, join(fixtureDir, 'session.jsonl'))
+    const childDir = join(fixtureDir, 'child')
+    mkdirSync(childDir, { recursive: true })
+    const childLog = join(childDir, 'session.jsonl')
+    copyFileSync(FIXTURE_LOG, childLog)
+    utimesSync(childLog, new Date(Date.now() + 5_000), new Date(Date.now() + 5_000))
+    const run = await runBenchmark(buildBenchmark({ trials: 1, replay: { dir: replayDir } }), { tempRoot: tempDir() })
+    expect(run.cases[0]?.status).toBe('completed')
+    const overlay = readFileSync(join(run.tempRoot, 'hello-1', 'eval.cordis.yml'), 'utf8')
+    expect(overlay).toContain('llm-replay')
+    expect(overlay).toContain(JSON.stringify(join(fixtureDir, 'session.jsonl')))
+    expect(overlay).toContain(JSON.stringify([childLog]))
+    const childlessReplay = tempDir()
+    const singleFixture = join(childlessReplay, 'hello-1')
+    mkdirSync(singleFixture, { recursive: true })
+    copyFileSync(FIXTURE_LOG, join(singleFixture, 'session.jsonl'))
+    const childless = await runBenchmark(
+      buildBenchmark({ trials: 1, replay: { dir: childlessReplay } }),
+      { tempRoot: tempDir() },
+    )
+    const childlessOverlay = readFileSync(join(childless.tempRoot, 'hello-1', 'eval.cordis.yml'), 'utf8')
+    expect(childlessOverlay).not.toContain('childFiles:')
+  })
+
+  it('reports a missing replay fixture as an error trial', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const replayDir = tempDir()
+    const run = await runBenchmark(buildBenchmark({ trials: 1, replay: { dir: replayDir } }), { tempRoot: tempDir() })
+    expect(run.cases[0]?.status).toBe('error')
+    expect(run.cases[0]?.error).toContain('no replay fixture found')
+  })
+
+  it('rejects judge and replay in one run', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const replayDir = tempDir()
+    await expect(runBenchmark(buildBenchmark({
+      trials: 1,
+      judge: { provider: 'deepseek', model: 'judge-m', maxScore: 10 },
+      replay: { dir: replayDir },
+    }), { tempRoot: tempDir(), judgeChat: async () => '{}' })).rejects.toThrow('judge and replay cannot be combined')
   })
 })
