@@ -50,7 +50,7 @@ function buildBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {
   }
 }
 
-describe('@deepseek-ai/dsh-eval benchmark runner', () => {
+describe('dsh-eval benchmark runner', () => {
   it('runs every trial, harvests traces, and folds metrics', async () => {
     process.env.FAKE_DASH_MODE = 'log'
     process.env.FAKE_DASH_LOG = FIXTURE_LOG

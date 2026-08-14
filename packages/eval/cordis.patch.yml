@@ -3,4 +3,4 @@
 # and the plugin spawns one headless dsh per case trial.
 - insert:
     - id: eval
-      name: '@deepseek-ai/dsh-eval'
+      name: 'dsh-eval'

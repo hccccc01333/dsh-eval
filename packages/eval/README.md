@@ -1,4 +1,4 @@
-# `@deepseek-ai/dsh-eval`
+# `dsh-eval`
 
 English | [中文](README.zh.md)
 
@@ -7,7 +7,7 @@ Agent evaluation over headless dsh profiles: a benchmark YAML document, one head
 The package is a bundle and a command-line app. Install it into a profile and run benchmarks with:
 
 ```sh
-dsh plugin --profile eval add @deepseek-ai/dsh-eval
+dsh plugin --profile eval add dsh-eval
 dsh eval run benchmark.yaml
 dsh eval report eval-run.json
 dsh eval compare eval-v1.json eval-v2.json

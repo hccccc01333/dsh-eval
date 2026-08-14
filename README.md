@@ -24,8 +24,8 @@ v0.2 · 68 tests · 100% branch/line coverage on `src` · typecheck clean.
 Install the package directly:
 
 ```sh
-pnpm add @deepseek-ai/dsh-eval
-dsh plugin --profile eval add @deepseek-ai/dsh-eval
+pnpm add dsh-eval
+dsh plugin --profile eval add dsh-eval
 ```
 
 The npm package targets the official `@deepseek-ai/*` releases (`0.1.0-rc.6` peers). For the source flow, clone this repo and link it to a deepseek-harness checkout:
@@ -51,14 +51,14 @@ Then:
 
 ```sh
 pnpm install
-pnpm --filter @deepseek-ai/dsh-eval build
-pnpm --filter @deepseek-ai/dsh-eval test
+pnpm --filter dsh-eval build
+pnpm --filter dsh-eval test
 ```
 
 With a `dsh` launcher from the harness checkout:
 
 ```sh
-dsh plugin --profile eval add @deepseek-ai/dsh-eval
+dsh plugin --profile eval add dsh-eval
 dsh eval run benchmark.yaml --out eval-run.json
 dsh eval report eval-run.json
 dsh eval compare eval-v1.json eval-v2.json

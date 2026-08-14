@@ -4,7 +4,7 @@
  * markdown. Parsing follows the cmdline contract: the action publishes an
  * ordinary service, and help or a rejection publishes nothing.
  *
- * @module @deepseek-ai/dsh-eval/command
+ * @module dsh-eval/command
  */
 
 import { Command } from 'commander'

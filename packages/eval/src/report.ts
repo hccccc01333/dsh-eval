@@ -1,7 +1,7 @@
 /**
  * Run-report persistence and markdown rendering for dsh-eval.
  *
- * @module @deepseek-ai/dsh-eval/report
+ * @module dsh-eval/report
  */
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises'

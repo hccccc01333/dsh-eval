@@ -33,7 +33,7 @@ function buildRun(overrides: Partial<EvalRun> = {}): EvalRun {
   }
 }
 
-describe('@deepseek-ai/dsh-eval report persistence and rendering', () => {
+describe('dsh-eval report persistence and rendering', () => {
   it('writes and loads a run report, creating parent directories', async () => {
     const dir = tempDir()
     const path = join(dir, 'nested', 'run.json')

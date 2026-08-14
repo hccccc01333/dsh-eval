@@ -2,7 +2,7 @@
  * Cross-run comparison for dsh-eval: two persisted run reports become a row
  * list of metric values and deltas, rendered as a markdown table.
  *
- * @module @deepseek-ai/dsh-eval/compare
+ * @module dsh-eval/compare
  */
 
 import type { EvalRun } from './types.ts'

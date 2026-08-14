@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-eval",
+  "name": "dsh-eval",
   "description": "Agent evaluation platform: benchmark YAML, headless run orchestration, trace-based metrics, and run reports",
   "version": "0.1.0-rc.6",
   "publishConfig": {

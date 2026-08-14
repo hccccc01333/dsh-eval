@@ -4,7 +4,7 @@
  * header line, decodes every event row (packed chunk rows included) through
  * the session package's storage decoder, and enforces seq continuity.
  *
- * @module @deepseek-ai/dsh-eval/trace
+ * @module dsh-eval/trace
  */
 
 import { readFile, readdir, stat } from 'node:fs/promises'

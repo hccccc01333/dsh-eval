@@ -23,7 +23,7 @@ const FIXTURE = fileURLToPath(new URL('./fixtures/session.jsonl', import.meta.ur
 
 const HEADER = '{"type":"session","version":0,"id":"session-t","createdAt":1,"delegationDepth":0}'
 
-describe('@deepseek-ai/dsh-eval trace parsing', () => {
+describe('dsh-eval trace parsing', () => {
   it('parses the fixture log into a trace with contiguous events', async () => {
     const trace = await loadTrace(FIXTURE)
     expect(String(trace.sessionId)).toBe('session-eval-fixture')
@@ -63,7 +63,7 @@ describe('@deepseek-ai/dsh-eval trace parsing', () => {
   })
 })
 
-describe('@deepseek-ai/dsh-eval primary-log discovery', () => {
+describe('dsh-eval primary-log discovery', () => {
   it('returns null for a missing or empty root', async () => {
     expect(await findPrimarySessionLog(join(tempDir(), 'absent'))).toBeNull()
     expect(await findPrimarySessionLog(tempDir())).toBeNull()

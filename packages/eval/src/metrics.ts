@@ -4,7 +4,7 @@
  * USD. The fold mirrors session-stats wall-time semantics and adds the
  * eval-owned failure and retry counters.
  *
- * @module @deepseek-ai/dsh-eval/metrics
+ * @module dsh-eval/metrics
  */
 
 import { isTokenDelta } from '@deepseek-ai/dsh-llm/message'

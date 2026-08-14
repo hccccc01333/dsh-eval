@@ -1,5 +1,5 @@
 /**
- * @deepseek-ai/dsh-eval 鈥?agent evaluation over headless dsh profiles.
+ * dsh-eval 鈥?agent evaluation over headless dsh profiles.
  *
  * The eval bundle mounts this command-line plugin over dsh-base. It parses
  * `dsh --profile eval run <benchmark.yaml>` / `report <run.json>`, spawns one
@@ -9,7 +9,7 @@
  * report. LLM-judge metrics (final-answer score, hallucination) and paired
  * same-seed trials are deferred to later milestones.
  *
- * @module @deepseek-ai/dsh-eval
+ * @module dsh-eval
  */
 
 import type { Context } from '@deepseek-ai/cordis'

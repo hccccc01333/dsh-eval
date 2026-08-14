@@ -98,7 +98,7 @@ async function bootEval(args: string[]): Promise<Observed> {
   return observed
 }
 
-describe('@deepseek-ai/dsh-eval command composition', () => {
+describe('dsh-eval command composition', () => {
   it('runs a benchmark through the real Loader and exits 0', async () => {
     const dir = tempDir()
     const benchmarkPath = benchmarkYaml(dir)
@@ -208,7 +208,7 @@ describe('@deepseek-ai/dsh-eval command composition', () => {
   })
 })
 
-describe('@deepseek-ai/dsh-eval execution entry', () => {
+describe('dsh-eval execution entry', () => {
   it('requires appExit before parsing', () => {
     const ctx = new Context()
     ctx.provide('cmdlineArgs', { get: () => [] })

@@ -1,6 +1,6 @@
 # dsh-eval（独立仓库）
 
-独立开发目录：Agent Evaluation Platform 插件 `@deepseek-ai/dsh-eval`，与
+独立开发目录：Agent Evaluation Platform 插件 `dsh-eval`，与
 deepseek-harness 主仓的 WIP 隔离。
 
 结构：
@@ -13,8 +13,8 @@ deepseek-harness 主仓的 WIP 隔离。
 快速开始（npm 直装）：
 
 ```sh
-pnpm add @deepseek-ai/dsh-eval
-dsh plugin --profile eval add @deepseek-ai/dsh-eval
+pnpm add dsh-eval
+dsh plugin --profile eval add dsh-eval
 ```
 
 源码流程：
@@ -38,7 +38,7 @@ pnpm install
 
 ```sh
 pnpm install
-pnpm --filter @deepseek-ai/dsh-eval test
-pnpm --filter @deepseek-ai/dsh-eval run typecheck
-pnpm --filter @deepseek-ai/dsh-eval build
+pnpm --filter dsh-eval test
+pnpm --filter dsh-eval run typecheck
+pnpm --filter dsh-eval build
 ```

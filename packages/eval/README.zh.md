@@ -1,4 +1,4 @@
-# `@deepseek-ai/dsh-eval`
+# `dsh-eval`
 
 English | [中文](README.md)
 
@@ -7,7 +7,7 @@ English | [中文](README.md)
 该包既是 bundle 也是命令行应用。安装到 profile 后即可运行评测：
 
 ```sh
-dsh plugin --profile eval add @deepseek-ai/dsh-eval
+dsh plugin --profile eval add dsh-eval
 dsh eval run benchmark.yaml
 dsh eval report eval-run.json
 dsh eval compare eval-v1.json eval-v2.json

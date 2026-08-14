@@ -18,7 +18,7 @@ afterEach(() => {
   }
 })
 
-describe('@deepseek-ai/dsh-eval benchmark loading', () => {
+describe('dsh-eval benchmark loading', () => {
   it('loads a document with defaults and resolves relative paths', async () => {
     const dir = tempDir()
     writeFileSync(join(dir, 'prompt.md'), 'Fix the tests.')

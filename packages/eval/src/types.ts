@@ -3,7 +3,7 @@
  * traces, per-trial metrics, and the persisted run record. This file contains
  * no runtime code.
  *
- * @module @deepseek-ai/dsh-eval/types
+ * @module dsh-eval/types
  */
 
 import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session'

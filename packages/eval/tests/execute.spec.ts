@@ -10,7 +10,7 @@ vi.mock('../src/runner.ts', () => ({
   }),
 }))
 
-describe('@deepseek-ai/dsh-eval non-Error failures', () => {
+describe('dsh-eval non-Error failures', () => {
   it('renders a non-Error rejection into the stderr diagnostic', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'dsh-eval-execute-'))
     const benchmarkPath = join(dir, 'benchmark.yml')

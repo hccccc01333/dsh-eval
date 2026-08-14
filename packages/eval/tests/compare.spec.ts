@@ -37,7 +37,7 @@ const METRICS = {
   costUsd: 0.000001,
 }
 
-describe('@deepseek-ai/dsh-eval comparison', () => {
+describe('dsh-eval comparison', () => {
   it('builds numeric, rate, and text rows with signed deltas', () => {
     const a = buildRun({
       benchmark: 'base',

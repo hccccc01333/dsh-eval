@@ -1,13 +1,13 @@
 /**
- * Package-owned invariant companion for `@deepseek-ai/dsh-eval`.
- * @module @deepseek-ai/dsh-eval/invariant
+ * Package-owned invariant companion for `dsh-eval`.
+ * @module dsh-eval/invariant
  */
 
 /* jscpd:ignore-start */
 import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
-const PACKAGE_NAME = '@deepseek-ai/dsh-eval'
+const PACKAGE_NAME = 'dsh-eval'
 
 /** Cordis companion plugin name. */
 export const name = 'eval-invariant'

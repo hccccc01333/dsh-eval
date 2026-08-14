@@ -3,7 +3,7 @@
  * js-yaml's safe loader; zod validates the parsed shape; prompt files and
  * workspaces resolve against the benchmark file's directory.
  *
- * @module @deepseek-ai/dsh-eval/benchmark
+ * @module dsh-eval/benchmark
  */
 
 import { readFile } from 'node:fs/promises'

@@ -10,7 +10,7 @@
  * this child. Timeout kills the direct child and reports timed-out orthogonally
  * from its exit code; Windows descendants of a killed process may survive.
  *
- * @module @deepseek-ai/dsh-eval/runner
+ * @module dsh-eval/runner
  */
 
 import { spawn } from 'node:child_process'

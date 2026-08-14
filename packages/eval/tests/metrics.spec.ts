@@ -39,7 +39,7 @@ function happyTrace(): SessionEvent[] {
   ]
 }
 
-describe('@deepseek-ai/dsh-eval metric folding', () => {
+describe('dsh-eval metric folding', () => {
   it('folds the happy path with cost', () => {
     const metrics = computeMetrics(happyTrace(), PRICING)
     expect(metrics).toMatchObject({
@@ -153,7 +153,7 @@ describe('@deepseek-ai/dsh-eval metric folding', () => {
   })
 })
 
-describe('@deepseek-ai/dsh-eval cost and aggregation', () => {
+describe('dsh-eval cost and aggregation', () => {
   it('computes cost from disjoint token buckets', () => {
     const tokens: EvalTokenUsage = { inputTokens: 1000, cacheReadTokens: 2000, cacheWriteTokens: 500, outputTokens: 3000 }
     expect(computeCost(tokens, PRICING)).toBeCloseTo(0.003845, 12)
