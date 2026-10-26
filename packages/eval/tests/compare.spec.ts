@@ -119,9 +119,9 @@ describe('dsh-eval comparison', () => {
     expect(paired?.losses).toBe(1)
     expect(paired?.ties).toBe(1)
     expect(paired?.primaryMetric).toBe('task success')
-    expect(paired?.meanStepsDelta).toBeCloseTo(1 / 3, 10)
-    expect(paired?.meanTokensDelta).toBeCloseTo(2, 10)
-    expect(paired?.meanScoreDelta).toBeCloseTo(0, 10)
+    expect(paired?.stepsDelta?.mean).toBeCloseTo(1 / 3, 10)
+    expect(paired?.tokensDelta?.mean).toBeCloseTo(2, 10)
+    expect(paired?.scoreDelta?.mean).toBeCloseTo(0, 10)
   })
 
   it('includes paired rows when both runs share completed trials', () => {
@@ -166,12 +166,65 @@ describe('dsh-eval comparison', () => {
     expect(paired?.losses).toBe(1)
     expect(paired?.ties).toBe(1)
     const rows = compareRuns(a, b)
-    expect(rows.find(row => row.metric === 'paired final-answer delta (B-A)')).toEqual({
-      metric: 'paired final-answer delta (B-A)',
+    const scoreRow = rows.find(row => row.metric === 'paired final-answer delta (B-A)')
+    expect(scoreRow?.a).toBe('–')
+    // Three pairs carry enough data for a bootstrap interval.
+    expect(scoreRow?.delta).toMatch(/^\+0\.0 \[95% CI -\d\.\d, \+\d\.\d\]$/u)
+    // Three pairs, one win and one loss: the sign test has nothing to separate them.
+    expect(rows.find(row => row.metric === 'paired final answer score p (sign test)')).toEqual({
+      metric: 'paired final answer score p (sign test)',
       a: '–',
       b: '–',
-      delta: '+0.0',
+      delta: '1.000 (n=2)',
     })
+  })
+
+  it('prints an exact sign-test p-value and collapses tiny ones', () => {
+    const wins = (caseId: string, trialNo: number): EvalTrialResult => ({
+      caseId,
+      trial: trialNo,
+      status: 'completed',
+      exitCode: 0,
+      timedOut: false,
+      grade: { taskSuccess: true, toolSelectionAccuracy: null },
+      metrics: METRICS,
+    })
+    const noWins = buildRun({
+      cases: Array.from({ length: 6 }, (_, index) => ({
+        caseId: 'c',
+        trial: index + 1,
+        status: 'completed' as const,
+        exitCode: 0,
+        timedOut: false,
+        grade: { taskSuccess: false, toolSelectionAccuracy: null },
+        metrics: METRICS,
+      })),
+    })
+    const allWins = buildRun({
+      cases: Array.from({ length: 6 }, (_, index) => wins('c', index + 1)),
+    })
+    // Six discordant pairs, all one way: p = 2 / 2^6 = 0.031.
+    const pRow = compareRuns(noWins, allWins).find(row => row.metric === 'paired task success p (sign test)')
+    expect(pRow?.delta).toBe('0.031 (n=6)')
+
+    const twelve = buildRun({
+      cases: Array.from({ length: 12 }, (_, index) => ({
+        caseId: 'c',
+        trial: index + 1,
+        status: 'completed' as const,
+        exitCode: 0,
+        timedOut: false,
+        grade: { taskSuccess: false, toolSelectionAccuracy: null },
+        metrics: METRICS,
+      })),
+    })
+    const twelveWins = buildRun({
+      cases: Array.from({ length: 12 }, (_, index) => wins('c', index + 1)),
+    })
+    // 2 / 2^12 is below the printed precision.
+    expect(
+      compareRuns(twelve, twelveWins).find(row => row.metric === 'paired task success p (sign test)')?.delta,
+    ).toBe('<0.001 (n=12)')
   })
 
   it('handles unmatched and unmeasured paired trials', () => {
@@ -199,7 +252,7 @@ describe('dsh-eval comparison', () => {
     })
     const paired = pairedCompare(a, b)
     expect(paired?.pairs).toBe(2)
-    expect(paired?.meanStepsDelta).toBeNull()
+    expect(paired?.stepsDelta).toBeNull()
     const rows = compareRuns(a, b)
     expect(rows.find(row => row.metric === 'paired steps delta (B-A)')).toBeUndefined()
   })

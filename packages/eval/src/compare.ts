@@ -6,6 +6,7 @@
  */
 
 import type { EvalRun, EvalTrialResult } from './types.ts'
+import { pairedDelta, signTest, type PairedDelta, type SignTestOutcome } from './stats.ts'
 
 /** One compared metric row. */
 export interface CompareRow {
@@ -31,12 +32,14 @@ export interface PairedStats {
   ties: number
   /** The metric used for win/lose/tie classification. */
   primaryMetric: 'task success' | 'tool selection accuracy' | 'final answer score'
-  /** Mean per-pair step delta (`b - a`), or null when no pair is numeric. */
-  meanStepsDelta: number | null
-  /** Mean per-pair token delta (`b - a`), or null when no pair is numeric. */
-  meanTokensDelta: number | null
-  /** Mean per-pair judge score delta (`b - a`), or null without judge verdicts. */
-  meanScoreDelta: number | null
+  /** Exact two-sided sign test over the discordant pairs of the primary metric. */
+  test: SignTestOutcome
+  /** Paired step delta (`b - a`) with its bootstrap interval, or null when no pair is numeric. */
+  stepsDelta: PairedDelta | null
+  /** Paired token delta (`b - a`) with its bootstrap interval, or null when no pair is numeric. */
+  tokensDelta: PairedDelta | null
+  /** Paired judge-score delta (`b - a`) with its bootstrap interval, or null without verdicts. */
+  scoreDelta: PairedDelta | null
 }
 
 /** Render a nullable number with a dash placeholder. */
@@ -54,6 +57,19 @@ function formatDelta(a: number | null, b: number | null, unit: 'pp' | '' = ''): 
   if (a === null || b === null) return '–'
   const delta = unit === 'pp' ? (b - a) * 100 : b - a
   return `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}${unit}`
+}
+
+/** Render a paired delta with its bootstrap interval when the sample allows one. */
+function formatPairedDelta(delta: PairedDelta): string {
+  const mean = formatDelta(0, delta.mean)
+  return delta.lower === null || delta.upper === null
+    ? mean
+    : `${mean} [95% CI ${formatDelta(0, delta.lower)}, ${formatDelta(0, delta.upper)}]`
+}
+
+/** Render an exact p-value, collapsing anything below the print precision. */
+function formatPValue(pValue: number): string {
+  return pValue < 0.001 ? '<0.001' : pValue.toFixed(3)
 }
 
 /** A metric that can classify a paired winner. */
@@ -133,17 +149,16 @@ export function pairedCompare(a: EvalRun, b: EvalRun): PairedStats | null {
       scoreDeltas.push(bScore - aScore)
     }
   }
-  const mean = (values: readonly number[]): number | null =>
-    values.length === 0 ? null : values.reduce((total, value) => total + value, 0) / values.length
   return {
     pairs: pairs.length,
     wins,
     losses,
     ties,
     primaryMetric,
-    meanStepsDelta: mean(stepDeltas),
-    meanTokensDelta: mean(tokenDeltas),
-    meanScoreDelta: mean(scoreDeltas),
+    test: signTest(wins, losses),
+    stepsDelta: pairedDelta(stepDeltas),
+    tokensDelta: pairedDelta(tokenDeltas),
+    scoreDelta: pairedDelta(scoreDeltas),
   }
 }
 
@@ -193,14 +208,20 @@ export function compareRuns(a: EvalRun, b: EvalRun): CompareRow[] {
         b: '–',
         delta: '–',
       },
-      ...(paired.meanStepsDelta === null ? [] : [{
-        metric: 'paired steps delta (B-A)', a: '–', b: '–', delta: formatDelta(0, paired.meanStepsDelta),
+      {
+        metric: `paired ${paired.primaryMetric} p (sign test)`,
+        a: '–',
+        b: '–',
+        delta: `${formatPValue(paired.test.pValue)} (n=${paired.test.discordant})`,
+      },
+      ...(paired.stepsDelta === null ? [] : [{
+        metric: 'paired steps delta (B-A)', a: '–', b: '–', delta: formatPairedDelta(paired.stepsDelta),
       }]),
-      ...(paired.meanTokensDelta === null ? [] : [{
-        metric: 'paired tokens delta (B-A)', a: '–', b: '–', delta: formatDelta(0, paired.meanTokensDelta),
+      ...(paired.tokensDelta === null ? [] : [{
+        metric: 'paired tokens delta (B-A)', a: '–', b: '–', delta: formatPairedDelta(paired.tokensDelta),
       }]),
-      ...(paired.meanScoreDelta === null ? [] : [{
-        metric: 'paired final-answer delta (B-A)', a: '–', b: '–', delta: formatDelta(0, paired.meanScoreDelta),
+      ...(paired.scoreDelta === null ? [] : [{
+        metric: 'paired final-answer delta (B-A)', a: '–', b: '–', delta: formatPairedDelta(paired.scoreDelta),
       }]),
     )
   }
