@@ -47,6 +47,7 @@ describe('dsh-eval benchmark loading', () => {
     expect(benchmark.profile).toBe('headless')
     expect(benchmark.command).toEqual(['dsh'])
     expect(benchmark.trials).toBe(1)
+    expect(benchmark.concurrency).toBe(1)
     expect(benchmark.timeoutMs).toBe(600_000)
     expect(benchmark.seed).toBe(0)
     expect(benchmark.baseDir).toBe(dir)
@@ -77,12 +78,14 @@ describe('dsh-eval benchmark loading', () => {
       'seed: 7',
       'profile: custom',
       'command: [pnpm, dsh]',
+      'concurrency: 4',
       `cases:\n  - id: a\n    prompt: inline\n    workspace: ${absolute}`,
       '',
     ].join('\n'), dir)
     expect(benchmark.profile).toBe('custom')
     expect(benchmark.command).toEqual(['pnpm', 'dsh'])
     expect(benchmark.trials).toBe(3)
+    expect(benchmark.concurrency).toBe(4)
     expect(benchmark.timeoutMs).toBe(500)
     expect(benchmark.seed).toBe(7)
     expect(benchmark.cases[0]).toEqual({ id: 'a', prompt: 'inline', workspace: absolute })
@@ -200,6 +203,8 @@ describe('dsh-eval benchmark loading', () => {
     { name: 'unknown key', text: 'name: n\nmodel: m\nbogus: 1\ncases:\n  - id: a\n    prompt: p\n', message: '' },
     { name: 'no cases', text: 'name: n\nmodel: m\ncases: []\n', message: '' },
     { name: 'empty expected', text: 'name: n\nmodel: m\ncases:\n  - id: a\n    prompt: p\n    expected: {}\n', message: 'expected needs at least one of tool or check' },
+    { name: 'zero concurrency', text: 'name: n\nmodel: m\nconcurrency: 0\ncases:\n  - id: a\n    prompt: p\n', message: '' },
+    { name: 'fractional concurrency', text: 'name: n\nmodel: m\nconcurrency: 1.5\ncases:\n  - id: a\n    prompt: p\n', message: '' },
   ])('rejects an invalid document ($name)', async ({ text, message }) => {
     if (message === '') {
       await expect(parseBenchmark(text, tempDir())).rejects.toThrow()

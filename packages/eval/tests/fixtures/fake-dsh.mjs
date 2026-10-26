@@ -2,7 +2,12 @@ import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const mode = process.env.FAKE_DASH_MODE ?? 'log'
-if (mode === 'log' || mode === 'badlog') {
+// `delay` sleeps first and then writes a normal log, so a concurrency test can
+// measure overlap instead of guessing it.
+if (mode === 'delay') {
+  await new Promise(resolve => setTimeout(resolve, Number(process.env.FAKE_DASH_DELAY_MS ?? '0')))
+}
+if (mode === 'log' || mode === 'badlog' || mode === 'delay') {
   const dir = join(process.env.DSH_HOME, 'sessions', 'project', 'session-1')
   mkdirSync(dir, { recursive: true })
   const target = join(dir, 'session.jsonl')

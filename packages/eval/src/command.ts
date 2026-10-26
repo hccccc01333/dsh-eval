@@ -19,6 +19,7 @@ export type EvalStartupValues =
     benchmarkPath: string
     outPath: string
     trials?: number
+    concurrency?: number
     dshCommand?: readonly string[]
     profile?: string
   }
@@ -43,6 +44,7 @@ export type EvalStartupValues =
 interface RunCommandOptions {
   out: string
   trials?: number
+  concurrency?: number
   dsh?: string
   profile?: string
 }
@@ -58,6 +60,21 @@ function splitCommand(value: string | undefined): readonly string[] | undefined 
   if (value === undefined) return undefined
   const command = value.trim().split(/\s+/u).filter(part => part !== '')
   return command.length === 0 ? undefined : command
+}
+
+/**
+ * Build a commander option parser for a positive-integer flag, so `--trials`
+ * and `--concurrency` reject the same inputs with the same message shape.
+ * @param program - the program to error through.
+ * @param flag - the flag name, for the error text.
+ * @returns the parser.
+ */
+function positiveInteger(program: Command, flag: string): (value: string) => number {
+  return (value) => {
+    const parsed = Number(value)
+    if (!Number.isInteger(parsed) || parsed <= 0) program.error(`error: ${flag} must be a positive integer`)
+    return parsed
+  }
 }
 
 /**
@@ -81,11 +98,8 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
   run
     .argument('<benchmark.yaml>', 'path to the benchmark document')
     .option('--out <path>', 'output run JSON path', 'eval-run.json')
-    .option('--trials <n>', 'override the benchmark trials count', (value) => {
-      const parsed = Number(value)
-      if (!Number.isInteger(parsed) || parsed <= 0) program.error('error: --trials must be a positive integer')
-      return parsed
-    })
+    .option('--trials <n>', 'override the benchmark trials count', positiveInteger(program, '--trials'))
+    .option('--concurrency <n>', 'override the in-flight trial limit', positiveInteger(program, '--concurrency'))
     .option('--dsh <cmd>', 'override the dsh launcher command, space-separated')
     .option('--profile <name>', 'override the spawned dsh profile')
     .action((benchmarkPath: string, options: RunCommandOptions) => {
@@ -95,6 +109,7 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
         benchmarkPath,
         outPath: options.out,
         ...(options.trials !== undefined ? { trials: options.trials } : {}),
+        ...(options.concurrency !== undefined ? { concurrency: options.concurrency } : {}),
         ...(dshCommand !== undefined ? { dshCommand } : {}),
         ...(options.profile !== undefined ? { profile: options.profile } : {}),
       })

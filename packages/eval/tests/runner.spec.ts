@@ -34,6 +34,7 @@ function buildBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {
     profile: 'headless',
     command: [process.execPath, FAKE_SCRIPT],
     trials: 2,
+    concurrency: 1,
     timeoutMs: 30_000,
     seed: 0,
     cases: [{ id: 'hello', prompt: 'Say hello.' }],
@@ -94,6 +95,51 @@ describe('dsh-eval benchmark runner', () => {
     })
     expect(run.trials).toBe(1)
     expect(run.cases).toHaveLength(1)
+  })
+
+  it('keeps case-then-trial order while running the pool concurrently', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const run = await runBenchmark(buildBenchmark({
+      concurrency: 2,
+      trials: 2,
+      cases: [
+        { id: 'alpha', prompt: 'a' },
+        { id: 'beta', prompt: 'b' },
+        { id: 'gamma', prompt: 'c' },
+      ],
+    }), { tempRoot: tempDir() })
+    expect(run.cases.map(result => `${result.caseId}-${result.trial}`)).toEqual([
+      'alpha-1', 'alpha-2', 'beta-1', 'beta-2', 'gamma-1', 'gamma-2',
+    ])
+    expect(run.cases.every(result => result.status === 'completed')).toBe(true)
+  })
+
+  it('overlaps trials when the concurrency override exceeds one', async () => {
+    process.env.FAKE_DASH_MODE = 'delay'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    process.env.FAKE_DASH_DELAY_MS = '800'
+    const start = Date.now()
+    // The benchmark itself stays serial; the override is what parallelizes it.
+    const run = await runBenchmark(buildBenchmark({ trials: 4 }), {
+      tempRoot: tempDir(),
+      concurrency: 4,
+    })
+    const elapsed = Date.now() - start
+    expect(run.cases).toHaveLength(4)
+    expect(run.cases.every(result => result.status === 'completed')).toBe(true)
+    // Four serial 800ms trials plus four spawns cannot finish this fast.
+    expect(elapsed).toBeLessThan(2500)
+  })
+
+  it('rejects the run when a trial setup throws', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const missing = join(tempDir(), 'does-not-exist')
+    await expect(runBenchmark(
+      buildBenchmark({ concurrency: 2, cases: [{ id: 'gone', prompt: 'p', workspace: missing }] }),
+      { tempRoot: tempDir() },
+    )).rejects.toThrow(/ENOENT/u)
   })
 
   it('reports a missing log as an error trial', async () => {

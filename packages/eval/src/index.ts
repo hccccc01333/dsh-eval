@@ -99,6 +99,7 @@ export async function executeEval(
     const benchmark = await loadBenchmark(values.benchmarkPath)
     const run = await runBenchmark(benchmark, {
       ...(values.trials !== undefined ? { trials: values.trials } : {}),
+      ...(values.concurrency !== undefined ? { concurrency: values.concurrency } : {}),
       ...(values.dshCommand !== undefined ? { command: values.dshCommand } : {}),
       ...(values.profile !== undefined ? { profile: values.profile } : {}),
       ...(services.judgeChat !== undefined ? { judgeChat: services.judgeChat } : {}),

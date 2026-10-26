@@ -74,6 +74,8 @@ export interface Benchmark {
   command: readonly string[]
   /** Trials per case. */
   trials: number
+  /** Case x trial executions allowed in flight at once; defaults to 1 (serial). */
+  concurrency: number
   /** Per-trial timeout in milliseconds. */
   timeoutMs: number
   /** Reserved deterministic seed for future paired comparisons. */

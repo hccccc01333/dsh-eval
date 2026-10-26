@@ -34,6 +34,8 @@ export interface RunOptions {
   profile?: string
   /** Override the benchmark's trials per case. */
   trials?: number
+  /** Override the benchmark's in-flight trial limit. */
+  concurrency?: number
   /** Root for trial directories; defaults to the platform temp dir. */
   tempRoot?: string
   /** LLM-judge chat seam; required when the benchmark configures a judge. */
@@ -343,7 +345,16 @@ async function runCaseTrial(
 }
 
 /**
- * Run every case x trial sequentially and aggregate the completed trials.
+ * Run every case x trial through a bounded worker pool and aggregate the
+ * completed trials.
+ *
+ * Trials are independent by construction — each owns a private temp directory,
+ * workspace copy, and DSH_HOME — so the only thing serial execution buys is
+ * determinism. The pool keeps that anyway: results land at their task index, so
+ * the run record stays in case-then-trial order no matter how the workers
+ * interleave. The first failure to escape `runCaseTrial` stops the remaining
+ * workers and rejects the run, which is the same contract as the serial loop.
+ *
  * @param benchmark - the loaded benchmark.
  * @param options - runtime overrides and test seams.
  * @returns the completed run record, written by the caller.
@@ -361,13 +372,29 @@ export async function runBenchmark(benchmark: Benchmark, options: RunOptions = {
     ...benchmark,
     ...(options.profile !== undefined ? { profile: options.profile } : {}),
     ...(options.command !== undefined ? { command: options.command } : {}),
+    ...(options.concurrency !== undefined ? { concurrency: options.concurrency } : {}),
   }
-  const results: EvalTrialResult[] = []
+  const tasks: { caseValue: Benchmark['cases'][number]; trial: number }[] = []
   for (const caseValue of effective.cases) {
-    for (let trial = 1; trial <= trials; trial++) {
-      results.push(await runCaseTrial(effective, caseValue, trial, root, options.judgeChat))
+    for (let trial = 1; trial <= trials; trial++) tasks.push({ caseValue, trial })
+  }
+  const results: EvalTrialResult[] = Array.from({ length: tasks.length })
+  let failure: { error: unknown } | undefined
+  let cursor = 0
+  const worker = async (): Promise<void> => {
+    while (failure === undefined) {
+      const index = cursor++
+      const task = tasks[index]
+      if (task === undefined) return
+      try {
+        results[index] = await runCaseTrial(effective, task.caseValue, task.trial, root, options.judgeChat)
+      } catch (error) {
+        failure = { error }
+      }
     }
   }
+  await Promise.all(Array.from({ length: Math.min(effective.concurrency, tasks.length) }, worker))
+  if (failure !== undefined) throw failure.error
   const completed = results.filter(
     (result): result is EvalTrialResult & { metrics: NonNullable<EvalTrialResult['metrics']> } =>
       result.status === 'completed' && result.metrics !== undefined,

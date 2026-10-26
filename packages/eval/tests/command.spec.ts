@@ -209,6 +209,29 @@ describe('dsh-eval command composition', () => {
     expect(observed.err).toContain('--trials must be a positive integer')
   })
 
+  it('runs a benchmark through a concurrency override', async () => {
+    const dir = tempDir()
+    const benchmarkPath = benchmarkYaml(dir)
+    const outPath = join(dir, 'pooled.json')
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const observed = await bootEval([
+      'run', benchmarkPath, '--out', outPath,
+      '--dsh', `${process.execPath} ${FAKE_SCRIPT}`,
+      '--trials', '2',
+      '--concurrency', '2',
+    ])
+    expect(observed.exits).toEqual([0])
+    expect(existsSync(outPath)).toBe(true)
+  })
+
+  it('rejects an invalid concurrency override', async () => {
+    const benchmarkPath = benchmarkYaml(tempDir())
+    const observed = await bootEval(['run', benchmarkPath, '--concurrency', '1.5'])
+    expect(observed.exits).toEqual([1])
+    expect(observed.err).toContain('--concurrency must be a positive integer')
+  })
+
   it('exits 1 when a run has no completed trials', async () => {
     const dir = tempDir()
     const benchmarkPath = benchmarkYaml(dir)
