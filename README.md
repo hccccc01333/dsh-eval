@@ -129,6 +129,23 @@ scripts/          harness-closure.mjs — optional local-harness workspace closu
 
 `dsh eval run` also takes `--trials`, `--concurrency`, `--dsh` and `--profile` to override the benchmark document, and `dsh eval import` takes `--case-id`. Replay runs need a `dsh` built from harness source; everything else runs against the released peers.
 
+## Releasing
+
+Bump `version` in `packages/eval/package.json` and add a CHANGELOG section, then push a matching tag:
+
+```sh
+git tag v0.4.0 && git push origin v0.4.0
+```
+
+`.github/workflows/release.yml` re-runs the gates and publishes to npm through **trusted publishing (OIDC)** with a provenance statement — no token on any machine. That path needs a one-time entry in the npm package settings (Trusted Publisher → GitHub Actions, workflow `release.yml`); the file's header has the exact fields.
+
+Without that entry, publish by staging and approving in the browser, which is the only route when the account's second factor is a security key (the npm CLI has no way to answer an OTP it cannot generate):
+
+```sh
+cd packages/eval && npx npm@11 stage publish
+# then approve the staged package at npmjs.com -> Staged Packages
+```
+
 ## License
 
 MIT

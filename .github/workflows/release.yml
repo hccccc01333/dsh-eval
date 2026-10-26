@@ -1,0 +1,85 @@
+# Publish a tag to npm through trusted publishing (OIDC).
+#
+# Why this exists: the account's 2FA is a security key, which the npm CLI cannot
+# use, so every local `npm publish` lands in EOTP and the only manual route is
+# staging plus a browser approval. Trusted publishing replaces both: GitHub
+# mints a short-lived OIDC token for this workflow, npm exchanges it for publish
+# rights, and nothing long-lived sits on a laptop.
+#
+# One-time setup, in the npm package settings
+# (https://www.npmjs.com/package/dsh-eval/access):
+#   Trusted Publisher -> GitHub Actions
+#     Organization or user: hccccc01333
+#     Repository:           dsh-eval
+#     Workflow filename:    release.yml
+#     Environment:          (leave empty)
+# Until that entry exists the publish step below fails with an auth error; the
+# staged flow (`npm stage publish` + browser approval) still works meanwhile.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Required: the OIDC token that npm exchanges for publish rights.
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm >= 11.5.1; the Node 22 image bundles 10.x.
+      - run: npm install --global npm@11
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --filter dsh-eval run typecheck
+
+      # Same gate as CI: coverage thresholds and the packed-tarball import.
+      - run: pnpm --filter dsh-eval run test:coverage
+
+      - run: pnpm --filter dsh-eval run test:pack
+
+      # A tag that disagrees with the manifest publishes the wrong version once
+      # and cannot be unpublished, so refuse up front.
+      - name: Check the tag matches the package version
+        run: |
+          package_version="$(node -p "require('./packages/eval/package.json').version")"
+          tag_version="${GITHUB_REF_NAME#v}"
+          if [ "$package_version" != "$tag_version" ]; then
+            echo "tag ${tag_version} does not match package version ${package_version}" >&2
+            exit 1
+          fi
+
+      # Re-tagging a version that already went out (for example one published by
+      # hand through staging) must not fail the run: the registry is immutable
+      # and there is nothing left to do.
+      - name: Check whether the version is already on the registry
+        id: registry
+        run: |
+          version="$(node -p "require('./packages/eval/package.json').version")"
+          if npm view "dsh-eval@${version}" version >/dev/null 2>&1; then
+            echo "dsh-eval@${version} is already published; skipping the publish step"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.registry.outputs.skip == 'false'
+        run: npm publish --provenance --access public
+        working-directory: packages/eval

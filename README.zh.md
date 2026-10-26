@@ -130,6 +130,23 @@ scripts/          harness-closure.mjs —— 可选的本地 harness workspace �
 
 回放（`replay.dir`）需要源码构建的 `dsh`；其余功能用发布版 peer 即可。
 
+## 发版
+
+改 `packages/eval/package.json` 的 `version` 并在 CHANGELOG 里加一节，然后推同名 tag：
+
+```sh
+git tag v0.4.0 && git push origin v0.4.0
+```
+
+`.github/workflows/release.yml` 会重跑各道闸门，再通过 **trusted publishing（OIDC）** 带 provenance 发布到 npm，任何机器上都不需要存 token。该路径需要在 npm 包设置里做一次性登记（Trusted Publisher → GitHub Actions，workflow 填 `release.yml`），具体字段见 workflow 文件头部。
+
+没做这个登记时，就走暂存 + 网页批准——当账号的第二因子是安全密钥时这是唯一的路（npm CLI 没法给出它生成不出来的 OTP）：
+
+```sh
+cd packages/eval && npx npm@11 stage publish
+# 然后在 npmjs.com -> Staged Packages 里批准
+```
+
 ## 许可
 
 MIT
