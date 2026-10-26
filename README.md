@@ -1,5 +1,7 @@
 # dsh-eval
 
+English | [中文](README.zh.md)
+
 **Agent Evaluation Platform for [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness).**
 
 [![npm version](https://img.shields.io/npm/v/dsh-eval)](https://www.npmjs.com/package/dsh-eval)
@@ -25,7 +27,9 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 
 ## Status
 
-npm `0.3.0` · 113 tests · 100% branch/line coverage on `src` · typecheck clean.
+`dsh-eval@0.3.1` · 113 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+
+Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 
 ## Quick start
 
@@ -36,34 +40,17 @@ pnpm add dsh-eval
 dsh plugin --profile eval add dsh-eval
 ```
 
-The npm package targets the official `@deepseek-ai/*` releases (`0.1.0-rc.6` peers). For the source flow, clone this repo and link it to a deepseek-harness checkout:
+The npm package targets the official `@deepseek-ai/*` releases (`0.1.0-rc.6` peers), and this workspace resolves the same versions, so a clone builds against exactly what consumers install — no harness checkout to link:
 
 ```sh
 git clone https://github.com/hccccc01333/dsh-eval.git
 cd dsh-eval
-```
-
-Windows (junction):
-
-```powershell
-New-Item -ItemType Junction -Path harness -Target D:\path\to\deepseek-harness
-```
-
-macOS / Linux (symlink):
-
-```sh
-ln -s /path/to/deepseek-harness harness
-```
-
-Then:
-
-```sh
 pnpm install
 pnpm --filter dsh-eval build
 pnpm --filter dsh-eval test
 ```
 
-With a `dsh` launcher from the harness checkout:
+Running benchmarks needs a `dsh` launcher; `pnpm test` does not (the suite is keyless, with a fake `dsh` and recorded session-log fixtures):
 
 ```sh
 dsh plugin --profile eval add dsh-eval
@@ -134,8 +121,10 @@ Each trial runs in a private temp workspace with an isolated `DSH_HOME` and non-
 
 ```
 packages/eval/    plugin bundle + CLI app + tests
-harness/          local deepseek-harness checkout (gitignored junction/symlink)
+scripts/          harness-closure.mjs — optional local-harness workspace closure
 ```
+
+`dsh eval run` also takes `--trials`, `--dsh` and `--profile` to override the benchmark document, and `dsh eval import` takes `--case-id`. Replay runs need a `dsh` built from harness source; everything else runs against the released peers.
 
 ## License
 

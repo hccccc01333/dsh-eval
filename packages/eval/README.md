@@ -13,7 +13,7 @@ dsh eval report eval-run.json
 dsh eval compare eval-v1.json eval-v2.json
 ```
 
-`dsh eval` is a launcher alias for `--profile eval`; the eval profile composes `dsh-base` plus this bundle. Each trial spawns the benchmark-configured `dsh` command (default `dsh`) against the benchmark-configured profile (default `headless`) with a private temp workspace, an isolated `DSH_HOME`, and a patch overlay forcing plain-JSONL persistence and non-interactive workspace-write/never-approval permissions. The harvested primary session log becomes the trial's trace; subagent child logs are not yet included.
+`dsh eval` is a launcher alias for `--profile eval`; the eval profile composes `dsh-base` plus this bundle. Each trial spawns the benchmark-configured `dsh` command (default `dsh`) against the benchmark-configured profile (default `headless`) with a private temp workspace, an isolated `DSH_HOME`, and a patch overlay forcing plain-JSONL persistence and non-interactive workspace-write/never-approval permissions. The harvested primary session log becomes the trial's trace, and subagent child logs under the trial's `DSH_HOME` are merged into it before the metric fold.
 
 ## Benchmark document
 
@@ -82,7 +82,7 @@ starting when the host exposes no LLM chat seam.
 
 ## Metrics
 
-The metric fold computes the automatic metrics directly from the session log: `turns`, `steps`, `toolCalls`, `toolResults`, `toolSuccess` plus `toolSuccessRate`, `invalidToolCalls` (results carrying an internal failure identity), `retries` (`llm/retry`), disjoint token buckets and totals, billed context tokens, `llmMs`/`toolMs`/`ttftMs`/`latencyMs`, and `costUsd` when pricing is configured. Scripted grading adds per-trial `taskSuccess` (check-command exit 0) and `toolSelectionAccuracy` (expected-tool match) and pools them into run-level rates. LLM-judge metrics (final-answer score, hallucination) are deferred.
+The metric fold computes the automatic metrics directly from the session log: `turns`, `steps`, `toolCalls`, `toolResults`, `toolSuccess` plus `toolSuccessRate`, `invalidToolCalls` (results carrying an internal failure identity), `retries` (`llm/retry`), disjoint token buckets and totals, billed context tokens, `llmMs`/`toolMs`/`ttftMs`/`latencyMs`, and `costUsd` when pricing is configured. Scripted grading adds per-trial `taskSuccess` (check-command exit 0) and `toolSelectionAccuracy` (expected-tool match) and pools them into run-level rates.
 
 Child session logs under the trial's DSH_HOME are merged into the trial trace
 before the fold, so delegated subagent work counts toward steps, tokens, tool
