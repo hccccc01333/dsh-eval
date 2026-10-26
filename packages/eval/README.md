@@ -15,6 +15,8 @@ dsh eval compare eval-v1.json eval-v2.json
 
 `dsh eval` is a launcher alias for `--profile eval`; the eval profile composes `dsh-base` plus this bundle. Each trial spawns the benchmark-configured `dsh` command (default `dsh`) against the benchmark-configured profile (default `headless`) with a private temp workspace, an isolated `DSH_HOME`, and a patch overlay forcing plain-JSONL persistence and non-interactive workspace-write/never-approval permissions. The harvested primary session log becomes the trial's trace, and subagent child logs under the trial's `DSH_HOME` are merged into it before the metric fold.
 
+Trials are independent — private temp workspace, isolated `DSH_HOME`, own patch overlay — so `concurrency` runs that many of them at once. The run record still lists results in case-then-trial order whatever the interleaving, and `--concurrency` overrides the document. Raising it trades wall time for peak CPU, memory, and concurrent model quota.
+
 ## Benchmark document
 
 ```yaml
@@ -47,6 +49,7 @@ pricing:
 | `profile` | `headless` | dsh profile each trial spawns. |
 | `command` | `[dsh]` | dsh launcher argv. |
 | `trials` | `1` | Trials per case. |
+| `concurrency` | `1` | Case x trial executions allowed in flight at once; `1` keeps the run strictly serial. |
 | `timeoutMs` | `600000` | Per-trial timeout; the direct child is killed on expiry. |
 | `seed` | `0` | Reserved for future deterministic paired comparisons. |
 | `cases[].id` | required | Stable case id. |
@@ -98,6 +101,8 @@ hallucination rate.
 
 `dsh eval compare run-v1.json run-v2.json` renders both runs as a markdown table: benchmark/model identity, completed trials, steps, tool/task/tool-selection rates, invalid calls, retries, tokens, cost, and latency, with signed `B - A` deltas. When both runs complete the same case x trial keys, the table appends paired statistics: trial count, win/lose/tie on the first available metric (task success, tool selection accuracy, or final-answer score), and mean `B - A` deltas for steps, tokens, and judge score. The runs' `seed` is recorded provenance for the pairing, not a guarantee of identical model output.
 
+Because a paired eval sample is small and its deltas are not normal, the paired block also carries inference rather than point estimates alone: an exact two-sided **sign test** over the discordant pairs (ties drop out, as the test requires) for the primary metric, and a seeded **bootstrap 95% interval** beside each mean delta. Nothing is assumed about the shape of the delta distribution, and the PRNG seed is fixed, so re-running `compare` on the same reports prints a byte-identical table. Read those p-values as per-metric and unadjusted for multiple comparisons: with three metrics shown, one p just under 0.05 is weak evidence.
+
 ## Replay (keyless CI)
 
 A keyed run records every trial's session log under its `tempRoot`. Copy the
@@ -143,6 +148,7 @@ None; this package neither assembles nor sends a provider request, so no request
 
 - **Judge output is best-effort** — a judge chat failure or unparsable reply yields null verdict fields, and judge calls consume model quota outside the trial's measured cost.
 - **Paired comparison pairs as-is** — trials pair by case id and trial index; `seed` is recorded provenance, not a deterministic guarantee of identical model output, and per-arm leaderboards are not rendered.
+- **Paired inference is unadjusted** — the sign test and bootstrap intervals are per metric, with no correction across the metrics a run prints, and a sign test needs discordant pairs to say anything: a run where every pair ties reports `p = 1`.
 - **Replay binds by first-call order** — the replay plugin keys recorded scripts to live sessions by first-call order, so concurrent subagents replay non-deterministically.
 - **Imported traces lack token usage** — Codex and Claude Code logs do not record provider usage, so imported runs report zero tokens and no cost.
 - **Direct-child timeout only** — a timed-out trial kills the direct dsh process; on Windows its descendants may survive.

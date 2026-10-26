@@ -20,6 +20,8 @@
 - LLM judge：由评审模型给出最终答案得分与幻觉标记
 - 子 agent trace 合并：子 session 日志折叠进 trial 指标
 - 配对 A/B：同 case 的胜/负/平统计
+- 配对推断：对不一致对做精确符号检验，每个均值差给出固定种子 bootstrap 95% 区间
+- 并发 trial：`concurrency` / `--concurrency` 让多个 case × trial 同时跑，结果顺序不变
 - keyless 回放：有 key 时录一次，CI 里从录制日志复现
 - 跨 harness 导入：`dsh eval import codex|claude-code <log> --out run.json`
 - `dsh eval report run.json` —— 带每个 trial 评分与合并比率的 Markdown 报告
@@ -27,7 +29,7 @@
 
 ## 状态
 
-`dsh-eval@0.3.1` · 113 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.3.1` · 129 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 `0.3.1` 起可安装：`0.3.0` 的 tarball 漏掉了入口 import 的运行时模块，导致每次安装都报 `ERR_MODULE_NOT_FOUND`。详见 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -111,12 +113,12 @@ pricing:
 | `dsh eval compare base.json candidate.json` | 对比两个 run，给出带符号的 `B - A` 差值 |
 | `dsh eval import codex\|claude-code log.jsonl --out run.json` | 把外部 session 日志导入为单 trial run |
 
-`dsh eval run` 还支持 `--trials`、`--dsh`、`--profile` 覆盖 benchmark 文档，`dsh eval import` 支持 `--case-id`。
+`dsh eval run` 还支持 `--trials`、`--concurrency`、`--dsh`、`--profile` 覆盖 benchmark 文档，`dsh eval import` 支持 `--case-id`。
 
 ## 路线图
 
-- 按实验组（arm）的排行榜与配对 trial 的显著性检验
-- 跨 case 并行执行 trial
+- 按实验组（arm）的配对排行榜
+- 报告内多指标的多重比较校正
 - run 报告与对比的 Web UI
 
 ## 仓库结构

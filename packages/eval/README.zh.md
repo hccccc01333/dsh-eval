@@ -15,6 +15,8 @@ dsh eval compare eval-v1.json eval-v2.json
 
 `dsh eval` 是 `--profile eval` 的启动器别名，eval profile 由 `dsh-base` 加本 bundle 组成。每个 trial 以 benchmark 配置的 `dsh` 命令（默认 `dsh`）和配置的 profile（默认 `headless`）启动，带有独立的临时工作区、隔离的 `DSH_HOME`，以及一层强制纯 JSONL 持久化和非交互 workspace-write/never-approval 权限的补丁。收获的主 session 日志即该 trial 的 trace；该 trial `DSH_HOME` 下的子 agent 日志会在指标折叠前合并进来。
 
+trial 之间彼此独立——各自的临时工作区、隔离的 `DSH_HOME`、各自的补丁层——所以 `concurrency` 可以让这么多个 trial 同时跑。无论并发如何交错，run 记录仍按 case、再按 trial 的顺序列出结果；`--concurrency` 可覆盖文档里的值。调高它是用墙钟时间换峰值 CPU、内存与并发的模型额度。
+
 ## Benchmark 文档
 
 ```yaml
@@ -47,6 +49,7 @@ pricing:
 | `profile` | `headless` | 每个 trial 启动的 dsh profile。 |
 | `command` | `[dsh]` | dsh 启动器 argv。 |
 | `trials` | `1` | 每个 case 的 trial 数。 |
+| `concurrency` | `1` | 同时在跑的 case × trial 数；`1` 表示严格串行。 |
 | `timeoutMs` | `600000` | 每个 trial 的超时；到期杀掉直接子进程。 |
 | `seed` | `0` | 为将来的确定性配对比较预留。 |
 | `cases[].id` | 必填 | 稳定的 case id。 |
@@ -90,6 +93,8 @@ trial `DSH_HOME` 下的子 session 日志在折叠前合并进 trial trace，因
 
 `dsh eval compare run-v1.json run-v2.json` 把两个 run 渲染成 Markdown 表：benchmark/模型标识、完成的 trial 数、steps、工具/任务/工具选择成功率、无效调用、重试、token、成本与延迟，并给出带符号的 `B - A` 差值。当两个 run 完成的 case × trial 键完全一致时，表尾追加配对统计：trial 数、按第一个可用指标（任务成功、工具选择准确率、最终答案得分）的胜/负/平，以及 steps、token、judge 得分的 `B - A` 均值差。两个 run 的 `seed` 是配对的可追溯出处，不保证模型输出一致。
 
+配对样本量小、差值不服从正态，所以配对区块除了点估计还给出推断：对主指标的不一致对做**精确双侧符号检验**（同分的对按要求剔除），并在每个均值差旁给出**固定种子 bootstrap 95% 区间**。不对差值分布的形状做任何假设，PRNG 种子固定，因此同一对报告重跑 `compare` 输出逐字节一致。这些 p 值应按"单指标、未做多重比较校正"来读：表里同时列三个指标时，单个略低于 0.05 的 p 只是弱证据。
+
 ## 回放（keyless CI）
 
 带 key 的 run 会把每个 trial 的 session 日志记录在其 `tempRoot` 下。把这些录制好的 trial 目录拷进 `replay.dir`，即可在无凭据的情况下重跑：被启动的 harness 会挂载 `@deepseek-ai/dsh-llm-replay`，从录制下来的 `assistant/chunk` 事件重建每一次模型流。
@@ -127,6 +132,7 @@ replay:
 
 - **judge 输出是尽力而为** —— judge chat 失败或回复无法解析时，裁决字段为空；judge 调用消耗的模型额度不计入 trial 的计量成本。
 - **配对对比按现状配对** —— trial 按 case id 与 trial 序号配对；`seed` 是记录下来的出处，并不确定性保证模型输出一致，按实验组（arm）的排行榜尚未渲染。
+- **配对推断未做多重比较校正** —— 符号检验与 bootstrap 区间都是单指标的，未对一次输出里的多个指标做校正；而且符号检验需要不一致对才能给出结论：全部同分的 run 报 `p = 1`。
 - **回放按首次调用顺序绑定** —— 回放插件按首次调用顺序把录制脚本对应到实时 session，因此并发子 agent 的回放是非确定性的。
 - **导入的 trace 没有 token 用量** —— Codex 与 Claude Code 日志不记录 provider 用量，导入的 run 报零 token 且无成本。
 - **超时只杀直接子进程** —— 超时的 trial 只杀直接 dsh 进程；在 Windows 上它的后代进程可能存活。

@@ -5,6 +5,7 @@ English | [中文](README.zh.md)
 **Agent Evaluation Platform for [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness).**
 
 [![npm version](https://img.shields.io/npm/v/dsh-eval)](https://www.npmjs.com/package/dsh-eval)
+[![CI](https://github.com/hccccc01333/dsh-eval/actions/workflows/ci.yml/badge.svg)](https://github.com/hccccc01333/dsh-eval/actions/workflows/ci.yml)
 [![license](https://img.shields.io/github/license/hccccc01333/dsh-eval)](LICENSE)
 
 Run benchmarks against headless `dsh` profiles, harvest persisted session logs as traces, fold automatic metrics, grade task success and tool selection, and report or compare runs — one `benchmark.yaml` in, one JSON run + Markdown report out.
@@ -20,6 +21,8 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - LLM judge: final-answer score and hallucination flags from a judge model
 - Subagent trace merging: child session logs fold into the trial metrics
 - Paired A/B: same-case win/lose/tie statistics across two runs
+- Paired inference: exact sign test over discordant pairs, seeded bootstrap 95% intervals on every mean delta
+- Parallel trials: `concurrency` / `--concurrency` runs several case × trial executions at once, results still ordered
 - Keyless replay: record once with a key, replay in CI from recorded logs
 - Cross-harness import: `dsh eval import codex|claude-code <log> --out run.json`
 - `dsh eval report run.json` — Markdown report with per-trial scores and pooled rates
@@ -27,7 +30,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 
 ## Status
 
-`dsh-eval@0.3.1` · 113 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.3.1` · 129 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 
@@ -113,8 +116,8 @@ Each trial runs in a private temp workspace with an isolated `DSH_HOME` and non-
 
 ## Roadmap
 
-- Per-arm leaderboards and significance testing over paired trials
-- Parallel trial execution across cases
+- Per-arm leaderboards over paired trials
+- Multiple-comparison correction across the metrics a report prints
 - Web UI dashboard for run reports and comparisons
 
 ## Repository layout
@@ -124,7 +127,7 @@ packages/eval/    plugin bundle + CLI app + tests
 scripts/          harness-closure.mjs — optional local-harness workspace closure
 ```
 
-`dsh eval run` also takes `--trials`, `--dsh` and `--profile` to override the benchmark document, and `dsh eval import` takes `--case-id`. Replay runs need a `dsh` built from harness source; everything else runs against the released peers.
+`dsh eval run` also takes `--trials`, `--concurrency`, `--dsh` and `--profile` to override the benchmark document, and `dsh eval import` takes `--case-id`. Replay runs need a `dsh` built from harness source; everything else runs against the released peers.
 
 ## License
 

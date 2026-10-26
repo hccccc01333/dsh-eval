@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased (0.4.0)
+
+### Added
+
+- **Concurrent trials.** `concurrency` in the benchmark document and
+  `--concurrency` on `dsh eval run` set how many case x trial executions are in
+  flight at once; default `1` keeps the previous serial behavior. Each trial
+  already owned a private temp directory, workspace copy, and `DSH_HOME`, so the
+  pool changes only scheduling: results are written at their task index, so the
+  run record keeps case-then-trial order whatever the interleaving, and the
+  first error to escape a trial still stops the pool and rejects the run.
+- **Paired inference in `compare`.** The paired block no longer stops at point
+  estimates. It runs an exact two-sided sign test over the discordant pairs of
+  the primary metric (printed with `n`, its discordant count) and reports a
+  seeded bootstrap 95% interval beside each paired mean delta of steps, tokens,
+  and judge score. Both are distribution-free: a paired eval sample is small and
+  its deltas are not normal, so a t-interval would be unjustified. Ties drop out
+  of the sign test, as it requires. The bootstrap PRNG is seeded, so re-running
+  `compare` on the same reports prints a byte-identical table.
+
+### Changed
+
+- The paired fields on the internal `PairedStats` shape became
+  `stepsDelta`/`tokensDelta`/`scoreDelta` (mean plus interval) instead of bare
+  `mean*Delta` numbers, and `test` carries the sign-test outcome.
+
 ## 0.3.1 — 2026-10-26
 
 ### Fixed
