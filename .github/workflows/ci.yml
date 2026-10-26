@@ -1,0 +1,47 @@
+# Typecheck, test, and pack the eval plugin.
+#
+# The pack step is the one that matters most: `pnpm test` exercises `src/`
+# through vitest and structurally cannot catch a `files` whitelist that drops a
+# module the built entry imports — which is exactly how `dsh-eval@0.3.0` shipped
+# unimportable. `test:pack` packs the tarball the way npm does and imports it
+# back through the real `exports` map.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  verify:
+    name: verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows is in the matrix on purpose: the runner spawns subprocesses
+        # without a shell and kills timed-out trials by pid, and both paths
+        # differ from POSIX.
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --filter dsh-eval run typecheck
+
+      # Thresholds in vitest.config.ts fail the build if coverage drops off 100%.
+      - run: pnpm --filter dsh-eval run test:coverage
+
+      - run: pnpm --filter dsh-eval run build
+
+      - run: pnpm --filter dsh-eval run test:pack
