@@ -1,5 +1,5 @@
 /**
- * dsh-eval 鈥?agent evaluation over headless dsh profiles.
+ * dsh-eval — agent evaluation over headless dsh profiles.
  *
  * The eval bundle mounts this command-line plugin over dsh-base. It parses
  * `dsh --profile eval run <benchmark.yaml>` / `report <run.json>`, spawns one

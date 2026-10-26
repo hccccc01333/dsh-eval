@@ -1,8 +1,20 @@
-# The standalone dsh-eval workspace. The eval package lives at packages/eval;
-# harness/ is a junction to the local deepseek-harness checkout so the
-# @deepseek-ai/* packages resolve at workspace version 0.1.0-rc.5 instead of
-# the older npm rc.1 releases.
+# The standalone dsh-eval workspace: one package, resolved against the published
+# @deepseek-ai/* releases.
+#
+# Why the npm releases rather than a harness checkout: the published package
+# declares its `@deepseek-ai/*` peers at the released versions, and CI and users
+# install exactly those, so developing against the same versions keeps the local
+# tree and the published artifact honest. It also means a clone installs with
+# nothing but `pnpm install` — no harness junction, no symlink privileges.
+#
+# Replay runs (`replay.dir`) still need a `dsh` launcher built from harness
+# source, but that is a *runtime* dependency on the spawned command, not on this
+# workspace: pass it with `--dsh` or put it on PATH.
+#
+# For the rarer case of typechecking against harness *sources* instead of the
+# releases, `node scripts/harness-closure.mjs` prints the transitive
+# `workspace:^` closure to add below, and the devDependencies have to switch
+# from semver ranges back to `workspace:^`. That variant is deliberately not the
+# default: it cannot be installed from a bare clone.
 packages:
   - packages/eval
-  - harness/vendor/*
-  - harness/packages/*/*
