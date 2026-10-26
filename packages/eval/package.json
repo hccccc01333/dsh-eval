@@ -9,6 +9,10 @@
     "type": "git",
     "url": "git+https://github.com/hccccc01333/dsh-eval.git"
   },
+  "homepage": "https://github.com/hccccc01333/dsh-eval#readme",
+  "bugs": {
+    "url": "https://github.com/hccccc01333/dsh-eval/issues"
+  },
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
