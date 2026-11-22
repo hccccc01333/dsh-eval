@@ -4,6 +4,8 @@
 
 ### Added
 
+- **Lower regex overhead.** Tool-name matching shares one worker across the
+  whole batch instead of spawning one per recorded tool call.
 - **Untrusted-input hardening.** Regex grading runs in a time-boxed worker so
   catastrophic patterns cannot hang the evaluator; benchmark file references are
   contained by default behind an explicit `allowExternalPaths` opt-in; and

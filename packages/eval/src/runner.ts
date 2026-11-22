@@ -18,7 +18,7 @@ import { cp, mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { splitArgv } from './argv.ts'
-import { safeRegexTest } from './safe-regex.ts'
+import { safeRegexTest, safeRegexTestAny } from './safe-regex.ts'
 import type { Benchmark, BenchmarkExpectation, EvalRun, EvalTrialResult } from './types.ts'
 import type { EvalGrade, EvalRunGrading } from './types.ts'
 import { finalAnswerOf, tryJudgeTrial, type JudgeChat } from './judge.ts'
@@ -122,15 +122,12 @@ async function toolSelectionOf(
   if (expected.tools !== undefined && !expected.tools.every(includes)) return false
   if (expected.toolAnyOf !== undefined && !expected.toolAnyOf.some(includes)) return false
   if (expected.toolRegex !== undefined) {
-    const matched = await Promise.all(names.map(async name => {
-      try {
-        return await safeRegexTest(expected.toolRegex!, name)
-      } catch {
-        // The schema validates at load; hand-built benchmarks degrade to failure.
-        return false
-      }
-    }))
-    if (!matched.some(Boolean)) return false
+    try {
+      if (!await safeRegexTestAny(expected.toolRegex!, names)) return false
+    } catch {
+      // The schema validates at load; hand-built benchmarks degrade to failure.
+      return false
+    }
   }
   if (expected.toolNot !== undefined && expected.toolNot.some(includes)) return false
   return true
