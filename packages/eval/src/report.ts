@@ -7,7 +7,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { z } from 'zod'
-import { computeReliability, type ReliabilitySummary } from './reliability.ts'
+import { computeCoverage, computeReliability, type ReliabilitySummary } from './reliability.ts'
 import type { EvalRun } from './types.ts'
 
 /**
@@ -154,6 +154,9 @@ function renderReliability(summary: ReliabilitySummary): string[] {
     '',
     `- cases: ${summary.cases} · trials/case: ${summary.k}`,
     `- pass@1: ${(summary.passAt1 * 100).toFixed(1)}% · pass@${summary.k}: ${(summary.passAtK * 100).toFixed(1)}% · pass^${summary.k}: ${(summary.passAllK * 100).toFixed(1)}%`,
+    ...(summary.unscored === 0 ? [] : [
+      `- strict pass@1: ${(summary.strictPassAt1 * 100).toFixed(1)}% over all ${summary.total} trials (${summary.unscored} unscored)`,
+    ]),
     `- hardest cases: ${summary.hardest.map(item => `\`${item.caseId}\` ${item.passes}/${item.trials}`).join(' · ')}`,
   ]
   if (summary.flaky.length > 0) {
@@ -229,6 +232,10 @@ export function renderMarkdownReport(run: EvalRun): string {
   const aggregateRow = `| aggregate | – | ${[...aggregateCells, ...aggregateJudgeCells].join(' | ')} |`
   const taskReliability = computeReliability(run, 'task')
   const toolReliability = computeReliability(run, 'tool-selection')
+  const coverage = computeCoverage(run)
+  const coverageLine = coverage.unscored === 0
+    ? `- trials: ${coverage.completed}/${coverage.total} completed`
+    : `- trials: ${coverage.completed}/${coverage.total} completed · ${coverage.unscored} unscored (${coverage.timeouts} timeouts, ${coverage.errors} errors)`
   return [
     `# Eval: ${run.benchmark}`,
     '',
@@ -237,6 +244,7 @@ export function renderMarkdownReport(run: EvalRun): string {
     `- trials per case: ${run.trials}`,
     `- created: ${new Date(run.createdAt).toISOString()}`,
     `- traces: ${run.tempRoot}`,
+    coverageLine,
     '',
     ...header,
     ...rows,

@@ -118,7 +118,7 @@ describe('dsh-eval benchmark runner', () => {
   it('overlaps trials when the concurrency override exceeds one', async () => {
     process.env.FAKE_DASH_MODE = 'delay'
     process.env.FAKE_DASH_LOG = FIXTURE_LOG
-    process.env.FAKE_DASH_DELAY_MS = '800'
+    process.env.FAKE_DASH_DELAY_MS = '1200'
     const start = Date.now()
     // The benchmark itself stays serial; the override is what parallelizes it.
     const run = await runBenchmark(buildBenchmark({ trials: 4 }), {
@@ -128,8 +128,9 @@ describe('dsh-eval benchmark runner', () => {
     const elapsed = Date.now() - start
     expect(run.cases).toHaveLength(4)
     expect(run.cases.every(result => result.status === 'completed')).toBe(true)
-    // Four serial 800ms trials plus four spawns cannot finish this fast.
-    expect(elapsed).toBeLessThan(2500)
+    // Four serial 1200ms trials cannot finish inside the threshold; the wide
+    // margin keeps this timing check stable on a loaded CI runner.
+    expect(elapsed).toBeLessThan(3000)
   })
 
   it('rejects the run when a trial setup throws', async () => {

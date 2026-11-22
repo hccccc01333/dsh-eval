@@ -87,9 +87,9 @@ trial `DSH_HOME` 下的子 session 日志在折叠前合并进 trial trace，因
 
 ## 运行报告
 
-`dsh eval run --out run.json` 每次运行写一份 JSON：benchmark 与模型标识、每个 trial 的结果与绝对 trace 路径、聚合指标（计数与耗时为均值，成功率为合并值）、合并后的评分比率。`dsh eval report run.json` 把 run 渲染为 Markdown。trial 工作区与 trace 保留在 run 的 `tempRoot`（私有临时目录）中且不会被删除，run 不再需要时自行清理。
+`dsh eval run benchmark.yaml --out run.json` 每次运行写一份 JSON：benchmark 与模型标识、每个 trial 的结果与绝对 trace 路径、聚合指标（计数与耗时为均值，成功率为合并值）、合并后的评分比率。`dsh eval report run.json` 把 run 渲染为 Markdown。trial 工作区与 trace 保留在 run 的 `tempRoot`（私有临时目录）中且不会被删除，run 不再需要时自行清理。
 
-Markdown 报告会为每个评分维度（任务成功、工具选择准确率）追加**可靠性**区块。合并比率无法区分"每个 case 都稳定在 66%"与"两个 case 全过、第三个全挂"；因此区块给出 `pass@1`（trial 级）、`pass@k`（至少一个 trial 成功的 case 比例）、`pass^k`（全部 trial 成功的 case 比例），以及结果不一致的不稳定 case 和按通过率排序的最难 case。这些指标在渲染时从已保存的 trial 现算，因此旧报告无需重跑就能获得新区块。
+Markdown 报告会为每个评分维度（任务成功、工具选择准确率）追加**可靠性**区块。合并比率无法区分"每个 case 都稳定在 66%"与"两个 case 全过、第三个全挂"；因此区块给出 `pass@1`（trial 级）、`pass@k`（至少一个 trial 成功的 case 比例）、`pass^k`（全部 trial 成功的 case 比例），以及结果不一致的不稳定 case 和按通过率排序的最难 case。报告头部还会给出 trial 覆盖率（完成/总数、未评分、超时数），可靠性区块在"仅已评分"的通过率旁并列 **严格 pass@1**：超时与失败 trial 留在分母里，因此"难题上超时"的模型不会显得比"跑完但答错"的模型更好。这些指标在渲染时从已保存的 trial 现算，旧报告无需重跑就能获得新区块。`dsh eval run` 只要有任何 trial 失败就以非零码退出，而非等到全部失败。
 
 ## 对比
 

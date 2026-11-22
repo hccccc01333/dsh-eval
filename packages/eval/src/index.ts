@@ -18,6 +18,7 @@ import { applyEval, type EvalStartupValues } from './command.ts'
 import { compareRuns, renderCompareMarkdown } from './compare.ts'
 import { importTraceFile } from './import.ts'
 import { llmJudgeChat, type JudgeChat } from './judge.ts'
+import { computeCoverage, computeReliability } from './reliability.ts'
 import { renderMarkdownReport, writeRunReport, loadRunReport } from './report.ts'
 import { runBenchmark } from './runner.ts'
 
@@ -62,7 +63,13 @@ function summary(run: Awaited<ReturnType<typeof runBenchmark>>): string {
   const score = judgeScore === null || judgeScore === undefined
     ? ''
     : `, judge score ${judgeScore.toFixed(1)}`
-  return `tool success ${rate}${task}${score}, ${aggregate.steps.toFixed(1)} steps/trial`
+  const reliability = computeReliability(run, 'task')
+  const passes = reliability === null
+    ? ''
+    : `, pass@${reliability.k} ${(reliability.passAtK * 100).toFixed(1)}% / pass^${reliability.k} ${(reliability.passAllK * 100).toFixed(1)}%`
+  const coverage = computeCoverage(run)
+  const unscored = coverage.unscored === 0 ? '' : `, ${coverage.unscored} unscored`
+  return `tool success ${rate}${task}${score}${passes}${unscored}, ${aggregate.steps.toFixed(1)} steps/trial`
 }
 
 /**
@@ -70,8 +77,8 @@ function summary(run: Awaited<ReturnType<typeof runBenchmark>>): string {
  * @param values - the resolved command-line invocation.
  * @param io - output streams for the report and diagnostics.
  * @param services - injected runtime seams, e.g. the LLM-judge chat.
- * @returns the process exit code; nonzero for any failure or a run with no
- *   completed trials.
+ * @returns the process exit code; nonzero when any trial failed or no trial
+ *   completed, so a partially failing run cannot be mistaken for a green CI.
  */
 export async function executeEval(
   values: EvalStartupValues,
@@ -105,10 +112,11 @@ export async function executeEval(
       ...(services.judgeChat !== undefined ? { judgeChat: services.judgeChat } : {}),
     })
     await writeRunReport(run, values.outPath)
-    io.stdout.write(`Wrote ${values.outPath} (${run.cases.length} trials, ${summary(run)})\n`)
+    const failed = run.cases.filter(result => result.status === 'error')
+    const completed = run.cases.length - failed.length
+    io.stdout.write(`Wrote ${values.outPath} (${completed}/${run.cases.length} completed, ${summary(run)})\n`)
     // A failed trial lives in the JSON report, but a CLI run must also say why
     // on stderr — otherwise an empty stdout/stderr looks like a clean failure.
-    const failed = run.cases.filter(result => result.status === 'error')
     if (failed.length > 0) {
       const sample = failed.slice(0, 3).map((result) => {
         /* v8 ignore next 2 -- runner always sets `error` on error trials; the fallback guards hand-edited reports. */
@@ -117,7 +125,7 @@ export async function executeEval(
       }).join('\n')
       io.stderr.write(`dsh eval: ${failed.length} trial(s) failed:\n${sample}\n`)
     }
-    return run.aggregate === null ? 1 : 0
+    return failed.length > 0 || run.aggregate === null ? 1 : 0
   } catch (error) {
     io.stderr.write(`dsh eval: ${error instanceof Error ? error.message : String(error)}\n`)
     return 1

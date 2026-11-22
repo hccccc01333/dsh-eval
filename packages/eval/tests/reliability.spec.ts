@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeReliability } from '../src/reliability.ts'
+import { computeCoverage, computeReliability } from '../src/reliability.ts'
 import type { EvalRun, EvalTrialResult } from '../src/types.ts'
 
 function trial(caseId: string, index: number, task: boolean | null, tool: boolean | null): EvalTrialResult {
@@ -38,6 +38,32 @@ describe('dsh-eval reliability', () => {
       caseId: 'c', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
     }]))).toBeNull()
     expect(computeReliability(run([trial('c', 1, null, null)]))).toBeNull()
+    expect(computeCoverage(run([
+      { caseId: 'c', trial: 1, status: 'error', error: 'timeout', exitCode: null, timedOut: true },
+    ]))).toEqual({ total: 1, completed: 0, errors: 1, timeouts: 1, unscored: 1 })
+  })
+
+  it('keeps errors and timeouts in the strict denominator', () => {
+    const withFailures = run([
+      trial('a', 1, true, null), trial('a', 2, true, null),
+      { caseId: 'a', trial: 3, status: 'error', error: 'timeout', exitCode: null, timedOut: true },
+      { caseId: 'b', trial: 1, status: 'error', error: 'boom', exitCode: 1, timedOut: false },
+    ])
+    const summary = computeReliability(withFailures)!
+    expect(summary.total).toBe(4)
+    expect(summary.unscored).toBe(2)
+    expect(summary.passAt1).toBe(1)
+    expect(summary.strictPassAt1).toBe(0.5)
+    expect(summary.cases).toBe(1)
+    expect(summary.hardest[0]).toMatchObject({ caseId: 'a', trials: 2, total: 3 })
+    // The error-only case is unscored but still belongs in the denominator.
+    expect(summary.hardest.map(item => item.caseId)).toEqual(['a'])
+    expect(computeCoverage(withFailures)).toEqual({
+      total: 4, completed: 2, errors: 2, timeouts: 1, unscored: 2,
+    })
+    expect(computeCoverage(run([trial('a', 1, true, null)]))).toEqual({
+      total: 1, completed: 1, errors: 0, timeouts: 0, unscored: 0,
+    })
   })
 
   it('separates pass@k from pass^k and surfaces flaky cases', () => {

@@ -4,6 +4,13 @@
 
 ### Added
 
+- **Trial coverage and survivor-bias-free pass rates.** Reports now show
+  `completed / total` trials with unscored and timeout counts, and the
+  Reliability block adds `strict pass@1` (passes over every trial, including
+  errors and timeouts) beside the graded-only figure. `compare` gained
+  `unscored trials` and `strict pass@1 (task)` rows. A model that times out on
+  hard cases can no longer look better simply because those trials vanished
+  from the denominator. Derived at render time, so old reports benefit too.
 - **Reliability metrics over repeated trials.** A new `reliability` module folds
   a run's per-trial grades into `pass@1`, `pass@k` (cases with at least one
   passing trial), and `pass^k` (cases passing every trial), plus the flaky cases
@@ -23,6 +30,17 @@
 
 ### Fixed
 
+- **`dsh eval run` exits nonzero when any trial fails.** Previously a single
+  surviving trial made the command exit 0 even if the rest errored, so a
+  `run && next-step` CI chain could go green on a broken benchmark. The stdout
+  count now reads `completed/total` and the failing trials are still listed on
+  stderr.
+- **Comparison cost is no longer rounded to zero.** `cost/trial (USD)` used a
+  one-decimal formatter, turning real micro-dollar costs into `0.0`; it now
+  prints six decimals with a sign-aware delta. Count rows print as integers.
+- **`dsh eval run` docs include the required benchmark argument.** Copying
+  `dsh eval run --out run.json` from the run-report section failed with a
+  missing-argument error.
 - **Case ids that collapse onto the same trial directory are now rejected.** A
   trial's private directory is `<caseSegment(id)>-<trial>`, so ids like `a/b`
   and `a b` (or a plain duplicate, or `Case`/`case` on a case-folding

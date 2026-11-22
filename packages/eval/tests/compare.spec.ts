@@ -59,11 +59,14 @@ describe('dsh-eval comparison', () => {
     const rows = compareRuns(a, b)
     const byMetric = new Map(rows.map(row => [row.metric, row]))
     expect(byMetric.get('benchmark')).toEqual({ metric: 'benchmark', a: 'base', b: 'candidate', delta: '–' })
-    expect(byMetric.get('completed trials')).toEqual({ metric: 'completed trials', a: '1.0', b: '2.0', delta: '+1.0' })
+    expect(byMetric.get('completed trials')).toEqual({ metric: 'completed trials', a: '1', b: '2', delta: '+1' })
     expect(byMetric.get('steps/trial')).toEqual({ metric: 'steps/trial', a: '2.0', b: '4.0', delta: '+2.0' })
     expect(byMetric.get('tool success')).toEqual({ metric: 'tool success', a: '100.0%', b: '90.0%', delta: '-10.0pp' })
     expect(byMetric.get('task success')).toEqual({ metric: 'task success', a: '50.0%', b: '75.0%', delta: '+25.0pp' })
-    expect(byMetric.get('cost/trial (USD)')).toEqual({ metric: 'cost/trial (USD)', a: '0.0', b: '0.0', delta: '+0.0' })
+    expect(byMetric.get('cost/trial (USD)')).toEqual({
+      metric: 'cost/trial (USD)', a: '$0.000001', b: '$0.000002', delta: '+$0.000001',
+    })
+    expect(compareRuns(b, a).find(row => row.metric === 'cost/trial (USD)')?.delta).toBe('-$0.000001')
     const markdown = renderCompareMarkdown(rows)
     expect(markdown).toContain('# Compare')
     expect(markdown).toContain('| benchmark | base | candidate | – |')

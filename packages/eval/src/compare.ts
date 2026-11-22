@@ -6,7 +6,7 @@
  */
 
 import type { EvalRun, EvalTrialResult } from './types.ts'
-import { computeReliability } from './reliability.ts'
+import { computeCoverage, computeReliability } from './reliability.ts'
 import {
   bonferroni,
   pairedDelta,
@@ -60,6 +60,24 @@ function formatNumber(value: number | null, digits = 1): string {
 /** Render a nullable rate as percent with a dash placeholder. */
 function formatRate(value: number | null): string {
   return value === null ? '–' : `${(value * 100).toFixed(1)}%`
+}
+
+/** Render USD at micro-dollar precision — one decimal rounds every real cost to zero. */
+function formatUsd(value: number | null): string {
+  return value === null ? '–' : `$${value.toFixed(6)}`
+}
+
+/** Render a signed USD delta at micro-dollar precision. */
+function formatUsdDelta(a: number | null, b: number | null): string {
+  if (a === null || b === null) return '–'
+  const delta = b - a
+  return `${delta >= 0 ? '+' : '-'}$${Math.abs(delta).toFixed(6)}`
+}
+
+/** Render a signed delta between two counts without decimal noise. */
+function formatCountDelta(a: number, b: number): string {
+  const delta = b - a
+  return `${delta >= 0 ? '+' : ''}${delta}`
 }
 
 /** Render a signed delta between two nullable numbers. */
@@ -199,10 +217,21 @@ export function compareRuns(a: EvalRun, b: EvalRun): CompareRow[] {
     }
   }
   const numeric = (selector: RunSelector, label: string): CompareRow => rates(selector, label, '')
+  const counts = (count: (run: EvalRun) => number, label: string): CompareRow => ({
+    metric: label,
+    a: String(count(a)),
+    b: String(count(b)),
+    delta: formatCountDelta(count(a), count(b)),
+  })
+  const usd = (selector: RunSelector, label: string): CompareRow => {
+    const aValue = selector(a)
+    const bValue = selector(b)
+    return { metric: label, a: formatUsd(aValue), b: formatUsd(bValue), delta: formatUsdDelta(aValue, bValue) }
+  }
   const rows: CompareRow[] = [
     { metric: 'benchmark', a: a.benchmark, b: b.benchmark, delta: '–' },
     { metric: 'model', a: a.model, b: b.model, delta: '–' },
-    numeric(run => completed(run), 'completed trials'),
+    counts(completed, 'completed trials'),
     numeric(run => run.aggregate?.steps ?? null, 'steps/trial'),
     rates(run => run.aggregate?.toolSuccessRate ?? null, 'tool success', 'pp'),
     rates(run => run.grading?.taskSuccessRate ?? null, 'task success', 'pp'),
@@ -210,12 +239,14 @@ export function compareRuns(a: EvalRun, b: EvalRun): CompareRow[] {
     numeric(run => run.aggregate?.invalidToolCalls ?? null, 'invalid tool calls/trial'),
     numeric(run => run.aggregate?.retries ?? null, 'retries/trial'),
     numeric(run => run.aggregate?.totalTokens ?? null, 'tokens/trial'),
-    numeric(run => run.aggregate?.costUsd ?? null, 'cost/trial (USD)'),
+    usd(run => run.aggregate?.costUsd ?? null, 'cost/trial (USD)'),
     numeric(run => run.aggregate?.latencyMs ?? null, 'latency/trial (ms)'),
   ]
   // Reliability is derived from the trials rather than stored, so older run
   // reports gain these rows on the next `compare` without being rewritten.
   rows.push(
+    counts(run => computeCoverage(run).unscored, 'unscored trials'),
+    rates(run => computeReliability(run, 'task')?.strictPassAt1 ?? null, 'strict pass@1 (task)', 'pp'),
     rates(run => computeReliability(run, 'task')?.passAtK ?? null, 'pass@k (task)', 'pp'),
     rates(run => computeReliability(run, 'task')?.passAllK ?? null, 'pass^k (task)', 'pp'),
     rates(run => computeReliability(run, 'tool-selection')?.passAtK ?? null, 'pass@k (tool-selection)', 'pp'),

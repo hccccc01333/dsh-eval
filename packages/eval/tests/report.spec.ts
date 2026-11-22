@@ -262,4 +262,19 @@ describe('dsh-eval report persistence and rendering', () => {
     // A stable tool-selection dimension prints no flaky line.
     expect(markdown.match(/flaky cases/gu)).toHaveLength(1)
   })
+
+  it('shows the unscored denominator and the strict rate', () => {
+    const markdown = renderMarkdownReport(buildRun({
+      trials: 3,
+      cases: [
+        { caseId: 'a', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          grade: { taskSuccess: true, toolSelectionAccuracy: null } },
+        { caseId: 'a', trial: 2, status: 'completed', exitCode: 0, timedOut: false,
+          grade: { taskSuccess: false, toolSelectionAccuracy: null } },
+        { caseId: 'a', trial: 3, status: 'error', error: 'timeout', exitCode: null, timedOut: true },
+      ],
+    }))
+    expect(markdown).toContain('- trials: 2/3 completed · 1 unscored (1 timeouts, 1 errors)')
+    expect(markdown).toContain('- strict pass@1: 33.3% over all 3 trials (1 unscored)')
+  })
 })

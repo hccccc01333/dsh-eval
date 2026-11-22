@@ -112,7 +112,7 @@ describe('dsh-eval command composition', () => {
       '--profile', 'headless',
     ])
     expect(observed.exits).toEqual([0])
-    expect(observed.out).toContain(`Wrote ${outPath} (1 trials, tool success 100.0%, 1.0 steps/trial)`)
+    expect(observed.out).toContain(`Wrote ${outPath} (1/1 completed, tool success 100.0%, 1.0 steps/trial)`)
     expect(existsSync(outPath)).toBe(true)
   })
 
@@ -377,6 +377,43 @@ describe('dsh-eval execution entry', () => {
     )
     expect(code).toBe(0)
     expect(out.join('')).toContain(', task success 100.0%')
+    expect(out.join('')).toContain(', pass@1 100.0% / pass^1 100.0%')
     expect(existsSync(outPath)).toBe(true)
+  })
+
+  it('exits 1 when only some trials fail, so CI cannot misread a green run', async () => {
+    const dir = tempDir()
+    const script = join(dir, 'partial-dsh.mjs')
+    writeFileSync(script, [
+      "import { copyFileSync, mkdirSync } from 'node:fs'",
+      "import { join } from 'node:path'",
+      "if (!process.cwd().includes('bad')) {",
+      "  const dir = join(process.env.DSH_HOME, 'sessions', 'project', 'session-1')",
+      '  mkdirSync(dir, { recursive: true })',
+      "  copyFileSync(process.env.FAKE_DASH_LOG, join(dir, 'session.jsonl'))",
+      '}',
+      '',
+    ].join('\n'))
+    const benchmarkPath = join(dir, 'partial.yml')
+    writeFileSync(benchmarkPath, [
+      'name: partial',
+      'model: m',
+      'cases:',
+      '  - id: good',
+      '    prompt: p',
+      '  - id: bad',
+      '    prompt: p',
+      '',
+    ].join('\n'))
+    const outPath = join(dir, 'run.json')
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const out: string[] = []
+    const code = await executeEval(
+      { kind: 'run', benchmarkPath, outPath, dshCommand: [process.execPath, script] },
+      { stdout: { write: (chunk) => { out.push(chunk); return true } }, stderr: { write: () => {} } },
+    )
+    expect(code).toBe(1)
+    expect(out.join('')).toContain('(1/2 completed,')
+    expect(out.join('')).toContain('1 unscored')
   })
 })
