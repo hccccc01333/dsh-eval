@@ -399,3 +399,19 @@ export function renderCompareMarkdown(rows: readonly CompareRow[]): string {
     ]),
   ].join('\n')
 }
+
+/**
+ * Render a two-run comparison as machine-readable JSON.
+ * @param a - the baseline run.
+ * @param b - the candidate run.
+ * @returns a JSON string ending in a newline.
+ */
+export function renderCompareJson(a: EvalRun, b: EvalRun): string {
+  return `${JSON.stringify({
+    baseline: { benchmark: a.benchmark, model: a.model },
+    candidate: { benchmark: b.benchmark, model: b.model },
+    rows: compareRuns(a, b),
+    paired: pairedCompare(a, b),
+    cases: pairedCases(a, b) ?? [],
+  })}\n`
+}

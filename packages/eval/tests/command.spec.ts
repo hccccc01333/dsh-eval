@@ -491,6 +491,11 @@ describe('dsh-eval command composition', () => {
     const unpaired = await bootEval(['compare', emptyA, emptyB])
     expect(unpaired.exits).toEqual([0])
     expect(unpaired.out).not.toContain('Paired case outcomes')
+
+    const structured = await bootEval(['compare', pathA, pathB, '--json'])
+    expect(structured.exits).toEqual([0])
+    const parsed = JSON.parse(structured.out) as { baseline: { benchmark: string } }
+    expect(parsed.baseline.benchmark).toBe('base')
   })
 
   it('ranks several persisted runs through the CLI', async () => {

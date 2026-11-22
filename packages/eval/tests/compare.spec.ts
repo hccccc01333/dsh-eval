@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compareRuns, pairedCases, pairedCompare, renderCompareMarkdown, renderPairedCases } from '../src/compare.ts'
+import { compareRuns, pairedCases, pairedCompare, renderCompareJson, renderCompareMarkdown, renderPairedCases } from '../src/compare.ts'
 import type { EvalRun, EvalTrialResult } from '../src/types.ts'
 
 function buildRun(overrides: Partial<EvalRun> = {}): EvalRun {
@@ -132,6 +132,26 @@ describe('dsh-eval comparison', () => {
       adjustedPValue: Math.min(1, paired!.test.pValue * 4),
       intervalConfidence: 0.9875,
     })
+  })
+
+  it('renders a machine-readable comparison with paired inference and cases', () => {
+    const a = buildRun({ benchmark: 'base', cases: [trial('c', 1, true, 2, 10, 5)] })
+    const b = buildRun({ benchmark: 'candidate', cases: [trial('c', 1, false, 3, 12, 4)] })
+    const parsed = JSON.parse(renderCompareJson(a, b)) as {
+      baseline: { benchmark: string }; candidate: { benchmark: string }
+      rows: { metric: string }[]; paired: { pairs: number } | null
+      cases: { outcome: string }[]
+    }
+    expect(parsed.baseline.benchmark).toBe('base')
+    expect(parsed.candidate.benchmark).toBe('candidate')
+    expect(parsed.rows.map(row => row.metric)).toContain('benchmark')
+    expect(parsed.paired?.pairs).toBe(1)
+    expect(parsed.cases.map(item => item.outcome)).toEqual(['A better'])
+    const unpaired = JSON.parse(renderCompareJson(buildRun(), buildRun())) as {
+      paired: unknown; cases: unknown[]
+    }
+    expect(unpaired.paired).toBeNull()
+    expect(unpaired.cases).toEqual([])
   })
 
   it('classifies and renders the paired cases behind the sign test', () => {

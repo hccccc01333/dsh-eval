@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Structured comparison.** `dsh eval compare --json` emits the comparison
+  rows, paired inference statistics and classified case outcomes as one JSON
+  object, completing the machine-readable read-only command set.
 - **Structured reports and leaderboards.** `dsh eval report --json` emits the
   run plus every derived summary block (coverage, reliability, precision,
   agreement, calibration) and raw trials as one JSON object; `dsh eval

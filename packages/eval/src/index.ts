@@ -15,7 +15,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { loadBenchmark } from './benchmark.ts'
 import { applyEval, type EvalStartupValues } from './command.ts'
-import { compareRuns, pairedCases, renderCompareMarkdown, renderPairedCases } from './compare.ts'
+import { compareRuns, pairedCases, renderCompareJson, renderCompareMarkdown, renderPairedCases } from './compare.ts'
 import { writeDashboard } from './dashboard.ts'
 import { evaluateGate, renderGate, renderGateJson } from './gate.ts'
 import { importTraceFile } from './import.ts'
@@ -126,6 +126,10 @@ export async function executeEval(
     if (values.kind === 'compare') {
       const a = await loadRunReport(values.runPathA)
       const b = await loadRunReport(values.runPathB)
+      if (values.json === true) {
+        io.stdout.write(renderCompareJson(a, b))
+        return 0
+      }
       io.stdout.write(renderCompareMarkdown(compareRuns(a, b)))
       const cases = pairedCases(a, b)
       if (cases !== null) io.stdout.write(renderPairedCases(cases))

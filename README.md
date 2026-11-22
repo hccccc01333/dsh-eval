@@ -33,12 +33,12 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - `dsh eval validate benchmark.yaml` — preflight a benchmark and warn about weak evidence before spending tokens
 - `dsh eval leaderboard a.json b.json c.json` — rank any number of runs by task success with gap-to-leader; `--json` for automation
 - `dsh eval gate candidate.json --baseline base.json --max-drop 0.05 [--max-cost-increase 0.1 --max-latency-increase 0.2]` — CI quality and resource-budget gate
-- `dsh eval compare v1.json v2.json` — signed `B - A` comparison table
+- `dsh eval compare v1.json v2.json` — signed `B - A` table plus paired inference; `--json` for structured output
 - `dsh eval rejudge run.json --out rejudged.json` — re-judge stored traces with a new judge model or rubric, without re-running the agent
 
 ## Status
 
-`dsh-eval@0.4.0` · 236 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.4.0` · 237 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 
@@ -125,7 +125,7 @@ Each trial runs in a private temp workspace with an isolated `DSH_HOME` and non-
 | `dsh eval validate benchmark.yaml` | Preflight a benchmark and print evidence warnings |
 | `dsh eval leaderboard a.json b.json ... [--json]` | Rank multiple runs with optional JSON output |
 | `dsh eval gate candidate.json --baseline base.json [--json]` | Fail CI on regressions; `--json` emits a machine-readable verdict |
-| `dsh eval compare base.json candidate.json` | Compare two runs with signed `B - A` deltas |
+| `dsh eval compare base.json candidate.json [--json]` | Compare two runs with deltas and paired inference |
 | `dsh eval rejudge run.json --out rejudged.json` | Re-judge stored traces offline and write a new report |
 | `dsh eval import codex\|claude-code log.jsonl --out run.json` | Import an external session log as a one-trial run |
 

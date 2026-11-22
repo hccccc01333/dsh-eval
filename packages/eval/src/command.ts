@@ -39,6 +39,7 @@ export type EvalStartupValues =
     kind: 'compare'
     runPathA: string
     runPathB: string
+    json?: boolean
   }
   | {
     kind: 'validate'
@@ -208,12 +209,13 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
         json: options.json === true,
       })
     })
-  const compare = program.command('compare').description('compare two persisted run reports as a markdown table')
+  const compare = program.command('compare').description('compare two persisted run reports as markdown or JSON')
   compare
     .argument('<run-a.json>', 'baseline run report')
     .argument('<run-b.json>', 'candidate run report')
-    .action((runPathA: string, runPathB: string) => {
-      publish({ kind: 'compare', runPathA, runPathB })
+    .option('--json', 'emit a machine-readable JSON comparison')
+    .action((runPathA: string, runPathB: string, options: { json?: boolean }) => {
+      publish({ kind: 'compare', runPathA, runPathB, json: options.json === true })
     })
   const validate = program.command('validate').description('validate a benchmark file and print a preflight summary')
   validate
