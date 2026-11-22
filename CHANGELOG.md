@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Live run progress.** `dsh eval run` now emits one bounded stderr line per
+  finished trial (`[eval] n/total case #trial task pass, 1234 ms`), including
+  errors, with case ids and messages sanitized against newline injection.
+  `--quiet` suppresses the progress while keeping the stdout summary.
 - **Resource budgets in the CI gate.** `dsh eval gate` now accepts
   `--max-cost-increase` and `--max-latency-increase` as relative limits, so a
   candidate that preserves quality but costs more still fails the build. The

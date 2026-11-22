@@ -8,7 +8,7 @@ import Include from '@deepseek-ai/cordis-plugin-include'
 import { internals as cmdlineInternals, provideCmdline } from '@deepseek-ai/dsh-cmdline'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { evalCommand, type EvalStartupValues } from '../src/command.ts'
-import { apply, executeEval, internals, resolveJudgeChat } from '../src/index.ts'
+import { apply, executeEval, internals, renderProgress, resolveJudgeChat } from '../src/index.ts'
 import { loadRunReport, writeRunReport } from '../src/report.ts'
 import type { EvalRun } from '../src/types.ts'
 
@@ -115,6 +115,37 @@ describe('dsh-eval command composition', () => {
     expect(observed.exits).toEqual([0])
     expect(observed.out).toContain(`Wrote ${outPath} (1/1 completed, tool success 100.0%, 1.0 steps/trial)`)
     expect(existsSync(outPath)).toBe(true)
+    expect(observed.err).toContain('[eval] 1/1 hello #1 task n/a, ')
+
+    const quietOut = join(dir, 'quiet', 'run.json')
+    const quiet = await bootEval([
+      'run', benchmarkPath, '--out', quietOut, '--quiet',
+      '--dsh', `${process.execPath} ${FAKE_SCRIPT}`,
+      '--trials', '1',
+    ])
+    expect(quiet.exits).toEqual([0])
+    expect(quiet.err).not.toContain('[eval] ')
+  })
+
+  it('formats bounded progress lines for pass, fail, ungraded and error trials', () => {
+    const base = {
+      caseId: 'c', trial: 2, status: 'completed' as const, exitCode: 0, timedOut: false,
+    }
+    expect(renderProgress({
+      ...base, grade: { taskSuccess: true, toolSelectionAccuracy: true },
+      metrics: { latencyMs: 123 } as never,
+    }, 1, 3)).toBe('[eval] 1/3 c #2 task pass, 123 ms\n')
+    expect(renderProgress({
+      ...base, grade: { taskSuccess: false, toolSelectionAccuracy: false },
+    }, 2, 3)).toBe('[eval] 2/3 c #2 task fail, ? ms\n')
+    expect(renderProgress(base, 3, 3)).toBe('[eval] 3/3 c #2 task n/a, ? ms\n')
+    expect(renderProgress({
+      caseId: 'x\ny', trial: 1, status: 'error', exitCode: 1, timedOut: false,
+      error: 'boom\nmore',
+    }, 1, 1)).toBe('[eval] 1/1 x y #1 ERROR boom more\n')
+    expect(renderProgress({
+      caseId: 'z', trial: 1, status: 'error', exitCode: 1, timedOut: false,
+    }, 1, 1)).toBe('[eval] 1/1 z #1 ERROR unknown error\n')
   })
 
   it('includes judge score in the run summary through the chat seam', async () => {

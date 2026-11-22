@@ -17,6 +17,8 @@ dsh eval compare eval-v1.json eval-v2.json
 
 trial 之间彼此独立——各自的临时工作区、隔离的 `DSH_HOME`、各自的补丁层——所以 `concurrency` 可以让这么多个 trial 同时跑。无论并发如何交错，run 记录仍按 case、再按 trial 的顺序列出结果；`--concurrency` 可覆盖文档里的值。调高它是用墙钟时间换峰值 CPU、内存与并发的模型额度。
 
+run 进行中时，每个完成的 trial 会向 stderr 写一行有长度上限的进度，例如 `[eval] 3/12 golden #1 task pass, 1204 ms`。错误会输出净化后的消息，agent 控制的 case id 无法注入换行。只想要最终 stdout 摘要的脚本可以传 `--quiet`。
+
 ## Benchmark 文档
 
 ```yaml

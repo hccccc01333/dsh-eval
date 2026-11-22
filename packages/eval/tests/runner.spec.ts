@@ -74,6 +74,25 @@ describe('dsh-eval benchmark runner', () => {
     ))).toEqual(['41', '42', '43'])
   })
 
+  it('emits progress for every finished trial', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const events: [string, number, number][] = []
+    await runBenchmark(buildBenchmark({ trials: 2 }), {
+      tempRoot: tempDir(),
+      onProgress: (result, finished, total) => events.push([result.status, finished, total]),
+    })
+    expect(events).toEqual([['completed', 1, 2], ['completed', 2, 2]])
+
+    process.env.FAKE_DASH_MODE = 'none'
+    const errors: string[] = []
+    await runBenchmark(buildBenchmark({ trials: 1 }), {
+      tempRoot: tempDir(),
+      onProgress: result => errors.push(result.status),
+    })
+    expect(errors).toEqual(['error'])
+  })
+
   it('persists case inputs so a stored run can be re-judged', async () => {
     process.env.FAKE_DASH_MODE = 'log'
     process.env.FAKE_DASH_LOG = FIXTURE_LOG

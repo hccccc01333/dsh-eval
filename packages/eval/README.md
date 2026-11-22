@@ -17,6 +17,8 @@ dsh eval compare eval-v1.json eval-v2.json
 
 Trials are independent — private temp workspace, isolated `DSH_HOME`, own patch overlay — so `concurrency` runs that many of them at once. The run record still lists results in case-then-trial order whatever the interleaving, and `--concurrency` overrides the document. Raising it trades wall time for peak CPU, memory, and concurrent model quota.
 
+While a run is in flight, each finished trial writes one bounded line to stderr, e.g. `[eval] 3/12 golden #1 task pass, 1204 ms`. Errors print their sanitized message, and agent-controlled case ids cannot inject newlines. Pass `--quiet` for scripts that want only the final stdout summary.
+
 ## Benchmark document
 
 ```yaml

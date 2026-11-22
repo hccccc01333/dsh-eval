@@ -61,6 +61,9 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
 - ✅ Judge/script agreement metric (done). Observed agreement plus Cohen's kappa
   over trials with both a scripted task result and a judge verdict, rendered in
   the full report and as one line in `--brief`.
+- ✅ Live run progress (done). Each finished trial writes one sanitized stderr
+  line with 1-based progress, case id, task result and latency; `--quiet`
+  keeps scripts that only parse stdout quiet.
 - ✅ HTML dashboard (single-run, two-run comparison and multi-run leaderboard).
   `dsh eval dashboard a.json [b.json ...]` writes a standalone, escaped,
   theme-aware page with summary cards, all report blocks, and either a

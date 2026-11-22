@@ -26,6 +26,7 @@ import { rejudgeRun } from './rejudge.ts'
 import { renderBenchmarkSummary } from './validate.ts'
 import { renderBriefReport, renderMarkdownReport, writeRunReport, loadRunReport } from './report.ts'
 import { runBenchmark } from './runner.ts'
+import type { EvalTrialResult } from './types.ts'
 
 /** Stable Cordis plugin name. */
 export const name = 'eval'
@@ -53,6 +54,19 @@ export const internals: EvalIo = {
 export function resolveJudgeChat(ctx: Context): JudgeChat | undefined {
   const llm = ctx.get('llm')
   return llm === undefined ? undefined : llmJudgeChat(llm.stream)
+}
+
+/** One bounded progress line; agent-controlled text must not inject newlines. */
+export function renderProgress(result: EvalTrialResult, finished: number, total: number): string {
+  const clean = (value: string): string => value.replace(/[\r\n]+/gu, ' ')
+  const label = `${clean(result.caseId)} #${result.trial}`
+  if (result.status === 'error') {
+    return `[eval] ${finished}/${total} ${label} ERROR ${clean(result.error ?? 'unknown error')}\n`
+  }
+  const task = result.grade?.taskSuccess === undefined || result.grade.taskSuccess === null
+    ? 'n/a' : result.grade.taskSuccess ? 'pass' : 'fail'
+  const latency = result.metrics?.latencyMs === undefined ? '?' : result.metrics.latencyMs.toFixed(0)
+  return `[eval] ${finished}/${total} ${label} task ${task}, ${latency} ms\n`
 }
 
 /** Aggregate-success sentence for the run summary line. */
@@ -159,6 +173,11 @@ export async function executeEval(
       ...(values.dshCommand !== undefined ? { command: values.dshCommand } : {}),
       ...(values.profile !== undefined ? { profile: values.profile } : {}),
       ...(services.judgeChat !== undefined ? { judgeChat: services.judgeChat } : {}),
+      ...(values.quiet === true ? {} : {
+        onProgress: (result: EvalTrialResult, finished: number, total: number) => {
+          io.stderr.write(renderProgress(result, finished, total))
+        },
+      }),
     })
     await writeRunReport(run, values.outPath)
     const failed = run.cases.filter(result => result.status === 'error')

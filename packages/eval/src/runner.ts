@@ -42,6 +42,8 @@ export interface RunOptions {
   tempRoot?: string
   /** LLM-judge chat seam; required when the benchmark configures a judge. */
   judgeChat?: JudgeChat
+  /** Called once per finished trial, including errors, with 1-based progress. */
+  onProgress?: (result: EvalTrialResult, finished: number, total: number) => void
 }
 
 /** One child process's orthogonal outcome facts. */
@@ -473,13 +475,16 @@ export async function runBenchmark(benchmark: Benchmark, options: RunOptions = {
   const results: EvalTrialResult[] = Array.from({ length: tasks.length })
   let failure: { error: unknown } | undefined
   let cursor = 0
+  let finished = 0
   const worker = async (): Promise<void> => {
     while (failure === undefined) {
       const index = cursor++
       const task = tasks[index]
       if (task === undefined) return
       try {
-        results[index] = await runCaseTrial(effective, task.caseValue, task.trial, root, options.judgeChat)
+        const result = await runCaseTrial(effective, task.caseValue, task.trial, root, options.judgeChat)
+        results[index] = result
+        options.onProgress?.(result, ++finished, tasks.length)
       } catch (error) {
         failure = { error }
       }

@@ -25,6 +25,7 @@ export type EvalStartupValues =
     concurrency?: number
     dshCommand?: readonly string[]
     profile?: string
+    quiet?: boolean
   }
   | {
     kind: 'report'
@@ -81,6 +82,7 @@ interface RunCommandOptions {
   concurrency?: number
   dsh?: string
   profile?: string
+  quiet?: boolean
 }
 
 /** Options accepted by `eval report`. */
@@ -161,6 +163,7 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     .option('--concurrency <n>', 'override the in-flight trial limit', positiveInteger(program, '--concurrency'))
     .option('--dsh <cmd>', 'override the dsh launcher command, space-separated')
     .option('--profile <name>', 'override the spawned dsh profile')
+    .option('--quiet', 'suppress per-trial progress lines')
     .action((benchmarkPath: string, options: RunCommandOptions) => {
       let dshCommand: readonly string[] | undefined
       try {
@@ -184,6 +187,7 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
         ...(options.concurrency !== undefined ? { concurrency: options.concurrency } : {}),
         ...(dshCommand !== undefined ? { dshCommand } : {}),
         ...(options.profile !== undefined ? { profile: options.profile } : {}),
+        quiet: options.quiet === true,
       })
     })
   const report = program.command('report').description('render a persisted run JSON as markdown')
