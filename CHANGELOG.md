@@ -6,7 +6,8 @@
 
 - **Strict pass@1 confidence interval.** The precision block now bootstraps
   every trial — errors and timeouts included — so the strict rate carries an
-  honest interval instead of silently dropping failed trials.
+  honest interval instead of silently dropping failed trials. Both the markdown
+  report and HTML dashboard show it.
 - **Trial-level CSV export.** `dsh eval export run.json [--out trials.csv]`
   flattens verdicts, metrics, cost and the trace digest into one row per trial,
   with CSV quoting and spreadsheet-formula escaping for agent-controlled text.

@@ -187,6 +187,8 @@ export function renderDashboard(runs: readonly EvalRun[]): string {
 
   const precisionRows = [
     ...(precision.task === null ? [] : [`<td>task success</td><td>${interval(precision.task)}</td>`]),
+    ...(precision.strictPassAt1 === null ? [] :
+      [`<td>strict pass@1 (all trials)</td><td>${interval(precision.strictPassAt1)}</td>`]),
     ...(precision.toolSelection === null ? [] : [`<td>tool selection</td><td>${interval(precision.toolSelection)}</td>`]),
   ]
   const precisionBlock = precisionRows.length === 0 && precision.latencyP50 === null

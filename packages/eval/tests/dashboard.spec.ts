@@ -80,6 +80,7 @@ describe('dsh-eval HTML dashboard', () => {
     expect(html).toContain('Hardest cases:')
     expect(html).toContain('Precision</h2>')
     expect(html).toContain('task success')
+    expect(html).toContain('<td>strict pass@1 (all trials)</td>')
     expect(html).toContain('tool selection')
     expect(html).toContain('Judge / script agreement</h2>')
     expect(html).toContain('Judge calibration</h2>')
