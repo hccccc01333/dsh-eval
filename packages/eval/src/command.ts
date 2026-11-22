@@ -34,6 +34,8 @@ export type EvalStartupValues =
     brief?: boolean
     /** Emit machine-readable JSON instead of markdown. */
     json?: boolean
+    /** Optional output path; the report goes to stdout when omitted. */
+    outPath?: string
   }
   | {
     kind: 'compare'
@@ -102,6 +104,7 @@ interface RunCommandOptions {
 interface ReportCommandOptions {
   brief?: boolean
   json?: boolean
+  out?: string
 }
 
 /** Options accepted by `eval rejudge`. */
@@ -220,12 +223,14 @@ Examples:
     .argument('<run.json>', 'path to a run report')
     .option('--brief', 'print a compact terminal summary instead of the full report')
     .option('--json', 'emit machine-readable JSON instead of markdown')
+    .option('--out <path>', 'write the report to a file instead of stdout')
     .action((runPath: string, options: ReportCommandOptions) => {
       publish({
         kind: 'report',
         runPath,
         ...(options.brief ? { brief: true } : {}),
         json: options.json === true,
+        ...(options.out === undefined ? {} : { outPath: options.out }),
       })
     })
   const compare = program.command('compare').description('compare two persisted run reports as markdown or JSON')

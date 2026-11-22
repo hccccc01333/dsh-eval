@@ -39,7 +39,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 
 ## Status
 
-`dsh-eval@0.4.0` · 259 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.4.0` · 260 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 
@@ -123,6 +123,7 @@ Each trial runs in a private temp workspace with an isolated `DSH_HOME` and non-
 | `dsh eval report run.json` | Render a run as Markdown |
 | `dsh eval report run.json --brief` | Print a compact terminal summary without the per-trial table |
 | `dsh eval report run.json --json` | Emit the run and all derived blocks as JSON |
+| `dsh eval report run.json [--out report.md]` | Write any report variant to a file instead of stdout |
 | `dsh eval export run.json [--out trials.csv]` | Flatten trials into a safely escaped CSV |
 | `dsh eval dashboard a.json [b.json ...] --out report.html` | Write a standalone HTML dashboard or multi-run leaderboard |
 | `dsh eval validate benchmark.yaml [--json]` | Preflight a benchmark with evidence warnings |

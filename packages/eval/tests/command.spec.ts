@@ -355,6 +355,26 @@ describe('dsh-eval command composition', () => {
     } finally {
       rmSync(exportDir, { recursive: true, force: true })
     }
+
+    const reportDir = mkdtempSync(join(tmpdir(), 'dsh-eval-report-out-'))
+    try {
+      const reportRunPath = join(reportDir, 'run.json')
+      const reportPath = join(reportDir, 'nested', 'report.md')
+      await writeRunReport(run, reportRunPath)
+      const published: EvalStartupValues[] = []
+      await evalCommand(value => published.push(value)).parseAsync([
+        'node', 'eval', 'report', reportRunPath, '--out', reportPath,
+      ])
+      expect(published.at(-1)).toMatchObject({ kind: 'report', outPath: reportPath })
+      const out: string[] = []
+      const io = { stdout: { write: (chunk: string) => { out.push(chunk); return true } }, stderr: { write: () => {} } }
+      expect(await executeEval(published.at(-1)!, io)).toBe(0)
+      expect(readFileSync(reportPath, 'utf8')).toContain('# Eval: b')
+      expect(out.join('')).toContain('Wrote ')
+    } finally {
+      rmSync(reportDir, { recursive: true, force: true })
+    }
+
     expect((await bootEval([
       'gate', candidatePath, '--baseline', baselinePath,
       '--max-cost-increase', '0.1', '--max-latency-increase', '0.2',

@@ -121,9 +121,16 @@ export async function executeEval(
     }
     if (values.kind === 'report') {
       const run = await loadRunReport(values.runPath)
-      io.stdout.write(values.json === true
+      const report = values.json === true
         ? renderReportJson(run)
-        : values.brief ? renderBriefReport(run) : renderMarkdownReport(run))
+        : values.brief ? renderBriefReport(run) : renderMarkdownReport(run)
+      if (values.outPath === undefined) {
+        io.stdout.write(report)
+      } else {
+        await mkdir(dirname(resolve(values.outPath)), { recursive: true })
+        await writeFile(values.outPath, report, 'utf8')
+        io.stdout.write(`Wrote ${values.outPath}\n`)
+      }
       return 0
     }
     if (values.kind === 'compare') {
