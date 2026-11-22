@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Deterministic final-answer grading.** `expected.answerRegex` (validated at
+  load) matches the final assistant message and sets `taskSuccess` when no
+  check command is configured, so a benchmark can grade answers without an LLM
+  judge. It is counted as a check in preflight summaries.
 - **Structured preflight.** `dsh eval validate --json` emits the same counts,
   configuration and weak-evidence warnings as the markdown summary, so a CI
   lint step can act on them without scraping text.

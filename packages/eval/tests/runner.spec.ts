@@ -314,6 +314,23 @@ describe('dsh-eval benchmark runner', () => {
     expect(failing.grading?.taskSuccessRate).toBe(0)
   })
 
+  it('grades task success from an answer regex without a check command or judge', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const passing = await runBenchmark(buildBenchmark({
+      trials: 1,
+      cases: [{ id: 'regex', prompt: 'p', expected: { answerRegex: '^Hi$' } }],
+    }), { tempRoot: tempDir() })
+    expect(passing.cases[0]?.grade).toEqual({ taskSuccess: true, toolSelectionAccuracy: null })
+    expect(passing.grading?.taskSuccessRate).toBe(1)
+
+    const failing = await runBenchmark(buildBenchmark({
+      trials: 1,
+      cases: [{ id: 'regex', prompt: 'p', expected: { answerRegex: '^Bye$' } }],
+    }), { tempRoot: tempDir() })
+    expect(failing.cases[0]?.grade).toEqual({ taskSuccess: false, toolSelectionAccuracy: null })
+  })
+
   it('matches every configured tool expectation', async () => {
     process.env.FAKE_DASH_MODE = 'log'
     process.env.FAKE_DASH_LOG = FIXTURE_LOG

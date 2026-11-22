@@ -20,7 +20,7 @@ import { join } from 'node:path'
 import { splitArgv } from './argv.ts'
 import type { Benchmark, BenchmarkExpectation, EvalRun, EvalTrialResult } from './types.ts'
 import type { EvalGrade, EvalRunGrading } from './types.ts'
-import { tryJudgeTrial, type JudgeChat } from './judge.ts'
+import { finalAnswerOf, tryJudgeTrial, type JudgeChat } from './judge.ts'
 import { caseSegment } from './segments.ts'
 import { aggregateMetrics, computeMetrics } from './metrics.ts'
 import { findSessionLogs, loadTrace, mergeTraces } from './trace.ts'
@@ -171,6 +171,9 @@ async function gradeTrial(
     } catch {
       taskSuccess = false
     }
+  } else if (expected.answerRegex !== undefined) {
+    // Deterministic final-answer grading: no command, no LLM needed.
+    taskSuccess = new RegExp(expected.answerRegex, 'u').test(finalAnswerOf(trace))
   }
   return { taskSuccess, toolSelectionAccuracy }
 }

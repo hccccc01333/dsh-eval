@@ -29,6 +29,10 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
   `check` now uses a quote-aware splitter shared with `--dsh`. Check processes
   are detached and terminated as a group on timeout. A lingering grandchild
   holding stdio open after its parent exits is now bounded: the runner resolves from `exit` after a short drain grace period instead of waiting for `close` forever.
+- ✅ **Deterministic answer grading** (done). `answerRegex` grades the final
+  assistant message without a check command or an LLM judge, and is validated
+  at load like `toolRegex`.
+- ✅ **Structured preflight** (`dsh eval validate --json`).
 - ✅ **Richer tool expectations** (done). `tool` stays a substring match;
   `tools` (all), `toolAnyOf`, `toolRegex` (validated at load) and `toolNot`
   combine conjunctively into the same boolean `EvalGrade.toolSelectionAccuracy`.
@@ -61,8 +65,8 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
 - ✅ Judge/script agreement metric (done). Observed agreement plus Cohen's kappa
   over trials with both a scripted task result and a judge verdict, rendered in
   the full report and as one line in `--brief`.
-- ✅ Structured JSON output (done). `report --json`, `compare --json`,
-  `leaderboard --json` and `gate --json` expose the same derived data and
+- ✅ Structured JSON output (done). `validate --json`, `report --json`,
+  `compare --json`, `leaderboard --json` and `gate --json` expose the same data and
   verdicts in machine-readable form while markdown/HTML remain human defaults.
 - ✅ Live run progress (done). Each finished trial writes one sanitized stderr
   line with 1-based progress, case id, task result and latency; `--quiet`

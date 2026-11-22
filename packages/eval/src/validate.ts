@@ -50,6 +50,7 @@ export function summarizeBenchmark(benchmark: Benchmark): BenchmarkSummary {
     if (expected.answer !== undefined) goldAnswers += 1
     if (expected.check !== undefined) checks += 1
     if (expected.checkArgv !== undefined) checks += 1
+    if (expected.answerRegex !== undefined) checks += 1
     if (expected.checkShell !== undefined) {
       checks += 1
       shellChecks += 1

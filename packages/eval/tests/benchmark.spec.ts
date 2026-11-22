@@ -97,6 +97,28 @@ describe('dsh-eval benchmark loading', () => {
     ].join('\n'), tempDir())).rejects.toThrow('toolRegex is not a valid regular expression')
   })
 
+  it('validates and preserves a deterministic answer regex', async () => {
+    const benchmark = await parseBenchmark([
+      'name: answers',
+      'model: m',
+      'cases:',
+      '  - id: good',
+      '    prompt: p',
+      '    expected:',
+      '      answerRegex: "^42$"',
+    ].join('\n'), tempDir())
+    expect(benchmark.cases[0]?.expected?.answerRegex).toBe('^42$')
+    await expect(parseBenchmark([
+      'name: answers',
+      'model: m',
+      'cases:',
+      '  - id: bad',
+      '    prompt: p',
+      '    expected:',
+      '      answerRegex: "["',
+    ].join('\n'), tempDir())).rejects.toThrow('answerRegex is not a valid regular expression')
+  })
+
   it('preserves structured and shell check modes', async () => {
     const benchmark = await parseBenchmark([
       'name: checks',
@@ -261,7 +283,7 @@ describe('dsh-eval benchmark loading', () => {
     { name: 'both prompt sources', text: 'name: n\nmodel: m\ncases:\n  - id: a\n    prompt: p\n    promptFile: x.md\n', message: 'exactly one of prompt or promptFile' },
     { name: 'unknown key', text: 'name: n\nmodel: m\nbogus: 1\ncases:\n  - id: a\n    prompt: p\n', message: '' },
     { name: 'no cases', text: 'name: n\nmodel: m\ncases: []\n', message: '' },
-    { name: 'empty expected', text: 'name: n\nmodel: m\ncases:\n  - id: a\n    prompt: p\n    expected: {}\n', message: 'expected needs at least one of tool, tools, toolAnyOf, toolRegex, toolNot, check, checkArgv, checkShell or answer' },
+    { name: 'empty expected', text: 'name: n\nmodel: m\ncases:\n  - id: a\n    prompt: p\n    expected: {}\n', message: 'expected needs at least one of tool, tools, toolAnyOf, toolRegex, toolNot, check, checkArgv, checkShell, answer or answerRegex' },
      { name: 'multiple check modes', text: 'name: n\nmodel: m\ncases:\n  - id: a\n    prompt: p\n    expected:\n      check: echo hi\n      checkShell: echo hi\n', message: 'at most one of check, checkArgv or checkShell' },
     { name: 'zero concurrency', text: 'name: n\nmodel: m\nconcurrency: 0\ncases:\n  - id: a\n    prompt: p\n', message: '' },
     { name: 'fractional concurrency', text: 'name: n\nmodel: m\nconcurrency: 1.5\ncases:\n  - id: a\n    prompt: p\n', message: '' },

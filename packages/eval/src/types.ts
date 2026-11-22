@@ -52,6 +52,8 @@ export interface BenchmarkExpectation {
   checkShell?: string
   /** Known-correct final answer handed to the LLM judge, when the task has one. */
   answer?: string
+  /** Regex the final assistant answer must match; sets task success when no check command is configured. */
+  answerRegex?: string
 }
 
 /** LLM-judge configuration: scores final answers and flags hallucinations. */

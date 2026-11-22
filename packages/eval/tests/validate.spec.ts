@@ -74,6 +74,11 @@ describe('dsh-eval benchmark preflight', () => {
     expect(parsed.warnings).toContain('judge is configured but no case supplies a gold answer — score calibration will be weak')
     expect(summarizeBenchmark(benchmark({ cases: [{ id: 'raw', prompt: 'p' }] })).warnings.length)
       .toBeGreaterThan(0)
+    const withRegex = summarizeBenchmark(benchmark({
+      cases: [{ id: 'answer', prompt: 'p', expected: { answerRegex: '^42$' } }],
+    }))
+    expect(withRegex.gradedCases).toBe(1)
+    expect(withRegex.checks).toBe(1)
   })
 
   it('warns that replay runs need rejudging for judge scores', () => {

@@ -32,6 +32,15 @@ function blockText(blocks: readonly ContentBlock[]): string {
   return blocks.flatMap(block => block.type === 'text' ? [block.text] : []).join('')
 }
 
+/** The last assistant text message in a trace, used as the final answer. */
+export function finalAnswerOf(trace: EvalTrace): string {
+  let finalAnswer = ''
+  for (const event of trace.events) {
+    if (event.type === 'assistant/message') finalAnswer = blockText(event.data.message.content)
+  }
+  return finalAnswer
+}
+
 /**
  * Summarize a trace for the judge: final assistant answer, the distinct tool
  * names called, and the failure counters a hallucination call needs.
@@ -39,12 +48,11 @@ function blockText(blocks: readonly ContentBlock[]): string {
  * @returns a compact human-readable summary.
  */
 export function summarizeTrace(trace: EvalTrace): string {
-  let finalAnswer = ''
+  const finalAnswer = finalAnswerOf(trace)
   const toolNames: string[] = []
   let invalidToolCalls = 0
   let retries = 0
   for (const event of trace.events) {
-    if (event.type === 'assistant/message') finalAnswer = blockText(event.data.message.content)
     if (event.type === 'tool/call') {
       if (!toolNames.includes(event.data.name)) toolNames.push(event.data.name)
     }

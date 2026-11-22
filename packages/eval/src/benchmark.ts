@@ -32,14 +32,19 @@ const pricingSchema = z.object({
 }).strict()
 
 /** A non-empty string that the runtime can compile as a Unicode regular expression. */
-const toolRegexSchema = z.string().min(1).refine((value) => {
-  try {
-    new RegExp(value, 'u')
-    return true
-  } catch {
-    return false
-  }
-}, { message: 'toolRegex is not a valid regular expression' })
+function regexSchema(message: string) {
+  return z.string().min(1).refine((value) => {
+    try {
+      new RegExp(value, 'u')
+      return true
+    } catch {
+      return false
+    }
+  }, { message })
+}
+
+const toolRegexSchema = regexSchema('toolRegex is not a valid regular expression')
+const answerRegexSchema = regexSchema('answerRegex is not a valid regular expression')
 
 const benchmarkCaseSchema = z.object({
   id: z.string().min(1),
@@ -56,14 +61,15 @@ const benchmarkCaseSchema = z.object({
     checkArgv: z.array(z.string().min(1)).min(1).readonly().optional(),
     checkShell: z.string().min(1).optional(),
     answer: z.string().min(1).optional(),
+    answerRegex: answerRegexSchema.optional(),
   }).strict().refine(
     expectation => expectation.tool !== undefined || expectation.tools !== undefined
       || expectation.toolAnyOf !== undefined || expectation.toolRegex !== undefined
       || expectation.toolNot !== undefined || expectation.check !== undefined
       || expectation.checkArgv !== undefined || expectation.checkShell !== undefined
-      || expectation.answer !== undefined,
+      || expectation.answer !== undefined || expectation.answerRegex !== undefined,
     {
-      message: 'expected needs at least one of tool, tools, toolAnyOf, toolRegex, toolNot, check, checkArgv, checkShell or answer',
+      message: 'expected needs at least one of tool, tools, toolAnyOf, toolRegex, toolNot, check, checkArgv, checkShell, answer or answerRegex',
     },
   ).refine(
     (expectation) => {
@@ -143,6 +149,7 @@ async function resolveCase(
           ...(parsed.expected.checkArgv !== undefined ? { checkArgv: parsed.expected.checkArgv } : {}),
           ...(parsed.expected.checkShell !== undefined ? { checkShell: parsed.expected.checkShell } : {}),
           ...(parsed.expected.answer !== undefined ? { answer: parsed.expected.answer } : {}),
+          ...(parsed.expected.answerRegex !== undefined ? { answerRegex: parsed.expected.answerRegex } : {}),
         },
       }
       : {}),
