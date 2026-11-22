@@ -4,6 +4,11 @@
 
 ### Added
 
+- **CI quality gate.** `dsh eval gate candidate.json --baseline base.json
+  --max-drop 0.05` checks coverage, task success, tool selection, strict pass@1
+  and normalized judge score, prints a PASS/FAIL table and exits nonzero on
+  regressions. Candidate-side missing metrics fail closed;
+  `--allow-incomplete` relaxes the coverage checks.
 - **Standalone HTML dashboard.** `dsh eval dashboard a.json [b.json] --out report.html`
   renders coverage, pass@1/pass@k, latency and cost cards plus reliability,
   precision, agreement and per-trial tables into one self-contained page. It

@@ -33,6 +33,13 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
   `tools` (all), `toolAnyOf`, `toolRegex` (validated at load) and `toolNot`
   combine conjunctively into the same boolean `EvalGrade.toolSelectionAccuracy`.
 
+## Beyond the original audit
+
+- ✅ **CI quality gate** (`dsh eval gate`). Compares a candidate against a
+  baseline on coverage, task/tool rates, strict pass@1 and normalized judge
+  score with one `--max-drop` tolerance; exits nonzero on regressions. Missing
+  candidate metrics fail closed; `--allow-incomplete` relaxes coverage checks.
+
 ## P2 — polish
 
 - ✅ Judge/script agreement metric (done). Observed agreement plus Cohen's kappa

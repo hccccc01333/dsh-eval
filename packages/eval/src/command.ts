@@ -38,6 +38,13 @@ export type EvalStartupValues =
     runPathB: string
   }
   | {
+    kind: 'gate'
+    candidatePath: string
+    baselinePath: string
+    maxDrop: number
+    allowIncomplete: boolean
+  }
+  | {
     kind: 'dashboard'
     runPaths: readonly string[]
     outPath: string
@@ -108,6 +115,17 @@ function positiveInteger(program: Command, flag: string): (value: string) => num
   }
 }
 
+/** Build a parser for a 0..1 tolerance flag. */
+function unitRatio(program: Command, flag: string): (value: string) => number {
+  return (value) => {
+    const parsed = Number(value)
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1) {
+      program.error(`error: ${flag} must be between 0 and 1`)
+    }
+    return parsed
+  }
+}
+
 /**
  * Build a fresh eval commander program. The root action rejects a bare
  * invocation; the `run` and `report` actions hand the resolved values to the
@@ -123,7 +141,7 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     .description('Run agent evaluations over headless dsh profiles and report trace-based metrics.')
     .helpOption('-h, --help', 'show this help')
     .action(() => {
-      program.error('error: eval needs a subcommand: run <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, rejudge <run.json>, dashboard <run.json>, or import <format> <log.jsonl>')
+      program.error('error: eval needs a subcommand: run <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, rejudge <run.json>, dashboard <run.json>, gate <candidate.json>, or import <format> <log.jsonl>')
     })
   const run = program.command('run').description('run a benchmark and write its JSON report')
   run
@@ -171,6 +189,26 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     .argument('<run-b.json>', 'candidate run report')
     .action((runPathA: string, runPathB: string) => {
       publish({ kind: 'compare', runPathA, runPathB })
+    })
+  const gate = program.command('gate').description('fail a CI build when a candidate run regresses against a baseline')
+  gate
+    .argument('<candidate.json>', 'path to the candidate run report')
+    .option('--baseline <path>', 'path to the trusted baseline run report')
+    .option('--max-drop <ratio>', 'largest tolerated quality regression, 0..1', unitRatio(program, '--max-drop'), 0)
+    .option('--allow-incomplete', 'do not fail on extra unscored trials')
+    .action((candidatePath: string, options: {
+      baseline?: string
+      maxDrop: number
+      allowIncomplete?: boolean
+    }) => {
+      if (options.baseline === undefined) program.error('error: gate needs --baseline <path>')
+      publish({
+        kind: 'gate',
+        candidatePath,
+        baselinePath: options.baseline!,
+        maxDrop: options.maxDrop,
+        allowIncomplete: options.allowIncomplete === true,
+      })
     })
   const dashboard = program.command('dashboard').description('render a persisted run as a standalone HTML dashboard')
   dashboard

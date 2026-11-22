@@ -235,6 +235,42 @@ describe('dsh-eval command composition', () => {
     expect(noLlm.err).toContain('no LLM chat seam')
   })
 
+  it('gates a candidate run through the CLI', async () => {
+    const dir = tempDir()
+    const baselinePath = join(dir, 'base.json')
+    const candidatePath = join(dir, 'candidate.json')
+    const regressedPath = join(dir, 'regressed.json')
+    const grading = {
+      taskSuccessRate: 1, toolSelectionAccuracyRate: null,
+      finalAnswerScore: null, hallucinationRate: null,
+    }
+    const run = {
+      benchmark: 'b', model: 'm', createdAt: 1, trials: 1, seed: 0, pricing: null,
+      tempRoot: '/tmp', cases: [], aggregate: null, grading,
+    }
+    await writeRunReport(run, baselinePath)
+    await writeRunReport(run, candidatePath)
+    await writeRunReport({ ...run, grading: { ...grading, taskSuccessRate: 0 } }, regressedPath)
+    const out: string[] = []
+    const io = { stdout: { write: (chunk: string) => { out.push(chunk); return true } }, stderr: { write: () => {} } }
+    expect(await executeEval({
+      kind: 'gate', candidatePath, baselinePath, maxDrop: 0, allowIncomplete: false,
+    }, io)).toBe(0)
+    expect(out.join('')).toContain('# Gate: PASS')
+    expect(await executeEval({
+      kind: 'gate', candidatePath: regressedPath, baselinePath, maxDrop: 0, allowIncomplete: false,
+    }, io)).toBe(1)
+
+    expect((await bootEval(['gate', candidatePath])).err).toContain('--baseline')
+    expect((await bootEval(['gate', candidatePath, '--baseline', baselinePath, '--max-drop', '2'])).err)
+      .toContain('between 0 and 1')
+    expect((await bootEval(['gate', candidatePath, '--baseline', baselinePath])).exits).toEqual([0])
+    expect((await bootEval(['gate', candidatePath, '--baseline', baselinePath, '--max-drop', '0.05'])).exits)
+      .toEqual([0])
+    expect((await bootEval(['gate', candidatePath, '--baseline', baselinePath, '--allow-incomplete'])).exits)
+      .toEqual([0])
+  })
+
   it('renders an HTML dashboard through the CLI', async () => {
     const dir = tempDir()
     const runPath = join(dir, 'run.json')

@@ -128,6 +128,21 @@ The same one-line statistic appears in `--brief` output.
 
 Because a paired eval sample is small and its deltas are not normal, the paired block also carries inference rather than point estimates alone: an exact two-sided **sign test** over the discordant pairs (ties drop out, as the test requires) for the primary metric, and a seeded **bootstrap interval** beside each mean delta. Nothing is assumed about the shape of the delta distribution, and the PRNG seed is fixed, so re-running `compare` on the same reports prints a byte-identical table. The sign-test p-value and every printed interval form one inference family, corrected together by **Bonferroni** at family-wise `alpha = 0.05`: the p row is labelled with the family size it was multiplied by, and each interval is widened to `1 - 0.05/k` confidence (for example, 98.8% when the p-value and three intervals are all present). A sign test still needs discordant pairs to say anything — when every pair ties it reports `p = 1`.
 
+## CI quality gate
+
+`dsh eval gate candidate.json --baseline base.json --max-drop 0.05` turns a run
+comparison into a build verdict. It checks completed-trial and unscored-trial
+counts, then task success, tool selection accuracy, strict pass@1 and judge
+score. Rates and judge scores are all normalized to 0..1 (the score is divided
+by its run's `maxScore`), so one tolerance applies to every quality metric. The
+command prints a markdown PASS/FAIL table and exits 1 on any regression beyond
+the tolerance, making it suitable as a required CI step.
+
+Metrics absent from the baseline are treated as "baseline ungraded" and pass;
+metrics absent from the candidate fail rather than being silently skipped. Pass
+`--allow-incomplete` to ignore trial-coverage differences when a benchmark
+intentionally varies its trial count.
+
 ## Replay (keyless CI)
 
 A keyed run records every trial's session log under its `tempRoot`. Copy the

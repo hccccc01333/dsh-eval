@@ -17,6 +17,7 @@ import { loadBenchmark } from './benchmark.ts'
 import { applyEval, type EvalStartupValues } from './command.ts'
 import { compareRuns, renderCompareMarkdown } from './compare.ts'
 import { writeDashboard } from './dashboard.ts'
+import { evaluateGate, renderGate } from './gate.ts'
 import { importTraceFile } from './import.ts'
 import { llmJudgeChat, type JudgeChat } from './judge.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
@@ -104,6 +105,15 @@ export async function executeEval(
       const b = await loadRunReport(values.runPathB)
       io.stdout.write(renderCompareMarkdown(compareRuns(a, b)))
       return 0
+    }
+    if (values.kind === 'gate') {
+      const [candidate, baseline] = await Promise.all([
+        loadRunReport(values.candidatePath),
+        loadRunReport(values.baselinePath),
+      ])
+      const result = evaluateGate(baseline, candidate, values.maxDrop, values.allowIncomplete)
+      io.stdout.write(renderGate(result))
+      return result.passed ? 0 : 1
     }
     if (values.kind === 'dashboard') {
       const runs = await Promise.all(values.runPaths.map(async path => loadRunReport(path)))
