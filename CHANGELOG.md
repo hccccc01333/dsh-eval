@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Machine-readable gate verdict.** `dsh eval gate ... --json` emits one JSON
+  object with the pass flag, thresholds, checks and case regressions, keeping
+  the same exit code as the markdown form.
 - **Live run progress.** `dsh eval run` now emits one bounded stderr line per
   finished trial (`[eval] n/total case #trial task pass, 1234 ms`), including
   errors, with case ids and messages sanitized against newline injection.
@@ -126,6 +129,12 @@
 
 ### Fixed
 
+- **Progress observers cannot abort a run.** A throwing `onProgress` callback
+  is now isolated from trial execution, so completed results and the run report
+  survive a broken observer. Progress text also strips ANSI/control sequences
+  and is length-capped before reaching a terminal.
+- **Skipped budget checks no longer claim a baseline is "unpriced".** The note
+  now says metrics are unavailable, which is accurate for both cost and latency.
 - **Leaderboards with no task-success data no longer print rank 0.** Runs whose
   grading lacks `taskSuccessRate` now receive distinct ranks, and the
   gap-to-leader column shows `–` instead of a bogus "leader" label.

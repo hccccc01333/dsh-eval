@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { evaluateGate, renderGate, type GateResult } from '../src/gate.ts'
+import { evaluateGate, renderGate, renderGateJson, type GateResult } from '../src/gate.ts'
 import type { EvalRun } from '../src/types.ts'
 
 function buildRun(overrides: Partial<EvalRun> = {}): EvalRun {
@@ -76,7 +76,7 @@ describe('dsh-eval CI gate', () => {
       maxCostIncrease: 0.1,
     })
     expect(skipped.passed).toBe(true)
-    expect(skipped.checks.at(-1)).toMatchObject({ note: 'baseline unpriced — check skipped', passed: true })
+    expect(skipped.checks.at(-1)).toMatchObject({ note: 'baseline metrics unavailable — check skipped', passed: true })
     const failed = evaluateGate(buildRun({ aggregate: METRICS }), buildRun(), 0, false, {
       maxCostIncrease: 0.1,
     })
@@ -89,7 +89,7 @@ describe('dsh-eval CI gate', () => {
       maxLatencyIncrease: 0.1,
     })
     expect(result.checks.at(-1)).toMatchObject({
-      metric: 'latency/trial', note: 'baseline unpriced — check skipped', passed: true,
+      metric: 'latency/trial', note: 'baseline metrics unavailable — check skipped', passed: true,
     })
   })
 
@@ -111,6 +111,31 @@ describe('dsh-eval CI gate', () => {
     expect(result.maxCostIncrease).toBeUndefined()
     expect(result.maxLatencyIncrease).toBeUndefined()
     expect(renderGate(result)).not.toContain('max tolerated cost increase')
+  })
+
+  it('emits a machine-readable verdict with the same numbers', () => {
+    const result = evaluateGate(
+      buildRun({ aggregate: METRICS }),
+      buildRun({ aggregate: { ...METRICS, costUsd: 0.000004 } }),
+      0.05, false, { maxCostIncrease: 0.1, maxLatencyIncrease: 0.2 },
+    )
+    const parsed = JSON.parse(renderGateJson(result)) as {
+      passed: boolean; maxDrop: number; maxCostIncrease?: number; maxLatencyIncrease?: number
+      checks: { metric: string }[]; regressions: unknown[]
+    }
+    expect(parsed.passed).toBe(false)
+    expect(parsed.maxDrop).toBe(0.05)
+    expect(parsed.maxCostIncrease).toBe(0.1)
+    expect(parsed.maxLatencyIncrease).toBe(0.2)
+    expect(parsed.checks.map(check => check.metric)).toContain('cost/trial')
+    expect(parsed.regressions).toEqual([])
+    const plain = JSON.parse(renderGateJson(evaluateGate(buildRun(), buildRun(), 0))) as Record<string, unknown>
+    expect(plain.maxCostIncrease).toBeUndefined()
+    expect(plain.maxLatencyIncrease).toBeUndefined()
+    const minimal = JSON.parse(renderGateJson({ passed: true, maxDrop: 0, checks: [] })) as {
+      regressions: unknown[]
+    }
+    expect(minimal.regressions).toEqual([])
   })
 
   it('fails when a rate drops beyond the tolerance', () => {

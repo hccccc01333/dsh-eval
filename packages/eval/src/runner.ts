@@ -481,12 +481,20 @@ export async function runBenchmark(benchmark: Benchmark, options: RunOptions = {
       const index = cursor++
       const task = tasks[index]
       if (task === undefined) return
+      let result: EvalTrialResult
       try {
-        const result = await runCaseTrial(effective, task.caseValue, task.trial, root, options.judgeChat)
-        results[index] = result
-        options.onProgress?.(result, ++finished, tasks.length)
+        result = await runCaseTrial(effective, task.caseValue, task.trial, root, options.judgeChat)
       } catch (error) {
         failure = { error }
+        continue
+      }
+      results[index] = result
+      const progress = ++finished
+      // Observational callbacks must never abort a run or discard its report.
+      try {
+        options.onProgress?.(result, progress, tasks.length)
+      } catch {
+        /* v8 ignore next -- a broken observer is deliberately swallowed. */
       }
     }
   }

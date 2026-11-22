@@ -128,7 +128,7 @@ function compareBudget(
   unit: 'usd' | 'ms',
 ): GateCheck {
   if (baseline === null) {
-    return { metric, baseline, candidate, delta: null, passed: true, unit, note: 'baseline unpriced — check skipped' }
+    return { metric, baseline, candidate, delta: null, passed: true, unit, note: 'baseline metrics unavailable — check skipped' }
   }
   if (candidate === null) {
     return { metric, baseline, candidate, delta: null, passed: false, unit, note: 'candidate unpriced' }
@@ -222,6 +222,22 @@ function formatDelta(value: number | null, check: GateCheck): string {
     return relative === null ? `${sign}${value.toFixed(2)}` : `${sign}${relative.toFixed(1)}%`
   }
   return `${sign}${(value * 100).toFixed(1)}pp`
+}
+
+/**
+ * Render a gate decision as machine-readable JSON for CI consumers.
+ * @param result - the evaluated gate.
+ * @returns a JSON string ending in a newline.
+ */
+export function renderGateJson(result: GateResult): string {
+  return `${JSON.stringify({
+    passed: result.passed,
+    maxDrop: result.maxDrop,
+    ...(result.maxCostIncrease === undefined ? {} : { maxCostIncrease: result.maxCostIncrease }),
+    ...(result.maxLatencyIncrease === undefined ? {} : { maxLatencyIncrease: result.maxLatencyIncrease }),
+    checks: result.checks,
+    regressions: result.regressions ?? [],
+  })}\n`
 }
 
 /**

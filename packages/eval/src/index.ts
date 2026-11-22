@@ -17,7 +17,7 @@ import { loadBenchmark } from './benchmark.ts'
 import { applyEval, type EvalStartupValues } from './command.ts'
 import { compareRuns, pairedCases, renderCompareMarkdown, renderPairedCases } from './compare.ts'
 import { writeDashboard } from './dashboard.ts'
-import { evaluateGate, renderGate } from './gate.ts'
+import { evaluateGate, renderGate, renderGateJson } from './gate.ts'
 import { importTraceFile } from './import.ts'
 import { buildLeaderboard, renderLeaderboard } from './leaderboard.ts'
 import { llmJudgeChat, type JudgeChat } from './judge.ts'
@@ -56,9 +56,14 @@ export function resolveJudgeChat(ctx: Context): JudgeChat | undefined {
   return llm === undefined ? undefined : llmJudgeChat(llm.stream)
 }
 
-/** One bounded progress line; agent-controlled text must not inject newlines. */
+/** One bounded progress line; agent-controlled text must not inject newlines or terminal control codes. */
 export function renderProgress(result: EvalTrialResult, finished: number, total: number): string {
-  const clean = (value: string): string => value.replace(/[\r\n]+/gu, ' ')
+  const clean = (value: string): string => value
+    // CSI / OSC sequences first, then every remaining C0/C1 control byte.
+    .replace(/\u001b\[[0-?]*[ -/]*[@-~]/gu, '')
+    .replace(/\u001b\][^\u0007]*(?:\u0007|\u001b\\)/gu, '')
+    .replace(/[\u0000-\u001f\u007f-\u009f]/gu, ' ')
+    .slice(0, 200)
   const label = `${clean(result.caseId)} #${result.trial}`
   if (result.status === 'error') {
     return `[eval] ${finished}/${total} ${label} ERROR ${clean(result.error ?? 'unknown error')}\n`
@@ -146,7 +151,7 @@ export async function executeEval(
         ...(values.maxLatencyIncrease === undefined ? {} : { maxLatencyIncrease: values.maxLatencyIncrease }),
       }
       const result = evaluateGate(baseline, candidate, values.maxDrop, values.allowIncomplete, budgets)
-      io.stdout.write(renderGate(result))
+      io.stdout.write(values.json === true ? renderGateJson(result) : renderGate(result))
       return result.passed ? 0 : 1
     }
     if (values.kind === 'dashboard') {

@@ -93,6 +93,16 @@ describe('dsh-eval benchmark runner', () => {
     expect(errors).toEqual(['error'])
   })
 
+  it('does not let a failing progress observer abort a run', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const run = await runBenchmark(buildBenchmark({ trials: 2 }), {
+      tempRoot: tempDir(),
+      onProgress: () => { throw new Error('observer failure') },
+    })
+    expect(run.cases).toHaveLength(2)
+  })
+
   it('persists case inputs so a stored run can be re-judged', async () => {
     process.env.FAKE_DASH_MODE = 'log'
     process.env.FAKE_DASH_LOG = FIXTURE_LOG

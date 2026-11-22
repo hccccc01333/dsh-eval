@@ -186,7 +186,9 @@ relative resource budgets, so a candidate that keeps quality but costs 2x more
 still fails. Budget rows print absolute values with a relative delta; a missing
 baseline metric skips that budget, while a missing candidate metric fails
 closed. A tiny relative tolerance absorbs floating-point noise at 1e-9 of the
-baseline without masking a real overrun.
+baseline without masking a real overrun. Add `--json` to emit the same verdict
+as a single JSON object (`passed`, thresholds, `checks`, `regressions`) for CI
+dashboards and automation.
 
 When paired trials exist, the verdict also lists up to five case x trials that
 flipped from pass to fail (or lost judge score), with case ids sanitized for

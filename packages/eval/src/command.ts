@@ -54,6 +54,7 @@ export type EvalStartupValues =
     maxCostIncrease?: number
     maxLatencyIncrease?: number
     allowIncomplete: boolean
+    json?: boolean
   }
   | {
     kind: 'dashboard'
@@ -224,12 +225,14 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     .option('--max-cost-increase <ratio>', 'largest tolerated cost/trial increase over baseline, 0..1', unitRatio(program, '--max-cost-increase'))
     .option('--max-latency-increase <ratio>', 'largest tolerated latency/trial increase over baseline, 0..1', unitRatio(program, '--max-latency-increase'))
     .option('--allow-incomplete', 'do not fail on extra unscored trials')
+    .option('--json', 'emit a machine-readable JSON verdict instead of markdown')
     .action((candidatePath: string, options: {
       baseline?: string
       maxDrop: number
       maxCostIncrease?: number
       maxLatencyIncrease?: number
       allowIncomplete?: boolean
+      json?: boolean
     }) => {
       if (options.baseline === undefined) program.error('error: gate needs --baseline <path>')
       publish({
@@ -240,6 +243,7 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
         ...(options.maxCostIncrease === undefined ? {} : { maxCostIncrease: options.maxCostIncrease }),
         ...(options.maxLatencyIncrease === undefined ? {} : { maxLatencyIncrease: options.maxLatencyIncrease }),
         allowIncomplete: options.allowIncomplete === true,
+        json: options.json === true,
       })
     })
   const dashboard = program.command('dashboard').description('render persisted runs as a standalone HTML dashboard or leaderboard')

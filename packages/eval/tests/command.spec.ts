@@ -146,6 +146,10 @@ describe('dsh-eval command composition', () => {
     expect(renderProgress({
       caseId: 'z', trial: 1, status: 'error', exitCode: 1, timedOut: false,
     }, 1, 1)).toBe('[eval] 1/1 z #1 ERROR unknown error\n')
+    expect(renderProgress({
+      caseId: 'a\u001b[31mred\u001b[0m', trial: 1, status: 'error', exitCode: 1,
+      timedOut: false, error: `\u001b]0;title\u0007${'x'.repeat(400)}`,
+    }, 1, 1)).toBe(`[eval] 1/1 ared #1 ERROR ${'x'.repeat(200)}\n`)
   })
 
   it('includes judge score in the run summary through the chat seam', async () => {
@@ -315,6 +319,9 @@ describe('dsh-eval command composition', () => {
       'gate', candidatePath, '--baseline', baselinePath,
       '--max-cost-increase', '0.1', '--max-latency-increase', '0.2',
     ])).exits).toEqual([0])
+    const json = await bootEval(['gate', candidatePath, '--baseline', baselinePath, '--json'])
+    expect(json.exits).toEqual([0])
+    expect(JSON.parse(json.out) as { passed: boolean }).toMatchObject({ passed: true })
   })
 
   it('renders an HTML dashboard through the CLI', async () => {

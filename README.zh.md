@@ -37,7 +37,7 @@
 
 ## 状态
 
-`dsh-eval@0.4.0` · 232 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.4.0` · 234 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 `0.3.1` 起可安装：`0.3.0` 的 tarball 漏掉了入口 import 的运行时模块，导致每次安装都报 `ERR_MODULE_NOT_FOUND`。详见 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -122,7 +122,7 @@ pricing:
 | `dsh eval dashboard a.json [b.json ...] --out report.html` | 写出独立 HTML 仪表盘或多 run 排行榜 |
 | `dsh eval validate benchmark.yaml` | 预检 benchmark 并给出证据质量警告 |
 | `dsh eval leaderboard a.json b.json ...` | 按任务成功率给多个 run 排名 |
-| `dsh eval gate candidate.json --baseline base.json` | 质量回退或预算超限时让 CI 失败 |
+| `dsh eval gate candidate.json --baseline base.json [--json]` | 回退或超限时让 CI 失败；`--json` 输出机器可读判定 |
 | `dsh eval compare base.json candidate.json` | 对比两个 run，给出带符号的 `B - A` 差值 |
 | `dsh eval rejudge run.json --out rejudged.json` | 离线重评分已保存的 trace，写入新报告 |
 | `dsh eval import codex\|claude-code log.jsonl --out run.json` | 把外部 session 日志导入为单 trial run |

@@ -38,7 +38,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 
 ## Status
 
-`dsh-eval@0.4.0` · 232 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.4.0` · 234 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 
@@ -123,7 +123,7 @@ Each trial runs in a private temp workspace with an isolated `DSH_HOME` and non-
 | `dsh eval dashboard a.json [b.json ...] --out report.html` | Write a standalone HTML dashboard or multi-run leaderboard |
 | `dsh eval validate benchmark.yaml` | Preflight a benchmark and print evidence warnings |
 | `dsh eval leaderboard a.json b.json ...` | Rank multiple runs by task success |
-| `dsh eval gate candidate.json --baseline base.json` | Fail CI on quality regressions or budget overruns |
+| `dsh eval gate candidate.json --baseline base.json [--json]` | Fail CI on regressions; `--json` emits a machine-readable verdict |
 | `dsh eval compare base.json candidate.json` | Compare two runs with signed `B - A` deltas |
 | `dsh eval rejudge run.json --out rejudged.json` | Re-judge stored traces offline and write a new report |
 | `dsh eval import codex\|claude-code log.jsonl --out run.json` | Import an external session log as a one-trial run |
