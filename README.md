@@ -39,7 +39,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 
 ## Status
 
-`dsh-eval@0.4.0` · 260 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.4.0` · 264 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 
@@ -115,10 +115,11 @@ Each trial runs in a private temp workspace with an isolated `DSH_HOME` and non-
 | Invalid tool call | tool results carrying an internal failure identity |
 | Final answer score / hallucination | LLM judge verdict from `judge` config |
 
-Parsed benchmark YAML is hashed with SHA-256; the digest is stored in every run
-and shown by `report`, `validate` and the HTML dashboard. The hash covers the
-YAML source only — prompt files, workspace trees and CLI option overrides are
-captured separately in the run's `caseInputs` and option fields, not in the digest.
+Benchmarks are fingerprinted with SHA-256 over the YAML source plus every
+resolved input — prompt files, workspace trees and replay logs. The digest is
+stored in each run and shown by `report`, `validate` and the HTML dashboard, so
+fixture edits cannot silently change what a result means. CLI option overrides
+are recorded separately in the run's option fields.
 
 ## CLI
 

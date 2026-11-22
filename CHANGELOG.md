@@ -4,8 +4,9 @@
 
 ### Added
 
-- **Benchmark source provenance.** Parsed YAML is SHA-256 hashed; the digest is
-  stored on the run and shown in reports, preflight summaries and dashboards.
+- **Benchmark input provenance.** The SHA-256 fingerprint covers the YAML plus
+  resolved prompt files, workspace trees and replay logs; it is stored on the
+  run and shown in reports, preflight summaries and dashboards.
 - **`--out` on every renderer.** `report`, `compare`, `validate`, `leaderboard`
   and `gate` now join `export` and `dashboard` in writing to a file (creating
   parent directories) instead of stdout, with exit codes unchanged.
@@ -273,8 +274,7 @@
   task trial now reports no interval instead of a misleading 0%.
 - **Benchmark digests survive the report loader.** `benchmarkSha256` is now part
   of the validated run schema and appears in markdown, brief, JSON and dashboard
-  output; rejudged reports keep the field. The documented scope is the YAML
-  source only.
+  output; rejudged reports keep the field.
 - **CSV export keeps its trial-count confirmation** after the shared `--out`
   writer refactor.
 - **Rejudge trace paths are resolved before the tempRoot check.** A hand-edited

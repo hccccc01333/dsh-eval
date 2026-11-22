@@ -6,11 +6,11 @@
  * @module dsh-eval/benchmark
  */
 
-import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { dirname, isAbsolute, resolve } from 'node:path'
 import { load } from 'js-yaml'
 import { z } from 'zod'
+import { hashBenchmarkInputs } from './digest.ts'
 import { caseSegment } from './segments.ts'
 import type { Benchmark, BenchmarkCase } from './types.ts'
 
@@ -178,7 +178,7 @@ export async function parseBenchmark(text: string, baseDir: string): Promise<Ben
   const pricing = parsed.pricing
   const judge = parsed.judge
   const replay = parsed.replay
-  return {
+  const benchmark: Benchmark = {
     name: parsed.name,
     model: parsed.model,
     profile: parsed.profile,
@@ -187,7 +187,6 @@ export async function parseBenchmark(text: string, baseDir: string): Promise<Ben
     concurrency: parsed.concurrency,
     timeoutMs: parsed.timeoutMs,
     seed: parsed.seed,
-    sourceSha256: createHash('sha256').update(text).digest('hex'),
     cases,
     ...(pricing !== undefined ? { pricing } : {}),
     ...(judge !== undefined
@@ -198,6 +197,7 @@ export async function parseBenchmark(text: string, baseDir: string): Promise<Ben
       : {}),
     baseDir,
   }
+  return { ...benchmark, sourceSha256: await hashBenchmarkInputs(text, benchmark) }
 }
 
 /**

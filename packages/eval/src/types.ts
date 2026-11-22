@@ -98,7 +98,7 @@ export interface Benchmark {
   timeoutMs: number
   /** Deterministic seed; trial n receives `DSH_EVAL_SEED = seed + n - 1`. */
   seed: number
-  /** SHA-256 of the benchmark YAML source, when the document was parsed from text. */
+  /** SHA-256 of the YAML source plus resolved prompt/workspace/replay inputs. */
   sourceSha256?: string
   /** The benchmark's cases, in order. */
   cases: readonly BenchmarkCase[]
@@ -252,7 +252,7 @@ export interface EvalRun {
   benchmark: string
   /** Model id the benchmark targeted. */
   model: string
-  /** SHA-256 of the benchmark YAML source, when known. */
+  /** SHA-256 of the benchmark YAML and its resolved input files, when known. */
   benchmarkSha256?: string
   /** Run creation time, epoch milliseconds. */
   createdAt: number

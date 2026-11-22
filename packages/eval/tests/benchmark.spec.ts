@@ -1,5 +1,4 @@
-import { createHash } from 'node:crypto'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -44,8 +43,11 @@ describe('dsh-eval benchmark loading', () => {
     ].join('\n'))
     const benchmark = await loadBenchmark(join(dir, 'benchmark.yml'))
     expect(benchmark.name).toBe('skill-regression')
-    expect(benchmark.sourceSha256).toBe(createHash('sha256')
-      .update(readFileSync(join(dir, 'benchmark.yml'), 'utf8')).digest('hex'))
+    const originalDigest = benchmark.sourceSha256
+    expect(originalDigest).toMatch(/^[0-9a-f]{64}$/u)
+    writeFileSync(join(dir, 'prompt.md'), 'Fix the tests. Changed.')
+    const changed = await loadBenchmark(join(dir, 'benchmark.yml'))
+    expect(changed.sourceSha256).not.toBe(originalDigest)
     expect(benchmark.model).toBe('deepseek-v4')
     expect(benchmark.profile).toBe('headless')
     expect(benchmark.command).toEqual(['dsh'])

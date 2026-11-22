@@ -38,7 +38,7 @@
 
 ## 状态
 
-`dsh-eval@0.4.0` · 260 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.4.0` · 264 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 `0.3.1` 起可安装：`0.3.0` 的 tarball 漏掉了入口 import 的运行时模块，导致每次安装都报 `ERR_MODULE_NOT_FOUND`。详见 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -114,10 +114,10 @@ pricing:
 | 无效工具调用 | 携带内部失败身份的 tool result |
 | 最终答案得分 / 幻觉 | `judge` 配置给出的 LLM 评审裁决 |
 
-解析 benchmark YAML 时会计算 SHA-256,摘要写入每个 run,并在 `report`、
-`validate` 和 HTML 仪表盘中展示。摘要仅覆盖 YAML 源文本;prompt 文件、
-workspace 目录和 CLI 选项覆盖分别记录在 run 的 `caseInputs` 与选项字段中,
-不计入该摘要。
+benchmark 的 SHA-256 覆盖 YAML 源文本以及所有解析后的输入:prompt 文件、
+workspace 目录与 replay 日志。摘要写入每个 run,并在 `report`、`validate` 和
+HTML 仪表盘中展示,因此 fixture 改动不会悄悄改变结果含义。CLI 选项覆盖另行
+记录在 run 的选项字段中。
 
 ## CLI
 
