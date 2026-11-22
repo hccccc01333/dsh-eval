@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { pairedDelta, signTest } from '../src/stats.ts'
+import { bonferroni, pairedDelta, signTest } from '../src/stats.ts'
 
 describe('dsh-eval paired statistics', () => {
   it('reports no evidence when every pair tied', () => {
@@ -56,5 +56,23 @@ describe('dsh-eval paired statistics', () => {
     expect(narrow?.upper).toBe(1)
     const wide = pairedDelta([-5, 0, 5, 10], { confidence: 0.99, resamples: 200, seed: 1 })
     expect(wide!.upper! - wide!.lower!).toBeGreaterThan(0)
+  })
+
+  it('scales the p-value and widens intervals for the whole family', () => {
+    expect(bonferroni(0.03, 4)).toEqual({
+      comparisons: 4,
+      alpha: 0.05,
+      adjustedPValue: 0.12,
+      intervalConfidence: 0.9875,
+    })
+    expect(bonferroni(0.9, 3).adjustedPValue).toBeCloseTo(1, 12)
+    expect(bonferroni(0.5, 1, 0.1)).toEqual({
+      comparisons: 1, alpha: 0.1, adjustedPValue: 0.5, intervalConfidence: 0.9,
+    })
+  })
+
+  it('rejects a family with no comparisons', () => {
+    expect(() => bonferroni(0.5, 0)).toThrow('comparisons must be a positive integer')
+    expect(() => bonferroni(0.5, 1.5)).toThrow('comparisons must be a positive integer')
   })
 })

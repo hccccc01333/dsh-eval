@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Added
+
+- **Family-wise correction on paired inference.** `dsh eval compare` prints a
+  sign-test p-value beside up to three bootstrap delta intervals. Those are now
+  treated as one inference family and corrected together with Bonferroni at
+  `alpha = 0.05`: the p-value row is labelled with the family size it was
+  multiplied by, and each interval is widened to `1 - 0.05/k` confidence (98.8%
+  when all four quantities are present). The family size adapts to which
+  intervals actually have data, so a run without a judge is corrected over
+  three quantities rather than four. `stats.ts` exports `bonferroni` for reuse.
+
 ### Fixed
 
 - **Case ids that collapse onto the same trial directory are now rejected.** A

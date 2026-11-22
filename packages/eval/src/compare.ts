@@ -6,7 +6,14 @@
  */
 
 import type { EvalRun, EvalTrialResult } from './types.ts'
-import { pairedDelta, signTest, type PairedDelta, type SignTestOutcome } from './stats.ts'
+import {
+  bonferroni,
+  pairedDelta,
+  signTest,
+  type FamilyWiseCorrection,
+  type PairedDelta,
+  type SignTestOutcome,
+} from './stats.ts'
 
 /** One compared metric row. */
 export interface CompareRow {
@@ -32,8 +39,10 @@ export interface PairedStats {
   ties: number
   /** The metric used for win/lose/tie classification. */
   primaryMetric: 'task success' | 'tool selection accuracy' | 'final answer score'
-  /** Exact two-sided sign test over the discordant pairs of the primary metric. */
+  /** Exact two-sided sign test over the discordant pairs of the primary metric (raw p-value). */
   test: SignTestOutcome
+  /** Bonferroni correction shared by the printed p-value and delta intervals. */
+  correction: FamilyWiseCorrection
   /** Paired step delta (`b - a`) with its bootstrap interval, or null when no pair is numeric. */
   stepsDelta: PairedDelta | null
   /** Paired token delta (`b - a`) with its bootstrap interval, or null when no pair is numeric. */
@@ -59,12 +68,12 @@ function formatDelta(a: number | null, b: number | null, unit: 'pp' | '' = ''): 
   return `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}${unit}`
 }
 
-/** Render a paired delta with its bootstrap interval when the sample allows one. */
-function formatPairedDelta(delta: PairedDelta): string {
+/** Render a paired delta with its bootstrap interval at the given confidence. */
+function formatPairedDelta(delta: PairedDelta, intervalConfidence: number): string {
   const mean = formatDelta(0, delta.mean)
   return delta.lower === null || delta.upper === null
     ? mean
-    : `${mean} [95% CI ${formatDelta(0, delta.lower)}, ${formatDelta(0, delta.upper)}]`
+    : `${mean} [${(intervalConfidence * 100).toFixed(1)}% CI ${formatDelta(0, delta.lower)}, ${formatDelta(0, delta.upper)}]`
 }
 
 /** Render an exact p-value, collapsing anything below the print precision. */
@@ -149,16 +158,21 @@ export function pairedCompare(a: EvalRun, b: EvalRun): PairedStats | null {
       scoreDeltas.push(bScore - aScore)
     }
   }
+  const test = signTest(wins, losses)
+  // The printed p-value and each non-null interval are tested as one family.
+  const comparisons = 1 + [stepDeltas, tokenDeltas, scoreDeltas].filter(deltas => deltas.length > 0).length
+  const correction = bonferroni(test.pValue, comparisons)
   return {
     pairs: pairs.length,
     wins,
     losses,
     ties,
     primaryMetric,
-    test: signTest(wins, losses),
-    stepsDelta: pairedDelta(stepDeltas),
-    tokensDelta: pairedDelta(tokenDeltas),
-    scoreDelta: pairedDelta(scoreDeltas),
+    test,
+    correction,
+    stepsDelta: pairedDelta(stepDeltas, { confidence: correction.intervalConfidence }),
+    tokensDelta: pairedDelta(tokenDeltas, { confidence: correction.intervalConfidence }),
+    scoreDelta: pairedDelta(scoreDeltas, { confidence: correction.intervalConfidence }),
   }
 }
 
@@ -209,19 +223,22 @@ export function compareRuns(a: EvalRun, b: EvalRun): CompareRow[] {
         delta: '–',
       },
       {
-        metric: `paired ${paired.primaryMetric} p (sign test)`,
+        metric: `paired ${paired.primaryMetric} p (sign test, Bonferroni ×${paired.correction.comparisons})`,
         a: '–',
         b: '–',
-        delta: `${formatPValue(paired.test.pValue)} (n=${paired.test.discordant})`,
+        delta: `${formatPValue(paired.correction.adjustedPValue)} (n=${paired.test.discordant})`,
       },
       ...(paired.stepsDelta === null ? [] : [{
-        metric: 'paired steps delta (B-A)', a: '–', b: '–', delta: formatPairedDelta(paired.stepsDelta),
+        metric: 'paired steps delta (B-A)', a: '–', b: '–',
+        delta: formatPairedDelta(paired.stepsDelta, paired.correction.intervalConfidence),
       }]),
       ...(paired.tokensDelta === null ? [] : [{
-        metric: 'paired tokens delta (B-A)', a: '–', b: '–', delta: formatPairedDelta(paired.tokensDelta),
+        metric: 'paired tokens delta (B-A)', a: '–', b: '–',
+        delta: formatPairedDelta(paired.tokensDelta, paired.correction.intervalConfidence),
       }]),
       ...(paired.scoreDelta === null ? [] : [{
-        metric: 'paired final-answer delta (B-A)', a: '–', b: '–', delta: formatPairedDelta(paired.scoreDelta),
+        metric: 'paired final-answer delta (B-A)', a: '–', b: '–',
+        delta: formatPairedDelta(paired.scoreDelta, paired.correction.intervalConfidence),
       }]),
     )
   }

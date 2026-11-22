@@ -122,6 +122,13 @@ describe('dsh-eval comparison', () => {
     expect(paired?.stepsDelta?.mean).toBeCloseTo(1 / 3, 10)
     expect(paired?.tokensDelta?.mean).toBeCloseTo(2, 10)
     expect(paired?.scoreDelta?.mean).toBeCloseTo(0, 10)
+    // One p-value plus three populated intervals: family size four at alpha 0.05.
+    expect(paired?.correction).toEqual({
+      comparisons: 4,
+      alpha: 0.05,
+      adjustedPValue: Math.min(1, paired!.test.pValue * 4),
+      intervalConfidence: 0.9875,
+    })
   })
 
   it('includes paired rows when both runs share completed trials', () => {
@@ -168,11 +175,12 @@ describe('dsh-eval comparison', () => {
     const rows = compareRuns(a, b)
     const scoreRow = rows.find(row => row.metric === 'paired final-answer delta (B-A)')
     expect(scoreRow?.a).toBe('–')
-    // Three pairs carry enough data for a bootstrap interval.
-    expect(scoreRow?.delta).toMatch(/^\+0\.0 \[95% CI -\d\.\d, \+\d\.\d\]$/u)
+    // Three pairs carry enough data for a bootstrap interval, widened to 98.8%
+    // because the report also prints the p-value and two other intervals.
+    expect(scoreRow?.delta).toMatch(/^\+0\.0 \[98\.8% CI -\d\.\d, \+\d\.\d\]$/u)
     // Three pairs, one win and one loss: the sign test has nothing to separate them.
-    expect(rows.find(row => row.metric === 'paired final answer score p (sign test)')).toEqual({
-      metric: 'paired final answer score p (sign test)',
+    expect(rows.find(row => row.metric === 'paired final answer score p (sign test, Bonferroni ×4)')).toEqual({
+      metric: 'paired final answer score p (sign test, Bonferroni ×4)',
       a: '–',
       b: '–',
       delta: '1.000 (n=2)',
@@ -203,9 +211,11 @@ describe('dsh-eval comparison', () => {
     const allWins = buildRun({
       cases: Array.from({ length: 6 }, (_, index) => wins('c', index + 1)),
     })
-    // Six discordant pairs, all one way: p = 2 / 2^6 = 0.031.
-    const pRow = compareRuns(noWins, allWins).find(row => row.metric === 'paired task success p (sign test)')
-    expect(pRow?.delta).toBe('0.031 (n=6)')
+    // Six discordant pairs, all one way: raw p = 2 / 2^6 = 0.031. Only the
+    // steps and token intervals exist (no judge), so Bonferroni ×3 applies.
+    const pRow = compareRuns(noWins, allWins)
+      .find(row => row.metric === 'paired task success p (sign test, Bonferroni ×3)')
+    expect(pRow?.delta).toBe('0.094 (n=6)')
 
     const twelve = buildRun({
       cases: Array.from({ length: 12 }, (_, index) => ({
@@ -221,10 +231,27 @@ describe('dsh-eval comparison', () => {
     const twelveWins = buildRun({
       cases: Array.from({ length: 12 }, (_, index) => wins('c', index + 1)),
     })
-    // 2 / 2^12 is below the printed precision.
+    // Raw 2 / 2^12 is below the print precision, but ×3 is not.
     expect(
-      compareRuns(twelve, twelveWins).find(row => row.metric === 'paired task success p (sign test)')?.delta,
-    ).toBe('<0.001 (n=12)')
+      compareRuns(twelve, twelveWins)
+        .find(row => row.metric === 'paired task success p (sign test, Bonferroni ×3)')?.delta,
+    ).toBe('0.001 (n=12)')
+
+    // Twenty clean sweeps stay below the precision even after ×3.
+    const twenty = buildRun({
+      cases: Array.from({ length: 20 }, (_, index) => ({
+        caseId: 'c', trial: index + 1, status: 'completed' as const,
+        exitCode: 0, timedOut: false,
+        grade: { taskSuccess: false, toolSelectionAccuracy: null }, metrics: METRICS,
+      })),
+    })
+    const twentyWins = buildRun({
+      cases: Array.from({ length: 20 }, (_, index) => wins('c', index + 1)),
+    })
+    expect(
+      compareRuns(twenty, twentyWins)
+        .find(row => row.metric === 'paired task success p (sign test, Bonferroni ×3)')?.delta,
+    ).toBe('<0.001 (n=20)')
   })
 
   it('handles unmatched and unmeasured paired trials', () => {

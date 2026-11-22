@@ -37,6 +37,46 @@ export interface PairedDelta {
   pairs: number
 }
 
+/** Bonferroni family-wise correction shared by a p-value and its sibling intervals. */
+export interface FamilyWiseCorrection {
+  /** Number of inference quantities in the family (the p-value plus intervals). */
+  comparisons: number
+  /** Family-wise error rate the family controls. */
+  alpha: number
+  /** Adjusted p-value: raw p times the family size, capped at 1. */
+  adjustedPValue: number
+  /** Per-interval confidence that keeps family-wise coverage at `1 - alpha`. */
+  intervalConfidence: number
+}
+
+/**
+ * Apply a Bonferroni correction across a family of inference quantities.
+ *
+ * A comparison report prints a sign-test p-value alongside several paired
+ * intervals. Testing each at 5% inflates the chance that at least one is a
+ * false discovery; dividing the error rate by the family size keeps that
+ * chance at `alpha` without any distributional assumption.
+ * @param pValue - raw p-value of the family's primary test.
+ * @param comparisons - number of quantities in the family; at least one.
+ * @param alpha - family-wise error rate, default `0.05`.
+ * @returns the adjusted p-value and the confidence each interval must use.
+ */
+export function bonferroni(
+  pValue: number,
+  comparisons: number,
+  alpha = 0.05,
+): FamilyWiseCorrection {
+  if (!Number.isInteger(comparisons) || comparisons < 1) {
+    throw new Error('bonferroni: comparisons must be a positive integer')
+  }
+  return {
+    comparisons,
+    alpha,
+    adjustedPValue: Math.min(1, pValue * comparisons),
+    intervalConfidence: 1 - alpha / comparisons,
+  }
+}
+
 /** Knobs for {@link pairedDelta}; defaults keep reports reproducible. */
 export interface BootstrapOptions {
   /** Interval confidence, default `0.95`. */

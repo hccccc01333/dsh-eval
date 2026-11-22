@@ -21,7 +21,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - LLM judge: final-answer score and hallucination flags from a judge model
 - Subagent trace merging: child session logs fold into the trial metrics
 - Paired A/B: same-case win/lose/tie statistics across two runs
-- Paired inference: exact sign test over discordant pairs, seeded bootstrap 95% intervals on every mean delta
+- Paired inference: exact sign test over discordant pairs, seeded bootstrap intervals on every mean delta, Bonferroni-corrected across the printed family
 - Parallel trials: `concurrency` / `--concurrency` runs several case × trial executions at once, results still ordered
 - Keyless replay: record once with a key, replay in CI from recorded logs
 - Cross-harness import: `dsh eval import codex|claude-code <log> --out run.json`
@@ -30,7 +30,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 
 ## Status
 
-`dsh-eval@0.4.0` · 137 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.4.0` · 139 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 
@@ -117,7 +117,6 @@ Each trial runs in a private temp workspace with an isolated `DSH_HOME` and non-
 ## Roadmap
 
 - Per-arm leaderboards over paired trials
-- Multiple-comparison correction across the metrics a report prints
 - Web UI dashboard for run reports and comparisons
 
 ## Repository layout
