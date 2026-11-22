@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { loadRunReport, renderMarkdownReport, writeRunReport } from '../src/report.ts'
+import { loadRunReport, renderBriefReport, renderMarkdownReport, writeRunReport } from '../src/report.ts'
 import type { EvalRun } from '../src/types.ts'
 
 const dirs: string[] = []
@@ -273,6 +273,57 @@ describe('dsh-eval report persistence and rendering', () => {
     }))
     expect(markdown).toContain('- judge: judge-m')
     expect(markdown).toContain('- judge failures: 2')
+  })
+
+  it('renders a compact brief summary for the terminal', () => {
+    const metrics = {
+      turns: 1, steps: 2, toolCalls: 1, toolResults: 1, toolSuccess: 1, toolSuccessRate: 1,
+      invalidToolCalls: 0, retries: 0,
+      tokens: { inputTokens: 10, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
+      totalTokens: 10, contextTokens: 10, llmMs: 1, toolMs: 1, ttftMs: 1,
+      latencyMs: 100, costUsd: 0.000001,
+    }
+    const brief = renderBriefReport(buildRun({
+      benchmark: 'suite', model: 'm2',
+      seed: 7,
+      aggregate: { ...metrics },
+      grading: {
+        taskSuccessRate: 0.5, toolSelectionAccuracyRate: null,
+        finalAnswerScore: null, hallucinationRate: null, judgeFailures: 2,
+      },
+      cases: [
+        ...[1, 2, 3].map(trialNo => ({
+          caseId: 'c', trial: trialNo, status: 'completed' as const, exitCode: 0, timedOut: false,
+          grade: { taskSuccess: trialNo !== 2, toolSelectionAccuracy: null }, metrics,
+        })),
+        { caseId: 'c', trial: 4, status: 'error' as const, error: 'boom', exitCode: 1, timedOut: false },
+      ],
+    }))
+    expect(brief).toContain('# suite — m2')
+    expect(brief).toContain('- trials: 3/4 completed · 1 unscored (0 timeouts, 1 errors)')
+    expect(brief).toContain('- tool success: 100.0%')
+    expect(brief).toContain('- steps / tokens / cost per trial: 2.0 / 10 / $0.000001')
+    expect(brief).toContain('- task success: 66.7%')
+    expect(brief).toMatch(/- task precision: 66\.7% \[95% CI .*\]/u)
+    expect(brief).toContain('- judge failures: 2')
+    expect(brief.split('\n').length).toBeLessThan(12)
+    const unpriced = renderBriefReport(buildRun({
+      aggregate: { ...metrics, costUsd: null },
+    }))
+    expect(unpriced).toContain('2.0 / 10 / –')
+  })
+
+  it('keeps the brief report short when data is missing', () => {
+    const empty = renderBriefReport(buildRun())
+    expect(empty).toBe('# b — m\n- trials: 0/0 completed\n')
+    const single = renderBriefReport(buildRun({
+      cases: [{
+        caseId: 'c', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        grade: { taskSuccess: true, toolSelectionAccuracy: null },
+      }],
+    }))
+    expect(single).toContain('- task success: 100.0%')
+    expect(single).not.toContain('95% CI')
   })
 
   it('prints single-run intervals and latency percentiles', () => {

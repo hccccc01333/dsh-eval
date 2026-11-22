@@ -190,6 +190,39 @@ function renderPrecision(summary: RunPrecision): string[] {
 }
 
 /**
+ * Render a compact terminal summary of a run. Unlike the markdown report this
+ * omits the per-trial table, so a hundred-trial run still fits on one screen.
+ * @param run - the run record to summarize.
+ * @returns a short markdown fragment ending in a newline.
+ */
+export function renderBriefReport(run: EvalRun): string {
+  const coverage = computeCoverage(run)
+  const aggregate = run.aggregate
+  const reliability = computeReliability(run, 'task')
+  const interval = computePrecision(run).task
+  const lines = [
+    `# ${run.benchmark} — ${run.model}`,
+    `- trials: ${coverage.completed}/${coverage.total} completed${coverage.unscored === 0
+      ? ''
+      : ` · ${coverage.unscored} unscored (${coverage.timeouts} timeouts, ${coverage.errors} errors)`}`,
+  ]
+  if (aggregate !== null) {
+    lines.push(
+      `- tool success: ${formatRate(aggregate.toolSuccessRate)}`,
+      `- steps / tokens / cost per trial: ${aggregate.steps.toFixed(1)} / ${aggregate.totalTokens.toFixed(0)} / ${aggregate.costUsd === null ? '–' : `$${aggregate.costUsd.toFixed(6)}`}`,
+    )
+  }
+  if (reliability !== null) {
+    lines.push(`- task success: ${(reliability.passAt1 * 100).toFixed(1)}% · pass@${reliability.k}: ${(reliability.passAtK * 100).toFixed(1)}% · pass^${reliability.k}: ${(reliability.passAllK * 100).toFixed(1)}%`)
+  }
+  if (interval !== null && interval.lower !== null && interval.upper !== null) {
+    lines.push(`- task precision: ${(interval.rate * 100).toFixed(1)}% [95% CI ${(interval.lower * 100).toFixed(1)}%, ${(interval.upper * 100).toFixed(1)}%]`)
+  }
+  if (run.grading?.judgeFailures) lines.push(`- judge failures: ${run.grading.judgeFailures}`)
+  return `${lines.join('\n')}\n`
+}
+
+/**
  * Render a run report as a markdown table: one row per trial plus the
  * aggregate row, followed by reliability and precision summaries.
  * @param run - the run record to render.

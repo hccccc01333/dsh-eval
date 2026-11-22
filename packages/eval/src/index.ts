@@ -19,7 +19,7 @@ import { compareRuns, renderCompareMarkdown } from './compare.ts'
 import { importTraceFile } from './import.ts'
 import { llmJudgeChat, type JudgeChat } from './judge.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
-import { renderMarkdownReport, writeRunReport, loadRunReport } from './report.ts'
+import { renderBriefReport, renderMarkdownReport, writeRunReport, loadRunReport } from './report.ts'
 import { runBenchmark } from './runner.ts'
 
 /** Stable Cordis plugin name. */
@@ -94,7 +94,7 @@ export async function executeEval(
     }
     if (values.kind === 'report') {
       const run = await loadRunReport(values.runPath)
-      io.stdout.write(renderMarkdownReport(run))
+      io.stdout.write(values.brief ? renderBriefReport(run) : renderMarkdownReport(run))
       return 0
     }
     if (values.kind === 'compare') {

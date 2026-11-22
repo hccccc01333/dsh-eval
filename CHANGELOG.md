@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Compact `--brief` report mode.** `dsh eval report run.json --brief` prints
+  trial coverage, per-trial tool/step/token/cost figures, the task rate with
+  pass@k/pass^k, the seeded interval, and the judge-failure count without the
+  per-trial markdown table, so large runs remain readable in a terminal.
 - **Single-run precision.** The report gained a Precision block: seeded
   percentile-bootstrap 95% intervals for task/tool pass rates (2000 resamples by
   default, seeded from the run) with an `n=` count, plus latency p50/p95. A

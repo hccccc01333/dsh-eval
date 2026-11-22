@@ -27,12 +27,12 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - Parallel trials: `concurrency` / `--concurrency` runs several case × trial executions at once, results still ordered
 - Keyless replay: record once with a key, replay in CI from recorded logs
 - Cross-harness import: `dsh eval import codex|claude-code <log> --out run.json`
-- `dsh eval report run.json` — Markdown report with per-trial scores, pooled rates, and reliability blocks
+- `dsh eval report run.json` — Markdown report with per-trial scores, pooled rates, reliability and precision blocks; `--brief` prints a compact terminal summary
 - `dsh eval compare v1.json v2.json` — signed `B - A` comparison table
 
 ## Status
 
-`dsh-eval@0.4.0` · 156 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.4.0` · 158 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 
@@ -113,6 +113,7 @@ Each trial runs in a private temp workspace with an isolated `DSH_HOME` and non-
 |---|---|
 | `dsh eval run benchmark.yaml --out run.json` | Execute the benchmark and write the JSON run |
 | `dsh eval report run.json` | Render a run as Markdown |
+| `dsh eval report run.json --brief` | Print a compact terminal summary without the per-trial table |
 | `dsh eval compare base.json candidate.json` | Compare two runs with signed `B - A` deltas |
 | `dsh eval import codex\|claude-code log.jsonl --out run.json` | Import an external session log as a one-trial run |
 

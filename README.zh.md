@@ -26,12 +26,12 @@
 - 并发 trial：`concurrency` / `--concurrency` 让多个 case × trial 同时跑，结果顺序不变
 - keyless 回放：有 key 时录一次，CI 里从录制日志复现
 - 跨 harness 导入：`dsh eval import codex|claude-code <log> --out run.json`
-- `dsh eval report run.json` —— 带每个 trial 评分、合并比率与可靠性区块的 Markdown 报告
+- `dsh eval report run.json` —— 带每个 trial 评分、合并比率、可靠性与精度区块的 Markdown 报告；`--brief` 输出紧凑的终端摘要
 - `dsh eval compare v1.json v2.json` —— 带符号的 `B - A` 对比表
 
 ## 状态
 
-`dsh-eval@0.4.0` · 156 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.4.0` · 158 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 `0.3.1` 起可安装：`0.3.0` 的 tarball 漏掉了入口 import 的运行时模块，导致每次安装都报 `ERR_MODULE_NOT_FOUND`。详见 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -112,6 +112,7 @@ pricing:
 |---|---|
 | `dsh eval run benchmark.yaml --out run.json` | 执行 benchmark 并写出 JSON run |
 | `dsh eval report run.json` | 把 run 渲染为 Markdown |
+| `dsh eval report run.json --brief` | 省略逐 trial 表格，输出紧凑终端摘要 |
 | `dsh eval compare base.json candidate.json` | 对比两个 run，给出带符号的 `B - A` 差值 |
 | `dsh eval import codex\|claude-code log.jsonl --out run.json` | 把外部 session 日志导入为单 trial run |
 

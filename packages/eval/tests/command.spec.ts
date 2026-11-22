@@ -188,6 +188,9 @@ describe('dsh-eval command composition', () => {
     const observed = await bootEval(['report', runPath])
     expect(observed.exits).toEqual([0])
     expect(observed.out).toContain('# Eval: reported')
+    const brief = await bootEval(['report', runPath, '--brief'])
+    expect(brief.exits).toEqual([0])
+    expect(brief.out).toBe('# reported — m\n- trials: 0/0 completed\n')
   })
 
   it('prints help and exits 0 without running', async () => {

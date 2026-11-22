@@ -26,6 +26,8 @@ export type EvalStartupValues =
   | {
     kind: 'report'
     runPath: string
+    /** Print a compact terminal summary instead of the full markdown report. */
+    brief?: boolean
   }
   | {
     kind: 'compare'
@@ -47,6 +49,11 @@ interface RunCommandOptions {
   concurrency?: number
   dsh?: string
   profile?: string
+}
+
+/** Options accepted by `eval report`. */
+interface ReportCommandOptions {
+  brief?: boolean
 }
 
 /** Options accepted by `eval import`. */
@@ -123,8 +130,9 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
   const report = program.command('report').description('render a persisted run JSON as markdown')
   report
     .argument('<run.json>', 'path to a run report')
-    .action((runPath: string) => {
-      publish({ kind: 'report', runPath })
+    .option('--brief', 'print a compact terminal summary instead of the full report')
+    .action((runPath: string, options: ReportCommandOptions) => {
+      publish({ kind: 'report', runPath, ...(options.brief ? { brief: true } : {}) })
     })
   const compare = program.command('compare').description('compare two persisted run reports as a markdown table')
   compare
