@@ -94,6 +94,7 @@ describe('dsh-eval report persistence and rendering', () => {
   it('renders completed and failed trials plus the aggregate row', () => {
     const run = buildRun({
       benchmark: 'render-me',
+      benchmarkSha256: 'a'.repeat(64),
       pricing: { inputUsdPerMTokens: 1, cacheReadUsdPerMTokens: 1, cacheWriteUsdPerMTokens: 1, outputUsdPerMTokens: 1 },
       cases: [
         {
@@ -121,6 +122,7 @@ describe('dsh-eval report persistence and rendering', () => {
     })
     const markdown = renderMarkdownReport(run)
     expect(markdown).toContain('# Eval: render-me')
+    expect(markdown).toContain(`- benchmark sha256: ${'a'.repeat(64)}`)
     expect(markdown).toContain('| ok | 1 | completed | 1 | 1 | 100.0% | 0 | 0 | 1 | $0.000001 | 4 | – | – |')
     expect(markdown).toContain('| bad | 1 | error | – | – | – | – | – | – | – | – | – | – |')
     expect(markdown).toContain('| aggregate | – | completed |')

@@ -385,6 +385,7 @@ export function renderMarkdownReport(run: EvalRun): string {
     `# Eval: ${run.benchmark}`,
     '',
     `- model: ${run.model}`,
+    ...(run.benchmarkSha256 === undefined ? [] : [`- benchmark sha256: ${run.benchmarkSha256}`]),
     ...(judged ? [`- judge: ${judge.model}`] : []),
     ...(run.grading?.judgeFailures ? [`- judge failures: ${run.grading.judgeFailures}`] : []),
     `- trials per case: ${run.trials}`,

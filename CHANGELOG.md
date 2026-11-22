@@ -4,6 +4,8 @@
 
 ### Added
 
+- **Benchmark source provenance.** Parsed YAML is SHA-256 hashed; the digest is
+  stored on the run and shown in reports, preflight summaries and dashboards.
 - **`--out` on every renderer.** `report`, `compare`, `validate`, `leaderboard`
   and `gate` now join `export` and `dashboard` in writing to a file (creating
   parent directories) instead of stdout, with exit codes unchanged.

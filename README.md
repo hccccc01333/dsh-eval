@@ -115,6 +115,10 @@ Each trial runs in a private temp workspace with an isolated `DSH_HOME` and non-
 | Invalid tool call | tool results carrying an internal failure identity |
 | Final answer score / hallucination | LLM judge verdict from `judge` config |
 
+Parsed benchmark YAML is hashed with SHA-256; the digest is stored in every run
+and shown by `report`, `validate` and the HTML dashboard, so a result can be tied
+back to the exact benchmark definition that produced it.
+
 ## CLI
 
 | Command | What it does |

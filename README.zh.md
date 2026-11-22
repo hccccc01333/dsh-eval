@@ -114,6 +114,9 @@ pricing:
 | 无效工具调用 | 携带内部失败身份的 tool result |
 | 最终答案得分 / 幻觉 | `judge` 配置给出的 LLM 评审裁决 |
 
+解析 benchmark YAML 时会计算 SHA-256,摘要写入每个 run,并在 `report`、
+`validate` 和 HTML 仪表盘中展示,从而把结果追溯到产生它的确切 benchmark 定义。
+
 ## CLI
 
 | 命令 | 作用 |

@@ -241,7 +241,7 @@ ${STYLE}</style>
 </head>
 <body><main>
 <h1>${esc(run.benchmark)}</h1>
-<p class="sub">${esc(run.model)} · ${new Date(run.createdAt).toISOString()} · ${judge === undefined ? 'no judge' : `judge ${esc(judge.model)}`}</p>
+<p class="sub">${esc(run.model)} · ${new Date(run.createdAt).toISOString()} · ${judge === undefined ? 'no judge' : `judge ${esc(judge.model)}`}${run.benchmarkSha256 === undefined ? '' : ` · source ${esc(run.benchmarkSha256.slice(0, 12))}`}</p>
 ${runs.length === 2 ? renderComparison(runs[0]!, runs[1]!) : ''}
 <section class="cards">${cards}</section>
 <h2>Reliability</h2>

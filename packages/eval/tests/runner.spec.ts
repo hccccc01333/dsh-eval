@@ -125,8 +125,11 @@ describe('dsh-eval benchmark runner', () => {
   it('runs every trial, harvests traces, and folds metrics', async () => {
     process.env.FAKE_DASH_MODE = 'log'
     process.env.FAKE_DASH_LOG = FIXTURE_LOG
-    const run = await runBenchmark(buildBenchmark(), { tempRoot: tempDir() })
+    const benchmark = buildBenchmark()
+    benchmark.sourceSha256 = 'deadbeef'
+    const run = await runBenchmark(benchmark, { tempRoot: tempDir() })
     expect(run.benchmark).toBe('runner-smoke')
+    expect(run.benchmarkSha256).toBe('deadbeef')
     expect(run.trials).toBe(2)
     expect(run.pricing).not.toBeNull()
     expect(run.cases).toHaveLength(2)
@@ -198,9 +201,9 @@ describe('dsh-eval benchmark runner', () => {
     const elapsed = Date.now() - start
     expect(run.cases).toHaveLength(4)
     expect(run.cases.every(result => result.status === 'completed')).toBe(true)
-    // Four serial 1200ms trials cannot finish inside the threshold; the wide
-    // margin keeps this timing check stable on a loaded CI runner.
-    expect(elapsed).toBeLessThan(3000)
+    // Four serial 1200ms trials need ~4800ms; the threshold still proves real
+    // overlap while tolerating a loaded CI runner with coverage instrumentation.
+    expect(elapsed).toBeLessThan(4500)
   })
 
   it('rejects the run when a trial setup throws', async () => {

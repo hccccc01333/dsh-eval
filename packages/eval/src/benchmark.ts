@@ -6,6 +6,7 @@
  * @module dsh-eval/benchmark
  */
 
+import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { dirname, isAbsolute, resolve } from 'node:path'
 import { load } from 'js-yaml'
@@ -186,6 +187,7 @@ export async function parseBenchmark(text: string, baseDir: string): Promise<Ben
     concurrency: parsed.concurrency,
     timeoutMs: parsed.timeoutMs,
     seed: parsed.seed,
+    sourceSha256: createHash('sha256').update(text).digest('hex'),
     cases,
     ...(pricing !== undefined ? { pricing } : {}),
     ...(judge !== undefined

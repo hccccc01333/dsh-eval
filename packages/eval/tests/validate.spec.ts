@@ -22,12 +22,14 @@ function benchmark(overrides: Partial<Benchmark> = {}): Benchmark {
 describe('dsh-eval benchmark preflight', () => {
   it('summarizes a fully configured benchmark without warnings', () => {
     const summary = renderBenchmarkSummary(benchmark({
+      sourceSha256: 'b'.repeat(64),
       trials: 4,
       judge: { provider: 'p', model: 'j', maxScore: 10 },
       pricing: { m: { inputUsdPerMTokens: 1, cacheReadUsdPerMTokens: 1, cacheWriteUsdPerMTokens: 1, outputUsdPerMTokens: 1 } },
     }))
     expect(summary).toContain('# Benchmark: smoke')
     expect(summary).toContain('- profile: headless')
+    expect(summary).toMatch(/- source sha256: [a-f0-9]{64}/)
     expect(summary).toContain('- timeout: 1000 ms')
     expect(summary).not.toContain('per-case override')
     expect(summary).toContain('- seed: 7 (trial n receives DSH_EVAL_SEED = 7 + n - 1)')

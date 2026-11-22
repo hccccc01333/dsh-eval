@@ -521,6 +521,7 @@ export async function runBenchmark(benchmark: Benchmark, options: RunOptions = {
   return {
     benchmark: benchmark.name,
     model: benchmark.model,
+    ...(benchmark.sourceSha256 === undefined ? {} : { benchmarkSha256: benchmark.sourceSha256 }),
     createdAt: Date.now(),
     trials,
     seed: benchmark.seed,

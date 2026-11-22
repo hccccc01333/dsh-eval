@@ -25,7 +25,8 @@ const METRICS = {
 
 function buildRun(overrides: Partial<EvalRun> = {}): EvalRun {
   return {
-    benchmark: 'suite', model: 'model', createdAt: 1, trials: 2, seed: 7, pricing: null,
+    benchmark: 'suite', model: 'model', benchmarkSha256: 'f'.repeat(64),
+    createdAt: 1, trials: 2, seed: 7, pricing: null,
     tempRoot: '/tmp/t',
     cases: [
       {
@@ -79,6 +80,7 @@ describe('dsh-eval HTML dashboard', () => {
     expect(html).toContain('Flaky cases:')
     expect(html).toContain('Hardest cases:')
     expect(html).toContain('Precision</h2>')
+    expect(html).toContain('source ffffffff')
     expect(html).toContain('task success')
     expect(html).toContain('<td>strict pass@1 (all trials)</td>')
     expect(html).toContain('tool selection')

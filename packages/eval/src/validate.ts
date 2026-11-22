@@ -15,6 +15,8 @@ import type { Benchmark } from './types.ts'
 /** Structured preflight result, shared by the markdown and JSON renderers. */
 export interface BenchmarkSummary {
   name: string
+  /** SHA-256 of the benchmark YAML source, when parsed from text. */
+  sourceSha256: string | null
   model: string
   profile: string
   command: readonly string[]
@@ -109,6 +111,7 @@ export function summarizeBenchmark(benchmark: Benchmark): BenchmarkSummary {
   const judge = benchmark.judge
   return {
     name: benchmark.name,
+    sourceSha256: benchmark.sourceSha256 ?? null,
     model: benchmark.model,
     profile: benchmark.profile,
     command: benchmark.command,
@@ -142,6 +145,7 @@ export function renderBenchmarkSummary(benchmark: Benchmark): string {
     `# Benchmark: ${summary.name}`,
     '',
     `- model: ${summary.model}`,
+    ...(summary.sourceSha256 === null ? [] : [`- source sha256: ${summary.sourceSha256}`]),
     `- profile: ${summary.profile}`,
     `- command: ${summary.command.join(' ')}`,
     `- trials per case: ${summary.trials}`,
