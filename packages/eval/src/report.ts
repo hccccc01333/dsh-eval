@@ -189,6 +189,7 @@ function renderPrecision(summary: RunPrecision): string[] {
     '## Precision',
     '',
     ...rateLine('task success', summary.task),
+    ...rateLine('strict pass@1 (all trials)', summary.strictPassAt1),
     ...rateLine('tool selection accuracy', summary.toolSelection),
     ...(summary.latencyP50 === null || summary.latencyP95 === null
       ? []
@@ -376,7 +377,7 @@ export function renderMarkdownReport(run: EvalRun): string {
   const agreement = computeAgreement(run)
   const calibration = computeCalibration(run)
   const hasPrecision = precision.task !== null || precision.toolSelection !== null
-    || precision.latencyP50 !== null
+    || precision.strictPassAt1 !== null || precision.latencyP50 !== null
   const coverageLine = coverage.unscored === 0
     ? `- trials: ${coverage.completed}/${coverage.total} completed`
     : `- trials: ${coverage.completed}/${coverage.total} completed · ${coverage.unscored} unscored (${coverage.timeouts} timeouts, ${coverage.errors} errors)`

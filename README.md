@@ -23,7 +23,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - Paired A/B: same-case win/lose/tie statistics across two runs
 - Paired inference: exact sign test with power/MDE floor, seeded bootstrap intervals on every mean delta, Bonferroni-corrected across the printed family
 - Reliability: per-case pass@1 / pass@k / pass^k, flaky-case detection, hardest-case ranking, and a strict rate that keeps timed-out/error trials in the denominator
-- Precision: seeded bootstrap intervals for single-run rates plus latency p50/p95, so small runs show their uncertainty
+- Precision: seeded bootstrap intervals for single-run rates (including strict pass@1 over all trials) plus latency p50/p95, so small runs show their uncertainty
 - Agreement: judge/script concordance and Cohen's kappa, so a proxy judge can be checked against real checks
 - Parallel trials: `concurrency` / `--concurrency` runs several case × trial executions at once, results still ordered
 - Keyless replay: record once with a key, replay in CI from recorded logs

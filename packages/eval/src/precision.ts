@@ -31,6 +31,8 @@ export interface RunPrecision {
   task: RateInterval | null
   /** Tool-selection interval, or null when no trial carried the expectation. */
   toolSelection: RateInterval | null
+  /** Strict pass@1 interval over every trial, keeping errors in the denominator. */
+  strictPassAt1: RateInterval | null
   /** Median trial latency in milliseconds, or null without metrics. */
   latencyP50: number | null
   /** 95th-percentile trial latency in milliseconds, or null without metrics. */
@@ -73,6 +75,8 @@ export function computePrecision(run: EvalRun, options: BootstrapOptions = {}): 
   return {
     task: rateInterval(completed, result => result.grade?.taskSuccess, bootstrap),
     toolSelection: rateInterval(completed, result => result.grade?.toolSelectionAccuracy, bootstrap),
+    strictPassAt1: rateInterval(run.cases, result =>
+      result.status === 'completed' && result.grade?.taskSuccess === true, bootstrap),
     latencyP50: latencies.length === 0 ? null : percentile(latencies, 0.5),
     latencyP95: latencies.length === 0 ? null : percentile(latencies, 0.95),
   }

@@ -22,7 +22,7 @@
 - 配对 A/B：同 case 的胜/负/平统计
 - 配对推断：带功效/最小可检出样本量下限的精确符号检验，每个均值差给出固定种子 bootstrap 区间，并对报告内的整个推断族做 Bonferroni 校正
 - 可靠性：从 trial 直接推导每个 case 的 pass@1 / pass@k / pass^k、不稳定 case 列表、最难 case 排名，以及把超时/失败 trial 保留在分母中的严格通过率
-- 精度：单 run 通过率的固定种子 bootstrap 区间，以及延迟 p50/p95，让小样本 run 坦白展示不确定性
+- 精度：单 run 通过率（含把所有 trial 计入分母的严格 pass@1）的固定种子 bootstrap 区间，以及延迟 p50/p95，让小样本 run 坦白展示不确定性
 - 一致性：判官与脚本评分的一致率和 Cohen's kappa，可用真实检查校验代理判官是否可信
 - 并发 trial：`concurrency` / `--concurrency` 让多个 case × trial 同时跑，结果顺序不变
 - keyless 回放：有 key 时录一次，CI 里从录制日志复现

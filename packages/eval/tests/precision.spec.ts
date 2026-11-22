@@ -55,6 +55,7 @@ describe('dsh-eval single-run precision', () => {
     expect(summary.task?.lower).toBeGreaterThanOrEqual(0.25)
     expect(summary.task?.upper).toBeLessThanOrEqual(1)
     expect(summary.toolSelection).toMatchObject({ trials: 4, rate: 0.75 })
+    expect(summary.strictPassAt1).toMatchObject({ trials: 4, rate: 0.75 })
     expect(summary.latencyP50).toBe(250)
     expect(summary.latencyP95).toBeCloseTo(385, 5)
   })
@@ -63,13 +64,20 @@ describe('dsh-eval single-run precision', () => {
     const single = computePrecision(run([trial(1, true, null, 50)]))
     expect(single.task).toEqual({ trials: 1, rate: 1, lower: null, upper: null })
     expect(single.toolSelection).toBeNull()
+    expect(single.strictPassAt1).toEqual({ trials: 1, rate: 1, lower: null, upper: null })
     expect(single.latencyP50).toBe(50)
     const empty = computePrecision(run([]))
-    expect(empty).toEqual({ task: null, toolSelection: null, latencyP50: null, latencyP95: null })
+    expect(empty).toEqual({
+      task: null, toolSelection: null, strictPassAt1: null, latencyP50: null, latencyP95: null,
+    })
     const unmeasured = computePrecision(run([{
       caseId: 'c', trial: 1, status: 'error', error: 'boom', exitCode: 1, timedOut: false,
     }]))
-    expect(unmeasured).toEqual({ task: null, toolSelection: null, latencyP50: null, latencyP95: null })
+    expect(unmeasured).toEqual({
+      task: null, toolSelection: null,
+      strictPassAt1: { trials: 1, rate: 0, lower: null, upper: null },
+      latencyP50: null, latencyP95: null,
+    })
   })
 
   it('seeds the interval from the run and honours an override', () => {
