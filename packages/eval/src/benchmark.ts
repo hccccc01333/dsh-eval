@@ -39,9 +39,11 @@ const benchmarkCaseSchema = z.object({
   expected: z.object({
     tool: z.string().min(1).optional(),
     check: z.string().min(1).optional(),
+    answer: z.string().min(1).optional(),
   }).strict().refine(
-    expectation => expectation.tool !== undefined || expectation.check !== undefined,
-    { message: 'expected needs at least one of tool or check' },
+    expectation => expectation.tool !== undefined || expectation.check !== undefined
+      || expectation.answer !== undefined,
+    { message: 'expected needs at least one of tool, check or answer' },
   ).optional(),
 }).strict().refine(
   caseValue => (caseValue.prompt === undefined) !== (caseValue.promptFile === undefined),
@@ -106,6 +108,7 @@ async function resolveCase(
         expected: {
           ...(parsed.expected.tool !== undefined ? { tool: parsed.expected.tool } : {}),
           ...(parsed.expected.check !== undefined ? { check: parsed.expected.check } : {}),
+          ...(parsed.expected.answer !== undefined ? { answer: parsed.expected.answer } : {}),
         },
       }
       : {}),

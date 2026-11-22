@@ -17,7 +17,7 @@
 - 从持久化 session 日志收获 trace（模型看到的每个字节都能从日志重建）
 - 自动指标：任务成功、工具成功、工具选择准确率、steps、token、延迟、成本、重试、无效工具调用、上下文用量
 - 脚本化评分：`expected.tool`（工具选择准确率）与 `expected.check`（任务成功）
-- LLM judge：由评审模型给出最终答案得分与幻觉标记
+- LLM judge：最终答案得分与幻觉标记，支持金标答案，判官失败显式可见
 - 子 agent trace 合并：子 session 日志折叠进 trial 指标
 - 配对 A/B：同 case 的胜/负/平统计
 - 配对推断：对不一致对做精确符号检验，每个均值差给出固定种子 bootstrap 区间，并对报告内的整个推断族做 Bonferroni 校正
@@ -30,7 +30,7 @@
 
 ## 状态
 
-`dsh-eval@0.4.0` · 147 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.4.0` · 151 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 `0.3.1` 起可安装：`0.3.0` 的 tarball 漏掉了入口 import 的运行时模块，导致每次安装都报 `ERR_MODULE_NOT_FOUND`。详见 [CHANGELOG.md](CHANGELOG.md)。
 

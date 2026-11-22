@@ -161,10 +161,11 @@ function gradingOf(results: readonly EvalTrialResult[]): EvalRunGrading | null {
   const hallucinationRate = hallucinated.length === 0
     ? null
     : hallucinated.filter(value => value).length / hallucinated.length
+  const judgeFailures = results.filter(result => result.judge?.judgeError !== undefined).length
   return taskSuccessRate === null && toolSelectionAccuracyRate === null
-      && finalAnswerScore === null && hallucinationRate === null
+      && finalAnswerScore === null && hallucinationRate === null && judgeFailures === 0
     ? null
-    : { taskSuccessRate, toolSelectionAccuracyRate, finalAnswerScore, hallucinationRate }
+    : { taskSuccessRate, toolSelectionAccuracyRate, finalAnswerScore, hallucinationRate, judgeFailures }
 }
 
 /**

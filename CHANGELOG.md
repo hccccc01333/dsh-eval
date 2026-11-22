@@ -4,6 +4,13 @@
 
 ### Added
 
+- **Gold answers and visible judge failures.** A case can set
+  `expected.answer`; the judge prompt now includes it and instructs the model to
+  score factual agreement rather than fluency. A failed chat call or an
+  unparsable reply no longer vanishes into a null score: the verdict carries
+  `judgeError`, `grading.judgeFailures` counts it, and both the Markdown report
+  (`- judge failures: N`) and `compare` show it. A run where every judge call
+  failed is still reported rather than collapsing to a null grading.
 - **Trial coverage and survivor-bias-free pass rates.** Reports now show
   `completed / total` trials with unscored and timeout counts, and the
   Reliability block adds `strict pass@1` (passes over every trial, including

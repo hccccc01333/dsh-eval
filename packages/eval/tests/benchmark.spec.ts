@@ -115,6 +115,17 @@ describe('dsh-eval benchmark loading', () => {
       '',
     ].join('\n'), dir)
     expect(checkOnly.cases[0]?.expected).toEqual({ check: './check.sh' })
+    const answerOnly = await parseBenchmark([
+      'name: answer-only',
+      'model: m',
+      'cases:',
+      '  - id: a',
+      '    prompt: p',
+      '    expected:',
+      '      answer: "42"',
+      '',
+    ].join('\n'), dir)
+    expect(answerOnly.cases[0]?.expected).toEqual({ answer: '42' })
   })
 
   it('parses judge configuration with defaults', async () => {
@@ -202,7 +213,7 @@ describe('dsh-eval benchmark loading', () => {
     { name: 'both prompt sources', text: 'name: n\nmodel: m\ncases:\n  - id: a\n    prompt: p\n    promptFile: x.md\n', message: 'exactly one of prompt or promptFile' },
     { name: 'unknown key', text: 'name: n\nmodel: m\nbogus: 1\ncases:\n  - id: a\n    prompt: p\n', message: '' },
     { name: 'no cases', text: 'name: n\nmodel: m\ncases: []\n', message: '' },
-    { name: 'empty expected', text: 'name: n\nmodel: m\ncases:\n  - id: a\n    prompt: p\n    expected: {}\n', message: 'expected needs at least one of tool or check' },
+    { name: 'empty expected', text: 'name: n\nmodel: m\ncases:\n  - id: a\n    prompt: p\n    expected: {}\n', message: 'expected needs at least one of tool, check or answer' },
     { name: 'zero concurrency', text: 'name: n\nmodel: m\nconcurrency: 0\ncases:\n  - id: a\n    prompt: p\n', message: '' },
     { name: 'fractional concurrency', text: 'name: n\nmodel: m\nconcurrency: 1.5\ncases:\n  - id: a\n    prompt: p\n', message: '' },
     { name: 'duplicate ids', text: 'name: n\nmodel: m\ncases:\n  - id: a\n    prompt: p\n  - id: a\n    prompt: q\n', message: 'collides with an earlier case' },

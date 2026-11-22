@@ -55,7 +55,7 @@ pricing:
 | `cases[].id` | 必填 | 稳定的 case id。 |
 | `cases[].prompt` / `cases[].promptFile` | 二选一 | 任务文本，内联或相对 benchmark 文件解析。 |
 | `cases[].workspace` | 缺省 | 复制进每个 trial 的工作区树，相对或绝对路径。 |
-| `cases[].expected` | 缺省 | 脚本化评分：`tool` 是对记录到的工具调用名做子串匹配；`check` 是 agent 退出后在 trial 工作区运行的命令（退出码 0 = 任务成功）。填了就必须至少给一个。 |
+| `cases[].expected` | 缺省 | 脚本化评分：`tool` 是对记录到的工具调用名做子串匹配；`check` 是 agent 退出后在 trial 工作区运行的命令（退出码 0 = 任务成功）；`answer` 是交给 judge 的金标答案，用于按事实一致性打分。填了就必须至少给一个。 |
 | `pricing` | 缺省 | 以模型 id 为键的每百万 token 美元价；未配置的模型报 `costUsd: null`。 |
 
 ### Judge
@@ -76,6 +76,8 @@ judge:
 | `model` | benchmark 的 `model` | judge 使用的模型 id。 |
 | `rubric` | 缺省 | 追加到评审 prompt 的任务评分标准。 |
 | `maxScore` | `10` | 最终答案得分的上限。 |
+
+case 配了 `expected.answer` 时，judge 会收到该参考答案，并被要求按事实一致性而非表达流畅度打分。judge 调用失败或返回不可用内容时，裁决带 `judgeError`，run 的 `grading.judgeFailures` 会计数；报告会打印该计数，不再让分数悄悄从均值里消失。
 
 judge 用 case 与合并后的 trace 构造一个严格 JSON 的 prompt。回复可解析时，trial 带上裁决字段（`finalAnswerScore`、`hallucination`、`rationale`）；输出不可用或 chat 调用失败只记为空的裁决字段，绝不记为失败的 trial。配置了 judge 但宿主没有暴露 LLM chat seam 时，run 在启动前就失败。
 
@@ -132,7 +134,7 @@ replay:
 
 ## 已知限制与延后项
 
-- **judge 输出是尽力而为** —— judge chat 失败或回复无法解析时，裁决字段为空；judge 调用消耗的模型额度不计入 trial 的计量成本。
+- **judge 输出尽力而为但不再静默** —— 失败或无法解析的裁决带 `judgeError` 并计入 `grading.judgeFailures`；judge 调用消耗的模型额度不计入 trial 的计量成本。
 - **配对对比按现状配对** —— trial 按 case id 与 trial 序号配对；`seed` 是记录下来的出处，并不确定性保证模型输出一致，按实验组（arm）的排行榜尚未渲染。
 - **Bonferroni 偏保守** —— 它在不假设各推断独立的前提下控制族错误率，代价是区间更宽；符号检验仍需要不一致对才能给出结论，全部同分的 run 报 `p = 1`。
 - **回放按首次调用顺序绑定** —— 回放插件按首次调用顺序把录制脚本对应到实时 session，因此并发子 agent 的回放是非确定性的。

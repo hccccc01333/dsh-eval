@@ -55,7 +55,7 @@ pricing:
 | `cases[].id` | required | Stable case id. |
 | `cases[].prompt` / `cases[].promptFile` | exactly one | Task text, inline or relative to the benchmark file. |
 | `cases[].workspace` | absent | Workspace tree copied into each trial, relative or absolute. |
-| `cases[].expected` | absent | Scripted grading: `tool` is a substring matched against recorded tool-call names; `check` is a command run in the trial workspace after the agent exits (exit 0 = task success). At least one is required when present. |
+| `cases[].expected` | absent | Scripted grading: `tool` is a substring matched against recorded tool-call names; `check` is a command run in the trial workspace after the agent exits (exit 0 = task success); `answer` is a gold answer passed to the judge for factual-agreement scoring. At least one is required when present. |
 | `pricing` | absent | Per-million-token USD prices keyed by model id; absent models report `costUsd: null`. |
 
 ### Judge
@@ -76,6 +76,8 @@ judge:
 | `model` | benchmark `model` | Judge model id. |
 | `rubric` | absent | Task rubric appended to the judging prompt. |
 | `maxScore` | `10` | Maximum final-answer score. |
+
+When a case sets `expected.answer`, the judge receives it as the reference answer and is instructed to score factual agreement with it rather than fluency. If a judge call fails or returns an unusable reply, the verdict carries `judgeError` and the run's `grading.judgeFailures` counts it; the report prints the count instead of silently dropping the score from the mean.
 
 The judge builds a strict-JSON prompt from the case and the merged trace. A
 trial carries its verdict (`finalAnswerScore`, `hallucination`, `rationale`)
@@ -148,7 +150,7 @@ None; this package neither assembles nor sends a provider request, so no request
 
 ## Known Limitations and Deferred Work
 
-- **Judge output is best-effort** — a judge chat failure or unparsable reply yields null verdict fields, and judge calls consume model quota outside the trial's measured cost.
+- **Judge output is best-effort but no longer silent** — a failed or unparsable verdict carries `judgeError` and is counted in `grading.judgeFailures`; judge calls consume model quota outside the trial's measured cost.
 - **Paired comparison pairs as-is** — trials pair by case id and trial index; `seed` is recorded provenance, not a deterministic guarantee of identical model output, and per-arm leaderboards are not rendered.
 - **Bonferroni is conservative** — it controls the family-wise error rate across the printed sign test and intervals without assuming independence, at the cost of wider intervals; a sign test also needs discordant pairs to say anything, so a run where every pair ties reports `p = 1`.
 - **Replay binds by first-call order** — the replay plugin keys recorded scripts to live sessions by first-call order, so concurrent subagents replay non-deterministically.

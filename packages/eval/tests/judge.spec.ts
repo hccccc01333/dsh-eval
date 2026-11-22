@@ -6,6 +6,7 @@ import {
   llmJudgeChat,
   parseJudgeVerdict,
   summarizeTrace,
+  tryJudgeTrial,
 } from '../src/judge.ts'
 import { parseSessionLog } from '../src/trace.ts'
 import type { BenchmarkCase, BenchmarkJudge, EvalTrace } from '../src/types.ts'
@@ -97,6 +98,31 @@ describe('dsh-eval judge', () => {
     expect(built.prompt).toContain('Task id: case-1')
     expect(built.prompt).toContain('Solve the task.')
     expect(built.prompt).toContain('final answer here')
+  })
+
+  it('hands a reference answer to the judge when the case has one', () => {
+    const built = buildJudgePrompt(
+      caseValue({ expected: { answer: '42' } }), trace(), judge(),
+    )
+    expect(built.system).toContain('score factual agreement with it')
+    expect(built.prompt).toContain('Reference answer: 42')
+  })
+
+  it('marks unusable replies and chat failures so they are not silently averaged out', async () => {
+    const unusable = await tryJudgeTrial(caseValue(), trace(), judge(), async () => 'not json')
+    expect(unusable).toMatchObject({ finalAnswerScore: null, judgeError: 'unparsable judge reply' })
+    const failed = await tryJudgeTrial(caseValue(), trace(), judge(), async () => {
+      throw new Error('judge down')
+    })
+    expect(failed).toMatchObject({ finalAnswerScore: null, judgeError: 'judge down' })
+    const nonError = await tryJudgeTrial(caseValue(), trace(), judge(), async () => {
+      throw 'plain failure'
+    })
+    expect(nonError.judgeError).toBe('plain failure')
+    const ok = await tryJudgeTrial(
+      caseValue(), trace(), judge(), async () => '{"finalAnswerScore": 7, "hallucination": false}',
+    )
+    expect(ok.judgeError).toBeUndefined()
   })
 
   it.each([

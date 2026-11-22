@@ -71,11 +71,15 @@ export function buildJudgePrompt(
   trace: EvalTrace,
   judge: BenchmarkJudge,
 ): { system: string; prompt: string } {
+  const hasReference = caseValue.expected?.answer !== undefined
   const system = [
     'You are an impartial evaluation judge for agent task completion.',
     `Score the agent's final answer from 0 to ${judge.maxScore} against the task,`,
     'and set "hallucination" to true only when the final answer asserts facts',
     'not supported by the task or the trace.',
+    ...(hasReference
+      ? ['A reference answer is supplied: score factual agreement with it, not mere fluency.']
+      : []),
     'Return STRICT JSON with exactly these fields:',
     `{"finalAnswerScore": <integer 0..${judge.maxScore}>, "hallucination": <true|false>, "rationale": "<one short sentence>"}`,
     ...(judge.rubric !== undefined ? ['Rubric:', judge.rubric] : []),
@@ -83,6 +87,7 @@ export function buildJudgePrompt(
   const prompt = [
     `Task id: ${caseValue.id}`,
     `Task: ${caseValue.prompt}`,
+    ...(hasReference ? [`Reference answer: ${caseValue.expected?.answer}`] : []),
     'Trace summary:',
     summarizeTrace(trace),
   ].join('\n')
@@ -154,7 +159,8 @@ export async function judgeTrial(
  * @param trace - the merged trial trace.
  * @param judge - the judge configuration.
  * @param chat - the injected chat seam.
- * @returns the parsed verdict, or all-null when the chat call threw.
+ * @returns the parsed verdict, or all-null plus `judgeError` when the call
+ *   failed or the reply could not be parsed.
  */
 export async function tryJudgeTrial(
   caseValue: BenchmarkCase,
@@ -163,9 +169,19 @@ export async function tryJudgeTrial(
   chat: JudgeChat,
 ): Promise<EvalJudgeVerdict> {
   try {
-    return await judgeTrial(caseValue, trace, judge, chat)
-  } catch {
-    return { finalAnswerScore: null, hallucination: null }
+    const verdict = await judgeTrial(caseValue, trace, judge, chat)
+    // A syntactically valid but field-less reply is just as unusable as an
+    // outage; without this marker its score silently drops out of the mean.
+    if (verdict.finalAnswerScore === null && verdict.hallucination === null) {
+      return { ...verdict, judgeError: 'unparsable judge reply' }
+    }
+    return verdict
+  } catch (error) {
+    return {
+      finalAnswerScore: null,
+      hallucination: null,
+      judgeError: error instanceof Error ? error.message : String(error),
+    }
   }
 }
 

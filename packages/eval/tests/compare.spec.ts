@@ -309,5 +309,20 @@ describe('dsh-eval comparison', () => {
       metric: 'pass^k (task)', a: '100.0%', b: '0.0%', delta: '-100.0pp',
     })
     expect(byMetric.get('pass@k (tool-selection)')?.a).toBe('–')
+    expect(byMetric.get('judge failures')?.a).toBe('–')
+  })
+
+  it('compares judge failure counts when a judge was configured', () => {
+    const withJudge = (failures: number) => buildRun({
+      judge: { provider: 'p', model: 'j', maxScore: 10 },
+      grading: {
+        taskSuccessRate: null, toolSelectionAccuracyRate: null,
+        finalAnswerScore: 7, hallucinationRate: null, judgeFailures: failures,
+      },
+    })
+    const rows = compareRuns(withJudge(2), withJudge(0))
+    expect(rows.find(row => row.metric === 'judge failures')).toEqual({
+      metric: 'judge failures', a: '2.0', b: '0.0', delta: '-2.0',
+    })
   })
 })

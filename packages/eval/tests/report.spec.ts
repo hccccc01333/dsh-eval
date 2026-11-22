@@ -263,6 +263,18 @@ describe('dsh-eval report persistence and rendering', () => {
     expect(markdown.match(/flaky cases/gu)).toHaveLength(1)
   })
 
+  it('reports judge failures instead of silently dropping the scores', () => {
+    const markdown = renderMarkdownReport(buildRun({
+      judge: { provider: 'p', model: 'judge-m', maxScore: 10 },
+      grading: {
+        taskSuccessRate: null, toolSelectionAccuracyRate: null,
+        finalAnswerScore: null, hallucinationRate: null, judgeFailures: 2,
+      },
+    }))
+    expect(markdown).toContain('- judge: judge-m')
+    expect(markdown).toContain('- judge failures: 2')
+  })
+
   it('shows the unscored denominator and the strict rate', () => {
     const markdown = renderMarkdownReport(buildRun({
       trials: 3,

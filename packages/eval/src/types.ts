@@ -38,6 +38,8 @@ export interface BenchmarkExpectation {
   tool?: string
   /** Command run in the trial workspace after the agent exits; exit 0 means task success. */
   check?: string
+  /** Known-correct final answer handed to the LLM judge, when the task has one. */
+  answer?: string
 }
 
 /** LLM-judge configuration: scores final answers and flags hallucinations. */
@@ -196,6 +198,8 @@ export interface EvalJudgeVerdict {
   hallucination: boolean | null
   /** Judge rationale, when the model returned one. */
   rationale?: string
+  /** Why this verdict is unusable — a failed call or an unparsable reply. */
+  judgeError?: string
 }
 
 /** Pooled grading rates over completed trials. */
@@ -208,6 +212,8 @@ export interface EvalRunGrading {
   finalAnswerScore: number | null
   /** Pooled hallucination rate over judged trials, or null when nothing was judged. */
   hallucinationRate: number | null
+  /** Judge calls that failed or returned unusable output, when a judge was configured. */
+  judgeFailures?: number
 }
 
 /** A persisted eval run. */

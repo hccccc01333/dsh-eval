@@ -215,6 +215,7 @@ describe('dsh-eval benchmark runner', () => {
       toolSelectionAccuracyRate: 1,
       finalAnswerScore: null,
       hallucinationRate: null,
+      judgeFailures: 0,
     })
 
     const missed = await runBenchmark(buildBenchmark({
@@ -309,8 +310,13 @@ describe('dsh-eval benchmark runner', () => {
       judgeChat: async () => { throw new Error('judge down') },
     })
     expect(run.cases[0]?.status).toBe('completed')
-    expect(run.cases[0]?.judge).toEqual({ finalAnswerScore: null, hallucination: null })
-    expect(run.grading).toBeNull()
+    expect(run.cases[0]?.judge).toMatchObject({
+      finalAnswerScore: null, hallucination: null, judgeError: 'judge down',
+    })
+    // A failed judge is now visible in the run instead of silently lowering the mean.
+    expect(run.grading).toMatchObject({
+      finalAnswerScore: null, hallucinationRate: null, judgeFailures: 1,
+    })
   })
 
   it('rejects a judge benchmark without a chat seam', async () => {

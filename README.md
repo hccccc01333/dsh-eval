@@ -18,7 +18,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - Trace harvesting from persisted session logs (everything a model sees is reconstructable from the log)
 - Automatic metrics: task success, tool success, tool-selection accuracy, steps, tokens, latency, cost, retry, invalid tool calls, context usage
 - Scripted grading: `expected.tool` (tool-selection accuracy) and `expected.check` (task success)
-- LLM judge: final-answer score and hallucination flags from a judge model
+- LLM judge: final-answer score and hallucination flags, with optional gold answers and visible judge failures
 - Subagent trace merging: child session logs fold into the trial metrics
 - Paired A/B: same-case win/lose/tie statistics across two runs
 - Paired inference: exact sign test over discordant pairs, seeded bootstrap intervals on every mean delta, Bonferroni-corrected across the printed family
@@ -31,7 +31,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 
 ## Status
 
-`dsh-eval@0.4.0` · 147 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.4.0` · 151 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 

@@ -63,6 +63,7 @@ const judgeVerdictSchema = z.object({
   finalAnswerScore: z.number().nullable(),
   hallucination: z.boolean().nullable(),
   rationale: z.string().optional(),
+  judgeError: z.string().optional(),
 })
 
 const trialSchema = z.object({
@@ -84,6 +85,7 @@ const gradingSchema = z.object({
   toolSelectionAccuracyRate: z.number().nullable(),
   finalAnswerScore: z.number().nullable(),
   hallucinationRate: z.number().nullable(),
+  judgeFailures: z.number().optional(),
 })
 
 const judgeConfigSchema = z.object({
@@ -241,6 +243,7 @@ export function renderMarkdownReport(run: EvalRun): string {
     '',
     `- model: ${run.model}`,
     ...(judged ? [`- judge: ${judge.model}`] : []),
+    ...(run.grading?.judgeFailures ? [`- judge failures: ${run.grading.judgeFailures}`] : []),
     `- trials per case: ${run.trials}`,
     `- created: ${new Date(run.createdAt).toISOString()}`,
     `- traces: ${run.tempRoot}`,

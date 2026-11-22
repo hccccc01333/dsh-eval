@@ -236,6 +236,7 @@ export function compareRuns(a: EvalRun, b: EvalRun): CompareRow[] {
     rates(run => run.aggregate?.toolSuccessRate ?? null, 'tool success', 'pp'),
     rates(run => run.grading?.taskSuccessRate ?? null, 'task success', 'pp'),
     rates(run => run.grading?.toolSelectionAccuracyRate ?? null, 'tool selection accuracy', 'pp'),
+    numeric(run => run.grading?.judgeFailures ?? null, 'judge failures'),
     numeric(run => run.aggregate?.invalidToolCalls ?? null, 'invalid tool calls/trial'),
     numeric(run => run.aggregate?.retries ?? null, 'retries/trial'),
     numeric(run => run.aggregate?.totalTokens ?? null, 'tokens/trial'),
