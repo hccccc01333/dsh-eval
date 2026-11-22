@@ -38,6 +38,10 @@ export type EvalStartupValues =
     runPathB: string
   }
   | {
+    kind: 'leaderboard'
+    runPaths: readonly string[]
+  }
+  | {
     kind: 'gate'
     candidatePath: string
     baselinePath: string
@@ -141,7 +145,7 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     .description('Run agent evaluations over headless dsh profiles and report trace-based metrics.')
     .helpOption('-h, --help', 'show this help')
     .action(() => {
-      program.error('error: eval needs a subcommand: run <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, rejudge <run.json>, dashboard <run.json>, gate <candidate.json>, or import <format> <log.jsonl>')
+      program.error('error: eval needs a subcommand: run <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, rejudge <run.json>, dashboard <run.json>, leaderboard <run.json>..., gate <candidate.json>, or import <format> <log.jsonl>')
     })
   const run = program.command('run').description('run a benchmark and write its JSON report')
   run
@@ -189,6 +193,12 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     .argument('<run-b.json>', 'candidate run report')
     .action((runPathA: string, runPathB: string) => {
       publish({ kind: 'compare', runPathA, runPathB })
+    })
+  const leaderboard = program.command('leaderboard').description('rank three or more runs by pooled task success')
+  leaderboard
+    .argument('<run.json...>', 'paths to run reports')
+    .action((runPaths: string[]) => {
+      publish({ kind: 'leaderboard', runPaths })
     })
   const gate = program.command('gate').description('fail a CI build when a candidate run regresses against a baseline')
   gate

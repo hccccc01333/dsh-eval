@@ -19,6 +19,7 @@ import { compareRuns, pairedCases, renderCompareMarkdown, renderPairedCases } fr
 import { writeDashboard } from './dashboard.ts'
 import { evaluateGate, renderGate } from './gate.ts'
 import { importTraceFile } from './import.ts'
+import { buildLeaderboard, renderLeaderboard } from './leaderboard.ts'
 import { llmJudgeChat, type JudgeChat } from './judge.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
 import { rejudgeRun } from './rejudge.ts'
@@ -106,6 +107,14 @@ export async function executeEval(
       io.stdout.write(renderCompareMarkdown(compareRuns(a, b)))
       const cases = pairedCases(a, b)
       if (cases !== null) io.stdout.write(renderPairedCases(cases))
+      return 0
+    }
+    if (values.kind === 'leaderboard') {
+      const runs = await Promise.all(values.runPaths.map(async path => loadRunReport(path)))
+      io.stdout.write(renderLeaderboard(buildLeaderboard(runs.map(run => ({
+        label: `${run.benchmark} — ${run.model}`,
+        run,
+      })))))
       return 0
     }
     if (values.kind === 'gate') {

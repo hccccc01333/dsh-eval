@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Multi-run leaderboard.** `dsh eval leaderboard a.json b.json ...` ranks any
+  number of runs by pooled task success with deterministic tie-breaking, a
+  gap-to-leader column and cost/latency figures, while pointing to `compare`
+  for paired inference.
 - **Case-level paired outcomes.** `compare` lists the concrete case x trials
   behind its sign test (candidate wins first, capped at 20 rows), and the
   two-run dashboard shows the same discordant cases under "Changed cases".

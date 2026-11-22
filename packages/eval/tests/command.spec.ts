@@ -433,6 +433,30 @@ describe('dsh-eval command composition', () => {
     expect(unpaired.out).not.toContain('Paired case outcomes')
   })
 
+  it('ranks several persisted runs through the CLI', async () => {
+    const dir = tempDir()
+    const make = (model: string, rate: number): EvalRun => ({
+      benchmark: 'b', model, createdAt: 1, trials: 1, seed: 0, pricing: null,
+      tempRoot: '/tmp', cases: [], aggregate: null,
+      grading: {
+        taskSuccessRate: rate, toolSelectionAccuracyRate: null,
+        finalAnswerScore: null, hallucinationRate: null,
+      },
+    })
+    const paths = [
+      join(dir, 'weak.json'), join(dir, 'strong.json'), join(dir, 'middle.json'),
+    ]
+    const runs = [make('weak', 0.2), make('strong', 0.9), make('middle', 0.5)]
+    for (let index = 0; index < paths.length; index += 1) {
+      await writeRunReport(runs[index]!, paths[index]!)
+    }
+    const observed = await bootEval(['leaderboard', ...paths])
+    expect(observed.exits).toEqual([0])
+    expect(observed.out).toContain('# Leaderboard')
+    expect(observed.out.indexOf('strong')).toBeLessThan(observed.out.indexOf('middle'))
+    expect(observed.out.indexOf('middle')).toBeLessThan(observed.out.indexOf('weak'))
+  })
+
   it('fails loudly for a missing compare input', async () => {
     const dir = tempDir()
     const pathA = join(dir, 'a.json')

@@ -147,6 +147,15 @@ of a single aggregate number. Trials with a null score still contribute via
 their hallucination flag; trials with neither signal are counted as ungraded
 rather than guessed.
 
+## Leaderboard
+
+`dsh eval leaderboard a.json b.json c.json ...` ranks any number of runs by
+pooled task success, with strict pass@1, tool selection, normalized judge
+score, cost, latency and a gap-to-leader column. Ties share a rank and missing
+metrics sort last instead of being invented. It is explicitly a screening
+view: the output points users back to `dsh eval compare` for paired inference
+between two close runs.
+
 ## CI quality gate
 
 `dsh eval gate candidate.json --baseline base.json --max-drop 0.05` turns a run

@@ -35,6 +35,10 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
 
 ## Beyond the original audit
 
+- ✅ **Multi-run leaderboard** (`dsh eval leaderboard`). Ranks any number of
+  runs by pooled task success with deterministic tie-breaking, gap to leader
+  and cost/latency columns; explicitly a screening view before paired
+  `compare`.
 - ✅ **Case-level paired outcomes.** `compare` and the two-run dashboard name
   the concrete case x trials behind a significant sign test, using the same
   primary metric and capped output for large benchmarks.

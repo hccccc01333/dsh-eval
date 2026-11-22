@@ -113,6 +113,10 @@ Markdown 报告会为每个评分维度（任务成功、工具选择准确率�
 
 一致率与 kappa 回答"判官和脚本是否得出相同结论"，校准回答"判官的分数对排序是否真的有用"。`computeCalibration`（渲染在完整报告与 HTML 仪表盘中，`--brief` 输出摘要）给出脚本通过与失败 trial 的判官归一化均分、两者差值，以及等价于 AUC 的排序准确率（并列计半）。它还会列出最多 5 个两种视图不一致的 case，便于直接按实例修正 rubric，而不是只盯着一个聚合数字。分数缺失的 trial 仍可通过幻觉标记参与判断；两者都缺失的 trial 记为未评分，不做猜测。
 
+## 排行榜
+
+`dsh eval leaderboard a.json b.json c.json ...` 按合并任务成功率给任意数量的 run 排名，同时给出 strict pass@1、工具选择、归一化判官分数、成本、延迟和与领先者的差距。并列共享名次，缺失指标排在末尾且不会被臆造。它明确只是筛选视图：输出会提示用 `dsh eval compare` 对接近的两个 run 做配对推断。
+
 ## CI 质量门禁
 
 `dsh eval gate candidate.json --baseline base.json --max-drop 0.05` 把 run 对比变成构建判定。它先检查完成 trial 数与未评分 trial 数，再检查任务成功率、工具选择准确率、strict pass@1 与判官得分。所有质量指标都归一化到 0..1（判官得分除以对应 run 的 `maxScore`），因此一个容差适用于所有指标。命令输出 PASS/FAIL 表格，任何指标回退超过容差即以 1 退出，可直接作为 CI 必需步骤。
