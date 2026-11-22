@@ -12,12 +12,14 @@
  * @module dsh-eval
  */
 
+import { writeFile } from 'node:fs/promises'
 import type { Context } from '@deepseek-ai/cordis'
 import { loadBenchmark } from './benchmark.ts'
 import { applyEval, type EvalStartupValues } from './command.ts'
 import { compareRuns, pairedCases, renderCompareJson, renderCompareMarkdown, renderPairedCases } from './compare.ts'
 import { writeDashboard } from './dashboard.ts'
 import { evaluateGate, renderGate, renderGateJson } from './gate.ts'
+import { renderTrialsCsv } from './export.ts'
 import { importTraceFile } from './import.ts'
 import { buildLeaderboard, renderLeaderboard, renderLeaderboardJson } from './leaderboard.ts'
 import { llmJudgeChat, type JudgeChat } from './judge.ts'
@@ -133,6 +135,17 @@ export async function executeEval(
       io.stdout.write(renderCompareMarkdown(compareRuns(a, b)))
       const cases = pairedCases(a, b)
       if (cases !== null) io.stdout.write(renderPairedCases(cases))
+      return 0
+    }
+    if (values.kind === 'export') {
+      const run = await loadRunReport(values.runPath)
+      const csv = renderTrialsCsv(run)
+      if (values.outPath === undefined) {
+        io.stdout.write(csv)
+      } else {
+        await writeFile(values.outPath, csv, 'utf8')
+        io.stdout.write(`Wrote ${values.outPath} (${run.cases.length} trials)\n`)
+      }
       return 0
     }
     if (values.kind === 'validate') {

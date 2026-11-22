@@ -42,6 +42,12 @@ export type EvalStartupValues =
     json?: boolean
   }
   | {
+    kind: 'export'
+    runPath: string
+    /** Optional output path; CSV goes to stdout when omitted. */
+    outPath?: string
+  }
+  | {
     kind: 'validate'
     benchmarkPath: string
     json?: boolean
@@ -165,6 +171,7 @@ Examples:
   dsh --profile eval validate benchmark.yaml
   dsh --profile eval run benchmark.yaml --out run.json
   dsh --profile eval report run.json --brief
+  dsh --profile eval export run.json --out trials.csv
   dsh --profile eval compare base.json candidate.json
   dsh --profile eval dashboard base.json candidate.json --out eval.html
   dsh --profile eval gate candidate.json --baseline base.json --max-drop 0.05
@@ -228,6 +235,13 @@ Examples:
     .option('--json', 'emit a machine-readable JSON comparison')
     .action((runPathA: string, runPathB: string, options: { json?: boolean }) => {
       publish({ kind: 'compare', runPathA, runPathB, json: options.json === true })
+    })
+  const exporter = program.command('export').description('export a run report as trial-level CSV')
+  exporter
+    .argument('<run.json>', 'path to a run report')
+    .option('--out <path>', 'write CSV to a file instead of stdout')
+    .action((runPath: string, options: { out?: string }) => {
+      publish({ kind: 'export', runPath, ...(options.out === undefined ? {} : { outPath: options.out }) })
     })
   const validate = program.command('validate').description('validate a benchmark file and print a preflight summary')
   validate

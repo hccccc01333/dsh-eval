@@ -255,6 +255,15 @@ Only `--judge-model` is required to override; the other flags default to
 report. If a judge call fails, an already usable verdict is kept with a
 `judgeError` marker instead of being erased by an outage.
 
+## Trial-level CSV export
+
+`dsh eval export run.json [--out trials.csv]` flattens every trial into one CSV
+row: case id, trial, status, error, scripted and judge verdicts, folded token
+and latency metrics, cost, and the trace digest. Without `--out` the CSV goes
+to stdout. Agent-controlled strings are CSV-escaped and prefixed with `'` when
+they start with a spreadsheet formula marker, so a hostile case id cannot
+execute on export.
+
 ## Importing external traces
 
 `dsh eval import codex|claude-code <session.jsonl> --out run.json` imports a

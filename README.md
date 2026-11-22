@@ -29,6 +29,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - Keyless replay: record once with a key, replay in CI from recorded logs
 - Cross-harness import: `dsh eval import codex|claude-code <log> --out run.json`
 - `dsh eval report run.json` — Markdown report with per-trial scores, pooled rates, reliability and precision blocks; `--brief` prints a compact terminal summary, `--json` emits all derived blocks as structured data
+- `dsh eval export run.json [--out trials.csv]` — flat trial-level CSV for spreadsheets and notebooks, with formula injection and quoting safely escaped
 - `dsh eval dashboard a.json [b.json ...] --out report.html` — standalone dark-mode-aware HTML dashboard: one run, two-run comparison, or a leaderboard for three or more (including the paired verdict against the leader), no external assets
 - `dsh eval validate benchmark.yaml [--json]` — preflight a benchmark and warn about weak evidence before spending tokens
 - `dsh eval leaderboard a.json b.json c.json` — rank any number of runs by task success with gap-to-leader and a Bonferroni-corrected paired verdict against the leader; `--json` for automation
@@ -38,7 +39,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 
 ## Status
 
-`dsh-eval@0.4.0` · 254 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.4.0` · 257 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 

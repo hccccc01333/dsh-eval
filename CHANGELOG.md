@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Trial-level CSV export.** `dsh eval export run.json [--out trials.csv]`
+  flattens verdicts, metrics, cost and the trace digest into one row per trial,
+  with CSV quoting and spreadsheet-formula escaping for agent-controlled text.
 - **Dashboard leaderboards match CLI leaderboards.** The HTML leaderboard now
   renders the same corrected paired verdict column as `dsh eval leaderboard`.
 - **Leaderboard shows paired evidence against the leader.** Each non-leading

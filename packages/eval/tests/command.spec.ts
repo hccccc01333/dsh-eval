@@ -327,6 +327,34 @@ describe('dsh-eval command composition', () => {
     expect((await bootEval([
       'gate', candidatePath, '--baseline', baselinePath, '--max-cost-increase', '2',
     ])).err).toContain('between 0 and 1')
+
+    const exportDir = mkdtempSync(join(tmpdir(), 'dsh-eval-export-'))
+    try {
+      const exportPath = join(exportDir, 'run.json')
+      const csvPath = join(exportDir, 'trials.csv')
+      await writeRunReport(run, exportPath)
+      const exported: EvalStartupValues[] = []
+      await evalCommand(value => exported.push(value)).parseAsync([
+        'node', 'eval', 'export', exportPath, '--out', csvPath,
+      ])
+      expect(exported.at(-1)).toMatchObject({ kind: 'export', outPath: csvPath })
+      await evalCommand(value => exported.push(value)).parseAsync([
+        'node', 'eval', 'export', exportPath,
+      ])
+      expect(exported.at(-1)).toMatchObject({ kind: 'export', runPath: exportPath })
+      expect(exported.at(-1)).not.toHaveProperty('outPath')
+      const out: string[] = []
+      const io = { stdout: { write: (chunk: string) => { out.push(chunk); return true } }, stderr: { write: () => {} } }
+      expect(await executeEval(exported[0]!, io)).toBe(0)
+      expect(readFileSync(csvPath, 'utf8')).toContain('caseId,trial,status')
+      expect(out.join('')).toContain('Wrote ')
+      const stdoutOut: string[] = []
+      const stdoutIo = { stdout: { write: (chunk: string) => { stdoutOut.push(chunk); return true } }, stderr: { write: () => {} } }
+      expect(await executeEval({ kind: 'export', runPath: exportPath }, stdoutIo)).toBe(0)
+      expect(stdoutOut.join('')).toContain('caseId,trial,status')
+    } finally {
+      rmSync(exportDir, { recursive: true, force: true })
+    }
     expect((await bootEval([
       'gate', candidatePath, '--baseline', baselinePath,
       '--max-cost-increase', '0.1', '--max-latency-increase', '0.2',

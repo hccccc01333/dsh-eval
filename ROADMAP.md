@@ -57,6 +57,8 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
 - ✅ **Paired statistical power.** `compare` reports the attainable p-value
   floor and required discordant sample size; `validate` warns when a benchmark
   cannot produce enough pairs for a corrected sign test.
+- ✅ **Trial-level CSV export.** `dsh eval export` flattens a persisted run for
+  spreadsheet and notebook analysis with safe cell escaping.
 - ✅ **Statistically guarded leaderboards.** Non-leading rows carry a
   Bonferroni-corrected paired verdict against the leader, separating real gaps
   from ranking noise.
