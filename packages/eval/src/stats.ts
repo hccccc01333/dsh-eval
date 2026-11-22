@@ -77,8 +77,10 @@ export function signTestPower(
   const floor = (n: number): number => n === 0 ? 1 : Math.min(1, 2 ** (1 - n))
   const bestRawP = floor(discordant)
   const bestAdjustedP = Math.min(1, bestRawP * comparisons)
+  // Walk from the largest significant tail down, so the reported win count is
+  // the minimum that still reaches alpha rather than a clean sweep.
   let minimumWins: number | null = null
-  for (let tail = 0; tail <= Math.floor(discordant / 2); tail++) {
+  for (let tail = Math.floor(discordant / 2); tail >= 0; tail--) {
     const adjusted = Math.min(1, signTest(tail, discordant - tail).pValue * comparisons)
     if (adjusted <= alpha) {
       minimumWins = discordant - tail

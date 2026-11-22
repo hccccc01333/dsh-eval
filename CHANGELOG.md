@@ -152,6 +152,14 @@
 
 ### Fixed
 
+- **Significance mode assesses every quality metric separately.** A clean
+  task-success pairing can no longer mask significant tool-selection or judge
+  score regressions; each check has its own Bonferroni-corrected sign test,
+  and case regressions are filtered per metric.
+- **Power rows report the true minimum winning margin.** `minimumWins` now
+  counts the smallest majority that still reaches alpha, not a clean sweep.
+  Preflight derives its sample-size warning from `signTestPower` with a
+  conservative inference family instead of hardcoded thresholds.
 - **Answer regex grading degrades safely.** A malformed hand-built
   `answerRegex` now fails the case instead of erroring the trial, input is
   capped at 4096 characters to avoid stalling the event loop, and preflight

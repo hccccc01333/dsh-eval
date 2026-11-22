@@ -42,7 +42,7 @@ describe('dsh-eval benchmark preflight', () => {
   it('warns when the benchmark cannot supply enough paired trials for a corrected sign test', () => {
     const summary = renderBenchmarkSummary(benchmark())
     expect(summary).toContain('at most 2 paired trials')
-    expect(summary).toContain('needs ≥6 discordant pairs')
+    expect(summary).toContain('needs ≥7 discordant pairs')
   })
 
   it('warns about weak evidence and unsafe shell checks', () => {

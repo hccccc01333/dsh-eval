@@ -9,8 +9,9 @@
  * @module dsh-eval/gate
  */
 
-import { pairedCompare } from './compare.ts'
+import { pairedSigns, type PairedMetric } from './compare.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
+import { signTest, signTestPower } from './stats.ts'
 import type { EvalRun } from './types.ts'
 
 /** One gate criterion. */
@@ -190,37 +191,54 @@ export function evaluateGate(
       })
     }
   }
-  let suppressQualityDrops = false
+  // Significance is assessed per quality metric: a clean task-success result
+  // must never hide a real tool-selection or judge-score regression.
+  const suppressByMetric = new Map<string, boolean>()
   if (options.requireSignificance === true) {
-    const paired = pairedCompare(baseline, candidate)
-    const worse = paired !== null && paired.losses > paired.wins
-    const powered = paired?.power.detectable === true
-    const confirmed = paired !== null && worse && powered
-      && paired.correction.adjustedPValue <= paired.correction.alpha
-    const clear = paired !== null && !confirmed && (powered || !worse)
-    suppressQualityDrops = clear
+    const qualityMetrics = [
+      { metric: 'task success', paired: 'task success', a: baseline.grading?.taskSuccessRate ?? null, b: candidate.grading?.taskSuccessRate ?? null },
+      { metric: 'tool selection', paired: 'tool selection accuracy', a: baseline.grading?.toolSelectionAccuracyRate ?? null, b: candidate.grading?.toolSelectionAccuracyRate ?? null },
+      { metric: 'strict pass@1 (task)', paired: 'task success', a: baseTask?.strictPassAt1 ?? null, b: candTask?.strictPassAt1 ?? null },
+      { metric: 'judge score', paired: 'final answer score', a: scoreRate(baseline), b: scoreRate(candidate) },
+    ] as const satisfies readonly { metric: string; paired: PairedMetric; a: number | null; b: number | null }[]
+    let undecidable = false
+    let bestFloor = 1
+    let worstObserved = 0
+    for (const { metric: gateMetric, paired: pairedMetric, a, b } of qualityMetrics) {
+      if (a === null && b === null) continue
+      const counts = pairedSigns(baseline, candidate, pairedMetric)
+      const discordant = counts.wins + counts.losses
+      const power = signTestPower(discordant, qualityMetrics.length)
+      const observed = Math.min(1, signTest(counts.wins, counts.losses).pValue * qualityMetrics.length)
+      const worse = counts.losses > counts.wins
+      const confirmed = worse && power.detectable && observed <= power.alpha
+      const clear = !worse || (power.detectable && observed > power.alpha)
+      suppressByMetric.set(gateMetric, clear)
+      if (counts.pairs === 0 || (!confirmed && !clear)) undecidable = true
+      bestFloor = Math.min(bestFloor, power.bestAdjustedP)
+      worstObserved = Math.max(worstObserved, observed)
+    }
     checks.push({
       metric: 'paired significance',
-      baseline: paired?.power.bestAdjustedP ?? null,
-      candidate: paired?.correction.adjustedPValue ?? null,
-      delta: paired === null ? null
-        : paired.correction.adjustedPValue - paired.power.bestAdjustedP,
-      passed: confirmed || clear,
+      baseline: bestFloor,
+      candidate: worstObserved,
+      delta: worstObserved - bestFloor,
+      passed: !undecidable,
       unit: 'p',
-      note: paired === null ? 'no paired trials'
-        : !powered && worse ? 'underpowered sign test'
-          : confirmed ? 'regression confirmed'
-            : 'no statistically confirmed regression',
+      note: undecidable ? 'some quality metrics lack conclusive paired evidence'
+        : 'all quality metrics assessed independently',
     })
   }
   checks.push(
     compareRate('task success', baseline.grading?.taskSuccessRate ?? null,
-      candidate.grading?.taskSuccessRate ?? null, maxDrop, suppressQualityDrops),
+      candidate.grading?.taskSuccessRate ?? null, maxDrop, suppressByMetric.get('task success')),
     compareRate('tool selection', baseline.grading?.toolSelectionAccuracyRate ?? null,
-      candidate.grading?.toolSelectionAccuracyRate ?? null, maxDrop, suppressQualityDrops),
+      candidate.grading?.toolSelectionAccuracyRate ?? null, maxDrop,
+      suppressByMetric.get('tool selection')),
     compareRate('strict pass@1 (task)', baseTask?.strictPassAt1 ?? null,
-      candTask?.strictPassAt1 ?? null, maxDrop, suppressQualityDrops),
-    compareRate('judge score', scoreRate(baseline), scoreRate(candidate), maxDrop, suppressQualityDrops),
+      candTask?.strictPassAt1 ?? null, maxDrop, suppressByMetric.get('strict pass@1 (task)')),
+    compareRate('judge score', scoreRate(baseline), scoreRate(candidate), maxDrop,
+      suppressByMetric.get('judge score')),
   )
   if (budgets.maxCostIncrease !== undefined && budgets.maxCostIncrease !== null) {
     checks.push(compareBudget('cost/trial', baseline.aggregate?.costUsd ?? null,
@@ -238,7 +256,8 @@ export function evaluateGate(
       ? {} : { maxCostIncrease: budgets.maxCostIncrease }),
     ...(budgets.maxLatencyIncrease === undefined || budgets.maxLatencyIncrease === null
       ? {} : { maxLatencyIncrease: budgets.maxLatencyIncrease }),
-    regressions: suppressQualityDrops ? [] : findRegressions(baseline, candidate, maxDrop),
+    regressions: findRegressions(baseline, candidate, maxDrop)
+      .filter(regression => suppressByMetric.get(regression.metric) !== true),
   }
 }
 

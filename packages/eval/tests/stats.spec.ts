@@ -30,6 +30,8 @@ describe('dsh-eval paired statistics', () => {
     expect(noPairs.bestRawP).toBe(1)
     expect(noPairs.minimumDiscordant).toBe(6)
     expect(noPairs.minimumWins).toBeNull()
+    const larger = signTestPower(20, 1)
+    expect(larger.minimumWins).toBe(15)
   })
 
   it('doubles the smaller tail and clamps at one', () => {

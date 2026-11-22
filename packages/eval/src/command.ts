@@ -168,6 +168,7 @@ Examples:
   dsh --profile eval compare base.json candidate.json
   dsh --profile eval dashboard base.json candidate.json --out eval.html
   dsh --profile eval gate candidate.json --baseline base.json --max-drop 0.05
+  dsh --profile eval gate candidate.json --baseline base.json --require-significance --json
 `)
     .action(() => {
       program.error('error: eval needs a subcommand: run <benchmark.yaml>, validate <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, rejudge <run.json>, dashboard <run.json>, leaderboard <run.json>..., gate <candidate.json>, or import <format> <log.jsonl>')

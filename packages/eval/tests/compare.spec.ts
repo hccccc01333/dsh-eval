@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compareRuns, pairedCases, pairedCompare, renderCompareJson, renderCompareMarkdown, renderPairedCases } from '../src/compare.ts'
+import { compareRuns, pairedCases, pairedCompare, pairedSigns, renderCompareJson, renderCompareMarkdown, renderPairedCases } from '../src/compare.ts'
 import type { EvalRun, EvalTrialResult } from '../src/types.ts'
 
 function buildRun(overrides: Partial<EvalRun> = {}): EvalRun {
@@ -131,6 +131,21 @@ describe('dsh-eval comparison', () => {
       alpha: 0.05,
       adjustedPValue: Math.min(1, paired!.test.pValue * 4),
       intervalConfidence: 0.9875,
+    })
+  })
+
+  it('counts only pairs that carry the requested metric', () => {
+    const outcome = (caseId: string, task: boolean, tool: boolean | undefined): EvalTrialResult => ({
+      caseId, trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+      grade: { taskSuccess: task, toolSelectionAccuracy: tool ?? null },
+    })
+    const a = buildRun({ cases: [outcome('with', true, true), outcome('missing', true, true)] })
+    const b = buildRun({
+      cases: [outcome('with', false, false), outcome('missing', true, undefined)],
+    })
+    expect(pairedSigns(a, b, 'task success')).toEqual({ pairs: 2, wins: 0, losses: 1, ties: 1 })
+    expect(pairedSigns(a, b, 'tool selection accuracy')).toEqual({
+      pairs: 1, wins: 0, losses: 1, ties: 0,
     })
   })
 

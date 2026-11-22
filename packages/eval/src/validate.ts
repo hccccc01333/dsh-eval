@@ -9,6 +9,7 @@
  * @module dsh-eval/validate
  */
 
+import { signTestPower } from './stats.ts'
 import type { Benchmark } from './types.ts'
 
 /** Structured preflight result, shared by the markdown and JSON renderers. */
@@ -78,7 +79,9 @@ export function summarizeBenchmark(benchmark: Benchmark): BenchmarkSummary {
     warnings.push(`${shellChecks} shell check(s) need a trusted benchmark file (pipes and redirection are enabled)`)
   }
   const maxPairs = benchmark.cases.length * benchmark.trials
-  const minimumDiscordant = benchmark.judge === undefined ? 6 : 8
+  // Preflight cannot know whether trials will carry step/token metrics, so it
+  // assumes the largest inference family the comparison may print.
+  const minimumDiscordant = signTestPower(0, benchmark.judge === undefined ? 3 : 4).minimumDiscordant
   if (maxPairs < minimumDiscordant) {
     warnings.push(`at most ${maxPairs} paired trials; a Bonferroni-corrected sign test needs ≥${minimumDiscordant} discordant pairs to reach α=0.05`)
   }

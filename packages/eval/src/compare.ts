@@ -107,7 +107,7 @@ function formatPValue(pValue: number): string {
 }
 
 /** A metric that can classify a paired winner. */
-type PairedMetric = 'task success' | 'tool selection accuracy' | 'final answer score'
+export type PairedMetric = 'task success' | 'tool selection accuracy' | 'final answer score'
 
 /** Read one trial's primary-metric outcome, or null when the trial lacks it. */
 function metricOutcome(result: EvalTrialResult, metric: PairedMetric): boolean | number | null {
@@ -137,6 +137,35 @@ function pairSign(aValue: boolean | number | null, bValue: boolean | number | nu
     return bBool === aBool ? 0 : (bBool ? 1 : -1)
   }
   return bValue > aValue ? 1 : (bValue < aValue ? -1 : 0)
+}
+
+/** Win/loss/tie counts for one metric over completed, paired trials. */
+export interface PairedSignCounts {
+  /** Pairs with both outcomes present for the metric. */
+  pairs: number
+  wins: number
+  losses: number
+  ties: number
+}
+
+/**
+ * Count paired wins/losses/ties for one metric, ignoring pairs missing it.
+ * @param a - the baseline run.
+ * @param b - the candidate run.
+ * @param metric - the metric to classify.
+ * @returns paired sign counts for that metric alone.
+ */
+export function pairedSigns(a: EvalRun, b: EvalRun, metric: PairedMetric): PairedSignCounts {
+  const counts: PairedSignCounts = { pairs: 0, wins: 0, losses: 0, ties: 0 }
+  for (const pair of pairedTrials(a, b)) {
+    const sign = pairSign(metricOutcome(pair.a, metric), metricOutcome(pair.b, metric))
+    if (metricOutcome(pair.a, metric) === null || metricOutcome(pair.b, metric) === null) continue
+    counts.pairs += 1
+    if (sign > 0) counts.wins += 1
+    else if (sign < 0) counts.losses += 1
+    else counts.ties += 1
+  }
+  return counts
 }
 
 /** Pair completed trials from both runs by case id and trial index. */
