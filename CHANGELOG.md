@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Judge calibration diagnostics.** Report mean normalized judge scores for
+  scripted passes and failures, their separation, an AUC-style ranking accuracy
+  and up to five disagreement cases with ids. Rendered in full reports, the
+  HTML dashboard and a one-line `--brief` summary.
 - **CI quality gate.** `dsh eval gate candidate.json --baseline base.json
   --max-drop 0.05` checks coverage, task success, tool selection, strict pass@1
   and normalized judge score, prints a PASS/FAIL table and exits nonzero on

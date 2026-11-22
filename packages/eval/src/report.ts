@@ -8,6 +8,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { z } from 'zod'
 import { computeAgreement, type AgreementSummary } from './agreement.ts'
+import { computeCalibration, type CalibrationSummary } from './calibration.ts'
 import { computePrecision, type RateInterval, type RunPrecision } from './precision.ts'
 import { computeCoverage, computeReliability, type ReliabilitySummary } from './reliability.ts'
 import type { EvalRun } from './types.ts'
@@ -243,6 +244,11 @@ export function renderBriefReport(run: EvalRun): string {
   if (agreement !== null) {
     lines.push(`- judge/script agreement: ${(agreement.rate * 100).toFixed(1)}% (n=${agreement.pairs}) · kappa ${agreement.kappa.toFixed(2)}`)
   }
+  const calibration = computeCalibration(run)
+  if (calibration !== null && calibration.separation !== null) {
+    // A non-null separation implies scores on both sides, so ranking is present too.
+    lines.push(`- judge separation: ${calibration.separation >= 0 ? '+' : ''}${(calibration.separation * 100).toFixed(1)}pp · ranking ${(calibration.rankingAccuracy! * 100).toFixed(1)}%`)
+  }
   if (run.grading?.judgeFailures) lines.push(`- judge failures: ${run.grading.judgeFailures}`)
   return `${lines.join('\n')}\n`
 }
@@ -253,6 +259,24 @@ export function renderBriefReport(run: EvalRun): string {
  * @param run - the run record to render.
  * @returns the markdown text.
  */
+/** Render the judge calibration block; callers pass only a populated summary. */
+function renderCalibration(summary: CalibrationSummary): string[] {
+  const lines = [
+    '## Judge calibration',
+    '',
+    `- pairs: ${summary.pairs} trial(s) with both a scripted task result and a judge score`,
+    `- mean normalized score: passed ${summary.passedMean === null ? 'n/a' : `${(summary.passedMean * 100).toFixed(1)}%`} · failed ${summary.failedMean === null ? 'n/a' : `${(summary.failedMean * 100).toFixed(1)}%`}`,
+    `- separation (passed − failed): ${summary.separation === null ? 'n/a' : `${summary.separation >= 0 ? '+' : ''}${(summary.separation * 100).toFixed(1)}pp`}`,
+    `- ranking accuracy: ${summary.rankingAccuracy === null ? 'n/a' : `${(summary.rankingAccuracy * 100).toFixed(1)}% (ties count as half)`}`,
+  ]
+  if (summary.disagreements.length > 0) {
+    lines.push('- disagreements to review:',
+      ...summary.disagreements.map(item => `  - ${item.caseId} trial ${item.trial}: script ${item.scriptPassed ? 'pass' : 'fail'} · judge score ${item.score ?? 'n/a'}${item.hallucination === true ? ' · hallucination' : ''}`))
+  }
+  lines.push('')
+  return lines
+}
+
 export function renderMarkdownReport(run: EvalRun): string {
   const judge = run.judge
   const judged = judge !== undefined
@@ -317,6 +341,7 @@ export function renderMarkdownReport(run: EvalRun): string {
   const coverage = computeCoverage(run)
   const precision = computePrecision(run)
   const agreement = computeAgreement(run)
+  const calibration = computeCalibration(run)
   const hasPrecision = precision.task !== null || precision.toolSelection !== null
     || precision.latencyP50 !== null
   const coverageLine = coverage.unscored === 0
@@ -341,5 +366,6 @@ export function renderMarkdownReport(run: EvalRun): string {
     ...(toolReliability === null ? [] : renderReliability(toolReliability)),
     ...(hasPrecision ? renderPrecision(precision) : []),
     ...(agreement === null ? [] : renderAgreement(agreement)),
+    ...(calibration === null ? [] : renderCalibration(calibration)),
   ].join('\n')
 }

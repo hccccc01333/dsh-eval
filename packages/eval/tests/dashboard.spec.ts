@@ -82,12 +82,45 @@ describe('dsh-eval HTML dashboard', () => {
     expect(html).toContain('task success')
     expect(html).toContain('tool selection')
     expect(html).toContain('Judge / script agreement</h2>')
+    expect(html).toContain('Judge calibration</h2>')
+    expect(html).toContain('+60.0pp')
     expect(html).toContain('Trials</h2>')
     expect(html).toContain('<span class="pill completed">completed</span>')
     expect(html).toContain('<span class="pill error">error</span>')
     expect(html).toContain('boom')
     expect(html).toContain('run seed 7')
     expect(html).not.toContain('<script')
+  })
+
+  it('shows negative and unavailable calibration figures', () => {
+    const judge = { provider: 'p', model: 'j', maxScore: 10 }
+    const html = renderDashboard([buildRun({
+      judge,
+      cases: [
+        {
+          caseId: 'low-pass', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          grade: { taskSuccess: true, toolSelectionAccuracy: true },
+          judge: { finalAnswerScore: 2, hallucination: false },
+        },
+        {
+          caseId: 'high-fail', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          grade: { taskSuccess: false, toolSelectionAccuracy: true },
+          judge: { finalAnswerScore: 8, hallucination: false },
+        },
+        {
+          caseId: 'unscored', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          grade: { taskSuccess: true, toolSelectionAccuracy: true },
+          judge: { finalAnswerScore: null, hallucination: true },
+        },
+      ],
+    })])
+    expect(html).toContain('-60.0pp')
+    expect(html).toContain('Review: high-fail #1')
+    expect(html).toContain('unscored #1')
+
+    const { judge: _judge, ...noJudge } = buildRun()
+    const sparse = renderDashboard([{ ...noJudge, cases: [], grading: null }])
+    expect(sparse).not.toContain('Judge calibration</h2>')
   })
 
   it('escapes benchmark, case and error strings', () => {

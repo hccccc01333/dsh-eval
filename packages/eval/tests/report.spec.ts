@@ -222,6 +222,7 @@ describe('dsh-eval report persistence and rendering', () => {
 
   it('renders judge/script agreement when both signals exist', () => {
     const run = buildRun({
+      judge: { provider: 'deepseek', model: 'judge-m', maxScore: 10 },
       cases: [
         {
           caseId: 'agree', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
@@ -243,6 +244,11 @@ describe('dsh-eval report persistence and rendering', () => {
     expect(markdown).toContain('judge no-hallucination 100.0% · script task success 50.0%')
     expect(renderBriefReport(run)).toContain('- judge/script agreement: 50.0% (n=2) · kappa 0.00')
     expect(renderMarkdownReport(buildRun())).not.toContain('Judge / script agreement')
+    expect(markdown).toContain('## Judge calibration')
+    expect(markdown).toContain('- separation (passed − failed): +60.0pp')
+    expect(markdown).toContain('- ranking accuracy: 100.0% (ties count as half)')
+    expect(markdown).toContain('  - disagree trial 1: script fail · judge score 2')
+    expect(renderBriefReport(run)).toContain('- judge separation: +60.0pp · ranking 100.0%')
   })
 
   it('renders judge dashes when verdicts are missing', () => {
@@ -289,6 +295,48 @@ describe('dsh-eval report persistence and rendering', () => {
     expect(markdown).toContain('- pass@1: 50.0% · pass@3: 50.0% · pass^3: 50.0%')
     // A stable tool-selection dimension prints no flaky line.
     expect(markdown.match(/flaky cases/gu)).toHaveLength(1)
+  })
+
+  it('renders a reversed and partially unscored calibration without hiding the gaps', () => {
+    const judge = { provider: 'deepseek', model: 'judge-m', maxScore: 10 }
+    const reversed = buildRun({
+      judge,
+      cases: [
+        {
+          caseId: 'low-pass', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          grade: { taskSuccess: true, toolSelectionAccuracy: null },
+          judge: { finalAnswerScore: 2, hallucination: false },
+        },
+        {
+          caseId: 'high-fail', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          grade: { taskSuccess: false, toolSelectionAccuracy: null },
+          judge: { finalAnswerScore: 8, hallucination: false },
+        },
+        {
+          caseId: 'unscored', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          grade: { taskSuccess: true, toolSelectionAccuracy: null },
+          judge: { finalAnswerScore: null, hallucination: true },
+        },
+      ],
+    })
+    const markdown = renderMarkdownReport(reversed)
+    expect(markdown).toContain('- separation (passed − failed): -60.0pp')
+    expect(markdown).toContain('- ranking accuracy: 0.0% (ties count as half)')
+    expect(markdown).toContain('  - unscored trial 1: script pass · judge score n/a · hallucination')
+    expect(renderBriefReport(reversed)).toContain('- judge separation: -60.0pp · ranking 0.0%')
+
+    const noScores = buildRun({
+      judge,
+      cases: [{
+        caseId: 'no-score', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        grade: { taskSuccess: true, toolSelectionAccuracy: null },
+        judge: { finalAnswerScore: null, hallucination: null },
+      }],
+    })
+    const sparse = renderMarkdownReport(noScores)
+    expect(sparse).toContain('- mean normalized score: passed n/a · failed n/a')
+    expect(sparse).toContain('- separation (passed − failed): n/a')
+    expect(sparse).toContain('- ranking accuracy: n/a')
   })
 
   it('reports judge failures instead of silently dropping the scores', () => {

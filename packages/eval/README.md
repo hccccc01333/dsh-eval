@@ -128,6 +128,19 @@ The same one-line statistic appears in `--brief` output.
 
 Because a paired eval sample is small and its deltas are not normal, the paired block also carries inference rather than point estimates alone: an exact two-sided **sign test** over the discordant pairs (ties drop out, as the test requires) for the primary metric, and a seeded **bootstrap interval** beside each mean delta. Nothing is assumed about the shape of the delta distribution, and the PRNG seed is fixed, so re-running `compare` on the same reports prints a byte-identical table. The sign-test p-value and every printed interval form one inference family, corrected together by **Bonferroni** at family-wise `alpha = 0.05`: the p row is labelled with the family size it was multiplied by, and each interval is widened to `1 - 0.05/k` confidence (for example, 98.8% when the p-value and three intervals are all present). A sign test still needs discordant pairs to say anything — when every pair ties it reports `p = 1`.
 
+## Judge calibration
+
+Agreement and kappa answer "do the judge and the scripted check decide the
+same thing?"; calibration answers "is the judge's score actually useful for
+ranking?" `computeCalibration` (rendered in full reports and the HTML
+dashboard, and summarized in `--brief`) reports the mean normalized judge score
+on scripted passes and failures, their separation, and a ranking-accuracy score
+equivalent to AUC (ties count as half). It also lists up to five cases where the
+two views disagree, so a rubric can be corrected from concrete examples instead
+of a single aggregate number. Trials with a null score still contribute via
+their hallucination flag; trials with neither signal are counted as ungraded
+rather than guessed.
+
 ## CI quality gate
 
 `dsh eval gate candidate.json --baseline base.json --max-drop 0.05` turns a run

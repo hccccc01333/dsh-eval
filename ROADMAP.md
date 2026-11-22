@@ -35,6 +35,10 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
 
 ## Beyond the original audit
 
+- ✅ **Judge calibration diagnostics.** Full reports and the dashboard now show
+  normalized score means for scripted passes/failures, their separation, an
+  AUC-style ranking accuracy, and up to five concrete disagreement cases —
+  turning a single kappa into an actionable rubric-improvement list.
 - ✅ **CI quality gate** (`dsh eval gate`). Compares a candidate against a
   baseline on coverage, task/tool rates, strict pass@1 and normalized judge
   score with one `--max-drop` tolerance; exits nonzero on regressions. Missing
