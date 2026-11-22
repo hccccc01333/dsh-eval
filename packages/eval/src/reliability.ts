@@ -87,17 +87,21 @@ export function computeCoverage(run: EvalRun): RunCoverage {
   let completed = 0
   let errors = 0
   let timeouts = 0
+  let unscored = 0
   for (const result of run.cases) {
     if (result.status === 'completed') completed += 1
     else errors += 1
     if (result.timedOut) timeouts += 1
+    // A completed trial without a task grade is just as absent from quality
+    // rates as an error; keep this identical to computeReliability().unscored.
+    if (result.status !== 'completed' || typeof result.grade?.taskSuccess !== 'boolean') unscored += 1
   }
   return {
     total: run.cases.length,
     completed,
     errors,
     timeouts,
-    unscored: run.cases.length - completed,
+    unscored,
   }
 }
 

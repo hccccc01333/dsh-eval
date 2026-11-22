@@ -113,7 +113,7 @@ describe('dsh-eval command composition', () => {
       '--profile', 'headless',
     ])
     expect(observed.exits).toEqual([0])
-    expect(observed.out).toContain(`Wrote ${outPath} (1/1 completed, tool success 100.0%, 1.0 steps/trial)`)
+    expect(observed.out).toContain(`Wrote ${outPath} (1/1 completed, tool success 100.0%, 1 unscored, 1.0 steps/trial)`)
     expect(existsSync(outPath)).toBe(true)
     expect(observed.err).toContain('[eval] 1/1 hello #1 task n/a, ')
 
@@ -767,6 +767,6 @@ describe('dsh-eval execution entry', () => {
     )
     expect(code).toBe(1)
     expect(out.join('')).toContain('(1/2 completed,')
-    expect(out.join('')).toContain('1 unscored')
+    expect(out.join('')).toContain('2 unscored')
   })
 })

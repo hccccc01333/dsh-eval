@@ -64,6 +64,10 @@ describe('dsh-eval reliability', () => {
     expect(computeCoverage(run([trial('a', 1, true, null)]))).toEqual({
       total: 1, completed: 1, errors: 0, timeouts: 0, unscored: 0,
     })
+    // Completed but ungraded trials are unscored too, matching reliability.
+    expect(computeCoverage(run([{
+      caseId: 'a', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+    }]))).toEqual({ total: 1, completed: 1, errors: 0, timeouts: 0, unscored: 1 })
   })
 
   it('separates pass@k from pass^k and surfaces flaky cases', () => {

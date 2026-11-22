@@ -127,9 +127,12 @@ export function buildLeaderboard(runs: readonly { label: string; run: EvalRun }[
         continue
       }
       const worse = paired.losses > paired.wins
-      const adjustedP = Math.min(1, paired.correction.adjustedPValue * family)
+      // The verdict concerns the one primary metric only, so the board's
+      // comparison family is the only correction that applies here. Comparing
+      // every metric (as `paired.correction` does) would double-count.
+      const adjustedP = Math.min(1, paired.test.pValue * family)
       const detectable = signTestPower(paired.losses + paired.wins,
-        paired.correction.comparisons * family, paired.correction.alpha).detectable
+        family, paired.correction.alpha).detectable
       row.significance = {
         adjustedP,
         detectable,

@@ -4,6 +4,15 @@
 
 ### Added
 
+- **Gate fail-open fix.** In significance mode, extra errors/timeouts in the
+  candidate can no longer hide a strict pass@1 collapse behind survivor-only
+  paired evidence.
+- **Consistent `unscored` accounting.** Completed-but-ungraded trials now count
+  as unscored everywhere, and `pass@k` labels show the observed graded count.
+- **Dashboard paired inference.** The HTML comparison table now renders the
+  sign-test p-values, power and deltas that were previously only in markdown.
+- **Leaderboard correction family.** The verdict adjusts the raw p-value by the
+  board family only, avoiding a double Bonferroni correction.
 - **Documented release procedure.** `RELEASE.md` lists the exact Trusted
   Publisher fields, the manual OIDC identity check and the tag flow.
 - **Benchmark input provenance.** The SHA-256 fingerprint covers the YAML plus

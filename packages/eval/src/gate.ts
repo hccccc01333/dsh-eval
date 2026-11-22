@@ -227,6 +227,12 @@ export function evaluateGate(
     for (const item of assessed) {
       suppressByMetric.set(item.metric, verdicts.get(item.paired) === true)
     }
+    // The strict pass@1 rate keeps errors and timeouts in its denominator, but
+    // pairedSigns only sees completed trials. A candidate with more unscored
+    // trials must not get its strict drop excused by survivor-only evidence.
+    if (computeCoverage(candidate).unscored > computeCoverage(baseline).unscored) {
+      suppressByMetric.set('strict pass@1 (task)', false)
+    }
     checks.push({
       metric: 'paired significance',
       baseline: bestFloor,

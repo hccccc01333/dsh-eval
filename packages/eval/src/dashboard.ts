@@ -91,8 +91,12 @@ function table(headers: readonly string[], rows: readonly string[]): string {
 
 /** Render the two-run comparison table from the same rows the markdown report uses. */
 function renderComparison(a: EvalRun, b: EvalRun): string {
-  const rows = compareRuns(a, b).map(row => [row.metric, row.a, row.b, row.delta]
-    .map(value => `<td>${esc(value)}</td>`).join(''))
+  const compared = compareRuns(a, b)
+  const rows = compared.filter(row => row.inference === undefined)
+    .map(row => [row.metric, row.a, row.b, row.delta]
+      .map(value => `<td>${esc(value)}</td>`).join(''))
+  const inferenceRows = compared.filter(row => row.inference !== undefined)
+    .map(row => `<td>${esc(row.metric)}</td><td>${esc(row.inference!)}</td>`)
   const cases = pairedCases(a, b) ?? []
   const discordant = cases.filter(item => item.outcome !== 'tie').slice(0, 10)
   const caseRows = discordant.map(item => [item.caseId, String(item.trial),
@@ -101,7 +105,9 @@ function renderComparison(a: EvalRun, b: EvalRun): string {
   const caseBlock = discordant.length === 0 ? '' : `<h2>Changed cases</h2>${table(
     ['Case', 'Trial', 'A', 'B', 'Result'], caseRows,
   )}`
-  return `<h2>Run comparison</h2>${table(['Metric', 'A', 'B', 'B − A'], rows)}${caseBlock}`
+  return `<h2>Run comparison</h2>${table(['Metric', 'A', 'B', 'B − A'], rows)}`
+    + (inferenceRows.length === 0 ? '' : `<h2>Paired inference</h2>${table(['Test', 'Result'], inferenceRows)}`)
+    + caseBlock
 }
 
 /** Render a standalone overview page for three or more runs. */
@@ -158,7 +164,7 @@ export function renderDashboard(runs: readonly EvalRun[]): string {
       : `${coverage.unscored} unscored · ${coverage.timeouts} timeouts · ${coverage.errors} errors`),
     ...(task === null ? [] : [
       card('pass@1', rate(task.passAt1), `strict ${rate(task.strictPassAt1)}`),
-      card(`pass@${task.k}`, rate(task.passAtK), `${task.cases} cases`),
+      card('pass@k', rate(task.passAtK), `${run.cases.filter(result => typeof result.grade?.taskSuccess === 'boolean').length} graded · ${task.cases} cases`),
     ]),
     ...(precision.latencyP95 === null ? [] : [
       // computePrecision produces p50 and p95 together.

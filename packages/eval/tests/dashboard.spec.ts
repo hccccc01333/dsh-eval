@@ -174,6 +174,7 @@ describe('dsh-eval HTML dashboard', () => {
     expect(html).toContain('<title>baseline — v1 vs candidate — v2</title>')
     expect(html).toContain('<h2>Run comparison</h2>')
     expect(html).toContain('<th>B − A</th>')
+    expect(html).toContain('<h2>Paired inference</h2>')
     expect(html).toContain('baseline')
     expect(html).toContain('candidate')
     expect(html).not.toContain('Changed cases</h2>')

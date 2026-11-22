@@ -283,6 +283,41 @@ describe('dsh-eval CI gate', () => {
     expect(ungraded.checks.find(check => check.metric === 'paired significance')?.passed).toBe(true)
   })
 
+  it('does not let survivor-only evidence excuse a strict pass@1 collapse', () => {
+    const grading = (rate: number) => ({
+      taskSuccessRate: rate, toolSelectionAccuracyRate: null,
+      finalAnswerScore: null, hallucinationRate: null,
+    })
+    const baseline = buildRun({
+      trials: 108,
+      cases: Array.from({ length: 108 }, (_, index) => ({
+        caseId: `c${index + 1}`, trial: 1, status: 'completed' as const,
+        exitCode: 0, timedOut: false,
+        grade: { taskSuccess: true, toolSelectionAccuracy: null },
+      })),
+      grading: grading(1),
+    })
+    const candidate = buildRun({
+      trials: 108,
+      cases: [
+        ...Array.from({ length: 8 }, (_, index) => ({
+          caseId: `c${index + 1}`, trial: 1, status: 'completed' as const,
+          exitCode: 0, timedOut: false,
+          grade: { taskSuccess: true, toolSelectionAccuracy: null },
+        })),
+        ...Array.from({ length: 100 }, (_, index) => ({
+          caseId: `c${index + 9}`, trial: 1, status: 'error' as const,
+          exitCode: 1, timedOut: false, error: 'boom',
+        })),
+      ],
+      grading: grading(1),
+    })
+    const result = evaluateGate(baseline, candidate, 0.005, true, {}, { requireSignificance: true })
+    expect(result.checks.find(check => check.metric === 'strict pass@1 (task)'))
+      .toMatchObject({ passed: false })
+    expect(result.passed).toBe(false)
+  })
+
   it('emits a machine-readable verdict with the same numbers', () => {
     const result = evaluateGate(
       buildRun({ aggregate: METRICS }),

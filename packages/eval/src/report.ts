@@ -159,13 +159,13 @@ function formatScore(value: number | null, maxScore: number): string {
 }
 
 /** Render one reliability block; callers pass only a non-null summary. */
-function renderReliability(summary: ReliabilitySummary): string[] {
+function renderReliability(summary: ReliabilitySummary, graded: number): string[] {
   const label = summary.dimension === 'task' ? 'task success' : 'tool selection accuracy'
   const lines = [
     `## Reliability: ${label}`,
     '',
     `- cases: ${summary.cases} · trials/case: ${summary.k}`,
-    `- pass@1: ${(summary.passAt1 * 100).toFixed(1)}% · pass@${summary.k}: ${(summary.passAtK * 100).toFixed(1)}% · pass^${summary.k}: ${(summary.passAllK * 100).toFixed(1)}%`,
+    `- pass@1: ${(summary.passAt1 * 100).toFixed(1)}% · pass@k (${graded} graded): ${(summary.passAtK * 100).toFixed(1)}% · pass^k: ${(summary.passAllK * 100).toFixed(1)}%`,
     ...(summary.unscored === 0 ? [] : [
       `- strict pass@1: ${(summary.strictPassAt1 * 100).toFixed(1)}% over all ${summary.total} trials (${summary.unscored} unscored)`,
     ]),
@@ -241,7 +241,8 @@ export function renderBriefReport(run: EvalRun): string {
     )
   }
   if (reliability !== null) {
-    lines.push(`- task success: ${(reliability.passAt1 * 100).toFixed(1)}% · pass@${reliability.k}: ${(reliability.passAtK * 100).toFixed(1)}% · pass^${reliability.k}: ${(reliability.passAllK * 100).toFixed(1)}%`)
+    const graded = run.cases.filter(result => typeof result.grade?.taskSuccess === 'boolean').length
+    lines.push(`- task success: ${(reliability.passAt1 * 100).toFixed(1)}% · pass@k (${graded} graded): ${(reliability.passAtK * 100).toFixed(1)}% · pass^k: ${(reliability.passAllK * 100).toFixed(1)}%`)
   }
   if (interval !== null && interval.lower !== null && interval.upper !== null) {
     lines.push(`- task precision: ${(interval.rate * 100).toFixed(1)}% [95% CI ${(interval.lower * 100).toFixed(1)}%, ${(interval.upper * 100).toFixed(1)}%]`)
@@ -401,8 +402,10 @@ export function renderMarkdownReport(run: EvalRun): string {
     ...rows,
     aggregateRow,
     '',
-    ...(taskReliability === null ? [] : renderReliability(taskReliability)),
-    ...(toolReliability === null ? [] : renderReliability(toolReliability)),
+    ...(taskReliability === null ? [] : renderReliability(taskReliability,
+      run.cases.filter(result => typeof result.grade?.taskSuccess === 'boolean').length)),
+    ...(toolReliability === null ? [] : renderReliability(toolReliability,
+      run.cases.filter(result => typeof result.grade?.toolSelectionAccuracy === 'boolean').length)),
     ...(hasPrecision ? renderPrecision(precision) : []),
     ...(agreement === null ? [] : renderAgreement(agreement)),
     ...(calibration === null ? [] : renderCalibration(calibration)),
