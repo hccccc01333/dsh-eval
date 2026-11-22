@@ -67,11 +67,23 @@ describe('dsh-eval leaderboard', () => {
       { label: 'also-ungraded', run: run({ model: 'other' }) },
     ])
     expect(rows[0]!.label).toBe('graded')
+    expect(rows[1]!.label).toBe('also-ungraded')
     expect(rows[1]!.taskSuccess).toBeNull()
     expect(rows[1]!.gapFromBest).toBeNull()
     expect(rows[2]!.taskSuccess).toBeNull()
     const markdown = renderLeaderboard(rows)
-    expect(markdown).toContain('| 2 | x bad name | 1/1 | – | 100.0% | – | – | – | – | – |')
+    expect(markdown).toContain('| 3 | x bad name | 1/1 | – | 100.0% | – | – | – | – | – |')
+  })
+
+  it('still ranks judge-only runs whose task success is null', () => {
+    const rows = buildLeaderboard([
+      { label: 'first', run: run({ model: 'a' }) },
+      { label: 'second', run: run({ model: 'b' }) },
+    ])
+    expect(rows.map(row => [row.label, row.rank, row.gapFromBest])).toEqual([
+      ['first', 1, null], ['second', 2, null],
+    ])
+    expect(renderLeaderboard(rows)).toContain('| 1 | first | 1/1 | – | 100.0% | – | – | – | – | – |')
   })
 
   it('renders an empty leaderboard header', () => {

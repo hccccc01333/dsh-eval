@@ -156,6 +156,17 @@ describe('dsh-eval comparison', () => {
     expect(renderPairedCases(pairedCases(manyA, manyB)!)).toContain('showing 20 of 21 discordant pairs')
   })
 
+  it('does not call unmeasured pairs ties', () => {
+    const bare = (label: string): EvalRun => buildRun({
+      model: label,
+      cases: [{
+        caseId: 'c', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+      }],
+    })
+    expect(pairedCases(bare('a'), bare('b'))).toBeNull()
+    expect(pairedCompare(bare('a'), bare('b'))?.ties).toBe(1)
+  })
+
   it('falls back to judge scores for case outcomes and sanitizes case ids', () => {
     const a = buildRun({
       cases: [{

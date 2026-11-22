@@ -457,6 +457,21 @@ describe('dsh-eval command composition', () => {
     expect(observed.out.indexOf('middle')).toBeLessThan(observed.out.indexOf('weak'))
   })
 
+  it('validates a benchmark through the CLI', async () => {
+    const dir = tempDir()
+    const benchmarkPath = benchmarkYaml(dir)
+    const observed = await bootEval(['validate', benchmarkPath])
+    expect(observed.exits).toEqual([0])
+    expect(observed.out).toContain('# Benchmark: command-smoke')
+    expect(observed.out).toContain('Validated: command-smoke is ready to run.')
+
+    const invalidPath = join(dir, 'invalid.yml')
+    writeFileSync(invalidPath, 'name: bad\nmodel: m\ncases:\n  - id: a\n    prompt: p\n    expected:\n      check: "a"\n      checkShell: "b"\n')
+    const invalid = await bootEval(['validate', invalidPath])
+    expect(invalid.exits).toEqual([1])
+    expect(invalid.err).toContain('at most one of check')
+  })
+
   it('fails loudly for a missing compare input', async () => {
     const dir = tempDir()
     const pathA = join(dir, 'a.json')

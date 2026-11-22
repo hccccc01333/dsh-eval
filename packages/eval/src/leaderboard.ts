@@ -74,10 +74,12 @@ export function buildLeaderboard(runs: readonly { label: string; run: EvalRun }[
   const best = rows[0]?.taskSuccess ?? null
   let lastRate: number | null = null
   let lastRank = 0
+  let first = true
   rows.forEach((row, index) => {
-    if (row.taskSuccess !== lastRate) {
+    if (row.taskSuccess === null || first || row.taskSuccess !== lastRate) {
       lastRank = index + 1
       lastRate = row.taskSuccess
+      first = false
     }
     row.rank = lastRank
     row.gapFromBest = best === null || row.taskSuccess === null ? null : best - row.taskSuccess
@@ -92,8 +94,8 @@ function rate(value: number | null): string {
 
 /** Format a signed percentage-point gap from the leader. */
 function gap(value: number | null, rank: number): string {
-  if (rank === 1) return 'leader'
   if (value === null) return '–'
+  if (rank === 1) return 'leader'
   return `-${(value * 100).toFixed(1)}pp`
 }
 

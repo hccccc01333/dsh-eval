@@ -23,6 +23,7 @@ import { buildLeaderboard, renderLeaderboard } from './leaderboard.ts'
 import { llmJudgeChat, type JudgeChat } from './judge.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
 import { rejudgeRun } from './rejudge.ts'
+import { renderBenchmarkSummary } from './validate.ts'
 import { renderBriefReport, renderMarkdownReport, writeRunReport, loadRunReport } from './report.ts'
 import { runBenchmark } from './runner.ts'
 
@@ -107,6 +108,10 @@ export async function executeEval(
       io.stdout.write(renderCompareMarkdown(compareRuns(a, b)))
       const cases = pairedCases(a, b)
       if (cases !== null) io.stdout.write(renderPairedCases(cases))
+      return 0
+    }
+    if (values.kind === 'validate') {
+      io.stdout.write(renderBenchmarkSummary(await loadBenchmark(values.benchmarkPath)))
       return 0
     }
     if (values.kind === 'leaderboard') {

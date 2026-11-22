@@ -282,10 +282,14 @@ function runCommand(
       // A detached grandchild can inherit the pipes and keep `close` pending
       // long after the direct child exited. Resolve from `exit` after a short
       // drain grace period so a check cannot hang the whole trial.
-      /* v8 ignore next 6 -- Windows closes inherited pipes eagerly; only POSIX grandchildren can keep them open. */
+      /* v8 ignore next 10 -- Windows closes inherited pipes eagerly; only POSIX grandchildren can keep them open. */
       drainGuard = setTimeout(() => {
         if (settled) return
         settled = true
+        clearTimers()
+        // A surviving grandchild owns these pipes; releasing them lets the CLI exit.
+        child.stdout.destroy()
+        child.stderr.destroy()
         resolveOutcome({ exitCode: code, timedOut, stdout, stderr })
       }, 200)
       drainGuard.unref()

@@ -113,6 +113,10 @@ Markdown 报告会为每个评分维度（任务成功、工具选择准确率�
 
 一致率与 kappa 回答"判官和脚本是否得出相同结论"，校准回答"判官的分数对排序是否真的有用"。`computeCalibration`（渲染在完整报告与 HTML 仪表盘中，`--brief` 输出摘要）给出脚本通过与失败 trial 的判官归一化均分、两者差值，以及等价于 AUC 的排序准确率（并列计半）。它还会列出最多 5 个两种视图不一致的 case，便于直接按实例修正 rubric，而不是只盯着一个聚合数字。分数缺失的 trial 仍可通过幻觉标记参与判断；两者都缺失的 trial 记为未评分，不做猜测。
 
+## Benchmark 预检
+
+`dsh eval validate benchmark.yaml` 用与 `run` 完全相同的解析器验证 benchmark，然后输出 case、trial、并发、超时、seed、判官、回放与定价摘要。它还会警告那些能跑但证据薄弱的配置：没有脚本期望、没有检查或工具约束、判官没有标准答案、不可信文件中的 shell 检查，以及需要 `rejudge` 才有判官分数的回放 run。在运行前发现这些问题，可以避免把 token 花在无法回答自身问题的 benchmark 上。
+
 ## 排行榜
 
 `dsh eval leaderboard a.json b.json c.json ...` 按合并任务成功率给任意数量的 run 排名，同时给出 strict pass@1、工具选择、归一化判官分数、成本、延迟和与领先者的差距。并列共享名次，缺失指标排在末尾且不会被臆造。它明确只是筛选视图：输出会提示用 `dsh eval compare` 对接近的两个 run 做配对推断。

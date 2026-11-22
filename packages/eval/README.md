@@ -147,6 +147,16 @@ of a single aggregate number. Trials with a null score still contribute via
 their hallucination flag; trials with neither signal are counted as ungraded
 rather than guessed.
 
+## Benchmark preflight
+
+`dsh eval validate benchmark.yaml` parses a benchmark exactly as `run` does,
+then prints a summary of cases, trials, concurrency, timeout, seed, judge,
+replay and pricing. It also warns about configurations that run but produce
+weak evidence: no scripted expectations, no checks or tool constraints, a judge
+without gold answers, shell checks in an untrusted file, or replay runs that
+will need `rejudge` for judge scores. Catching these before a run avoids
+spending tokens on a benchmark that cannot answer its own question.
+
 ## Leaderboard
 
 `dsh eval leaderboard a.json b.json c.json ...` ranks any number of runs by

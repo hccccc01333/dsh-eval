@@ -38,6 +38,10 @@ export type EvalStartupValues =
     runPathB: string
   }
   | {
+    kind: 'validate'
+    benchmarkPath: string
+  }
+  | {
     kind: 'leaderboard'
     runPaths: readonly string[]
   }
@@ -145,7 +149,7 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     .description('Run agent evaluations over headless dsh profiles and report trace-based metrics.')
     .helpOption('-h, --help', 'show this help')
     .action(() => {
-      program.error('error: eval needs a subcommand: run <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, rejudge <run.json>, dashboard <run.json>, leaderboard <run.json>..., gate <candidate.json>, or import <format> <log.jsonl>')
+      program.error('error: eval needs a subcommand: run <benchmark.yaml>, validate <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, rejudge <run.json>, dashboard <run.json>, leaderboard <run.json>..., gate <candidate.json>, or import <format> <log.jsonl>')
     })
   const run = program.command('run').description('run a benchmark and write its JSON report')
   run
@@ -194,7 +198,13 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     .action((runPathA: string, runPathB: string) => {
       publish({ kind: 'compare', runPathA, runPathB })
     })
-  const leaderboard = program.command('leaderboard').description('rank three or more runs by pooled task success')
+  const validate = program.command('validate').description('validate a benchmark file and print a preflight summary')
+  validate
+    .argument('<benchmark.yaml>', 'path to a benchmark document')
+    .action((benchmarkPath: string) => {
+      publish({ kind: 'validate', benchmarkPath })
+    })
+  const leaderboard = program.command('leaderboard').description('rank persisted runs by pooled task success')
   leaderboard
     .argument('<run.json...>', 'paths to run reports')
     .action((runPaths: string[]) => {

@@ -35,6 +35,9 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
 
 ## Beyond the original audit
 
+- ✅ **Benchmark preflight** (`dsh eval validate`). Parses a benchmark with the
+  same loader as `run`, prints a readable summary and warns about configurations
+  that would produce weak evidence before any tokens are spent.
 - ✅ **Multi-run leaderboard** (`dsh eval leaderboard`). Ranks any number of
   runs by pooled task success with deterministic tie-breaking, gap to leader
   and cost/latency columns; explicitly a screening view before paired

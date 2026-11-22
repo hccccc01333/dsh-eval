@@ -223,6 +223,10 @@ export function pairedCases(a: EvalRun, b: EvalRun): PairedCase[] | null {
   const pairs = pairedTrials(a, b)
   if (pairs.length === 0) return null
   const metric = pickMetric(pairs)
+  // The fallback metric may also be unmeasured; those pairs are not ties.
+  if (!pairs.some(pair => metricOutcome(pair.a, metric) !== null && metricOutcome(pair.b, metric) !== null)) {
+    return null
+  }
   return pairs.map(pair => {
     const aValue = metricOutcome(pair.a, metric)
     const bValue = metricOutcome(pair.b, metric)

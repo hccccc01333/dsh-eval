@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Benchmark preflight.** `dsh eval validate benchmark.yaml` parses a
+  benchmark with the run loader, prints a readable summary and warns about
+  weak-evidence configurations before any tokens are spent.
 - **Multi-run leaderboard.** `dsh eval leaderboard a.json b.json ...` ranks any
   number of runs by pooled task success with deterministic tie-breaking, a
   gap-to-leader column and cost/latency figures, while pointing to `compare`
@@ -110,6 +113,14 @@
 
 ### Fixed
 
+- **Leaderboards with no task-success data no longer print rank 0.** Runs whose
+  grading lacks `taskSuccessRate` now receive distinct ranks, and the
+  gap-to-leader column shows `–` instead of a bogus "leader" label.
+- **Unmeasured pairs are no longer reported as ties.** `pairedCases` returns no
+  case outcomes when every pair lacks the chosen primary metric, while the
+  aggregate sign test keeps its historical all-ties behaviour.
+- **Grandchild-held stdio no longer keeps the CLI alive.** The 200 ms exit
+  drain guard now clears timers and releases inherited streams after resolving.
 - **`dsh eval run` exits nonzero when any trial fails.** Previously a single
   surviving trial made the command exit 0 even if the rest errored, so a
   `run && next-step` CI chain could go green on a broken benchmark. The stdout
