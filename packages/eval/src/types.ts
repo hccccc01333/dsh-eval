@@ -100,6 +100,8 @@ export interface Benchmark {
   seed: number
   /** SHA-256 of the YAML source plus resolved prompt/workspace/replay inputs. */
   sourceSha256?: string
+  /** Permit referenced paths outside the benchmark directory; trusted files only. */
+  allowExternalPaths?: boolean
   /** The benchmark's cases, in order. */
   cases: readonly BenchmarkCase[]
   /** Pricing keyed by model id; an absent model reports `costUsd: null`. */

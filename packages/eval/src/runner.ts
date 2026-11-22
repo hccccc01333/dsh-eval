@@ -18,6 +18,7 @@ import { cp, mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { splitArgv } from './argv.ts'
+import { safeRegexTest } from './safe-regex.ts'
 import type { Benchmark, BenchmarkExpectation, EvalRun, EvalTrialResult } from './types.ts'
 import type { EvalGrade, EvalRunGrading } from './types.ts'
 import { finalAnswerOf, tryJudgeTrial, type JudgeChat } from './judge.ts'
@@ -108,10 +109,10 @@ function evalOverlay(replay: { file: string; childFiles: readonly string[] } | u
  * @param names - tool-call names recorded in the harvested trace.
  * @returns the boolean match, or null when no tool expectation is configured.
  */
-function toolSelectionOf(
+async function toolSelectionOf(
   expected: BenchmarkExpectation,
   names: readonly string[],
-): boolean | null {
+): Promise<boolean | null> {
   const configured = expected.tool !== undefined || expected.tools !== undefined
     || expected.toolAnyOf !== undefined || expected.toolRegex !== undefined
     || expected.toolNot !== undefined
@@ -121,14 +122,15 @@ function toolSelectionOf(
   if (expected.tools !== undefined && !expected.tools.every(includes)) return false
   if (expected.toolAnyOf !== undefined && !expected.toolAnyOf.some(includes)) return false
   if (expected.toolRegex !== undefined) {
-    let regex: RegExp
-    try {
-      regex = new RegExp(expected.toolRegex, 'u')
-    } catch {
-      // The schema validates at load; hand-built benchmarks degrade to failure.
-      return false
-    }
-    if (!names.some(name => regex.test(name))) return false
+    const matched = await Promise.all(names.map(async name => {
+      try {
+        return await safeRegexTest(expected.toolRegex!, name)
+      } catch {
+        // The schema validates at load; hand-built benchmarks degrade to failure.
+        return false
+      }
+    }))
+    if (!matched.some(Boolean)) return false
   }
   if (expected.toolNot !== undefined && expected.toolNot.some(includes)) return false
   return true
@@ -154,7 +156,7 @@ async function gradeTrial(
   const expected = caseValue.expected
   if (expected === undefined) return { taskSuccess: null, toolSelectionAccuracy: null }
   const names = trace.events.flatMap(event => event.type === 'tool/call' ? [event.data.name] : [])
-  const toolSelectionAccuracy = toolSelectionOf(expected, names)
+  const toolSelectionAccuracy = await toolSelectionOf(expected, names)
   let taskSuccess: boolean | null = null
   const shell = expected.checkShell !== undefined
   const checkArgv = expected.checkArgv !== undefined
@@ -176,9 +178,11 @@ async function gradeTrial(
     // Deterministic final-answer grading: no command, no LLM needed.
     // The schema validates at load; hand-built benchmarks degrade to failure.
     try {
-      // Cap the input so a pathological pattern cannot block the event loop
-      // on an unbounded assistant reply.
-      taskSuccess = new RegExp(expected.answerRegex, 'u').test(finalAnswerOf(trace).slice(0, 4096))
+      // The pattern runs in a time-boxed worker: a catastrophic benchmark regex
+      // must not hang the evaluator on agent-controlled final-answer text.
+      taskSuccess = await safeRegexTest(
+        expected.answerRegex, finalAnswerOf(trace).slice(0, 4096),
+      )
     } catch {
       taskSuccess = false
     }

@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Untrusted-input hardening.** Regex grading runs in a time-boxed worker so
+  catastrophic patterns cannot hang the evaluator; benchmark file references are
+  contained by default behind an explicit `allowExternalPaths` opt-in; and
+  rejudge resolves real paths and refuses drive-root/home temp roots.
 - **Gate fail-open fix.** In significance mode, extra errors/timeouts in the
   candidate can no longer hide a strict pass@1 collapse behind survivor-only
   paired evidence.

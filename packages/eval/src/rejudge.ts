@@ -10,7 +10,9 @@
  * @module dsh-eval/rejudge
  */
 
-import { extname, isAbsolute, relative, resolve } from 'node:path'
+import { realpath } from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { extname, isAbsolute, parse, relative, resolve, sep } from 'node:path'
 import { tryJudgeTrial, type JudgeChat } from './judge.ts'
 import { aggregateGrading } from './runner.ts'
 import { loadTrace, mergeTraces, traceDigest } from './trace.ts'
@@ -39,13 +41,25 @@ export async function rejudgeRun(
   const inputs = new Map(run.caseInputs.map(input => [input.caseId, input]))
   // A report is data, not code: a hand-edited tracePaths entry must not be able
   // to make the judge read and ship an arbitrary local file to an LLM.
-  const root = resolve(run.tempRoot)
-  const insideRoot = (path: string): boolean => {
-    // Resolve before comparing: a raw "root/../outside.jsonl" prefix matches
-    // the root but readFile() would happily escape it.
-    const resolved = resolve(path)
+  const root = await realpath(resolve(run.tempRoot))
+  // A hand-edited report must not promote a drive root or home directory to
+  // the "allowed" root; that would make every local log reachable by design.
+  if (root === parse(root).root || root === resolve(homedir())
+    || relative(parse(root).root, root).split(sep).filter(Boolean).length === 0) {
+    throw new Error('rejudge: tempRoot must be a dedicated run directory')
+  }
+  const insideRoot = async (path: string): Promise<boolean> => {
+    if (!isAbsolute(path)) return false
+    // realpath resolves `..` and symlinks before comparing, so neither a
+    // traversal prefix nor a symlink to another run's log escapes the check.
+    let resolved: string
+    try {
+      resolved = await realpath(path)
+    } catch {
+      return false
+    }
     const rel = relative(root, resolved)
-    return isAbsolute(path) && extname(resolved) === '.jsonl'
+    return extname(resolved) === '.jsonl'
       && rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
   }
   const cases: EvalTrialResult[] = []
@@ -63,7 +77,7 @@ export async function rejudgeRun(
       throw new Error(`rejudge: trial ${result.caseId}#${result.trial} has no harvested trace`)
     }
     for (const path of paths) {
-      if (!insideRoot(path)) {
+      if (!await insideRoot(path)) {
         throw new Error(`rejudge: trace path "${path}" is outside the run's tempRoot or not a .jsonl log`)
       }
     }

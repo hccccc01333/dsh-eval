@@ -167,6 +167,32 @@ describe('dsh-eval benchmark loading', () => {
     expect(benchmark.cases[1]?.expected).toEqual({ checkShell: 'npm test > result.txt' })
   })
 
+  it('rejects referenced paths that escape the benchmark directory', async () => {
+    const dir = tempDir()
+    const base = [
+      'name: escape',
+      'model: m',
+      'cases:',
+      '  - id: a',
+      '    prompt: inline',
+      `    workspace: ${join(dir, '..', 'outside')}`,
+      '',
+    ].join('\n')
+    await expect(parseBenchmark(base, dir)).rejects.toThrow('escapes the benchmark directory')
+    await expect(parseBenchmark(base.replace('workspace:', 'promptFile:').replace('    prompt: inline\n', ''), dir))
+      .rejects.toThrow('escapes the benchmark directory')
+    await expect(parseBenchmark([
+      'name: escape',
+      'model: m',
+      'replay:',
+      `  dir: ${join(dir, '..', 'outside')}`,
+      'cases:',
+      '  - id: a',
+      '    prompt: p',
+      '',
+    ].join('\n'), dir)).rejects.toThrow('escapes the benchmark directory')
+  })
+
   it('keeps absolute workspace paths and inline prompts as-is', async () => {
     const dir = tempDir()
     const absolute = join(dir, 'abs')
@@ -175,6 +201,7 @@ describe('dsh-eval benchmark loading', () => {
       'model: m',
       'trials: 3',
       'timeoutMs: 500',
+      'allowExternalPaths: true',
       'seed: 7',
       'profile: custom',
       'command: [pnpm, dsh]',
@@ -281,6 +308,7 @@ describe('dsh-eval benchmark loading', () => {
     const benchmark = await parseBenchmark([
       'name: replayed',
       'model: m',
+      'allowExternalPaths: true',
       'replay:',
       '  dir: ./replays',
       'cases:',
@@ -297,6 +325,7 @@ describe('dsh-eval benchmark loading', () => {
     const benchmark = await parseBenchmark([
       'name: replayed',
       'model: m',
+      'allowExternalPaths: true',
       'replay:',
       `  dir: ${absolute}`,
       'cases:',

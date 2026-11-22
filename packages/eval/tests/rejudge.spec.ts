@@ -1,6 +1,6 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join, sep } from 'node:path'
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
+import { join, parse, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
 import { rejudgeRun } from '../src/rejudge.ts'
@@ -156,6 +156,32 @@ describe('dsh-eval offline re-judging', () => {
     const run = buildRun({ tempRoot: `${root}${sep}` })
     const result = await rejudgeRun(run, async () => '{"finalAnswerScore": 5, "hallucination": false}')
     expect(result.cases[0]?.judge?.finalAnswerScore).toBe(5)
+  })
+
+  it('refuses a filesystem root or home directory as tempRoot', async () => {
+    const chat = async () => '{"finalAnswerScore": 1, "hallucination": false}'
+    await expect(rejudgeRun(buildRun({ tempRoot: parse(root).root }), chat))
+      .rejects.toThrow('dedicated run directory')
+    await expect(rejudgeRun(buildRun({ tempRoot: homedir() }), chat))
+      .rejects.toThrow('dedicated run directory')
+  })
+
+  it('refuses trace paths reached through a symlink outside the root', async () => {
+    const outside = mkdtempSync(join(tmpdir(), 'dsh-eval-rejudge-outside-'))
+    try {
+      const secret = join(outside, 'secret.jsonl')
+      writeFileSync(secret, source)
+      const link = join(root, 'escape-link')
+      symlinkSync(outside, link, 'junction')
+      const run = withCase(buildRun(), 0, {
+        ...buildRun().cases[0]!, tracePaths: [join(link, 'secret.jsonl')],
+      })
+      await expect(rejudgeRun(run, async () => '{"finalAnswerScore": 1, "hallucination": false}'))
+        .rejects.toThrow('outside the run')
+    } finally {
+      rmSync(join(root, 'escape-link'), { recursive: true, force: true })
+      rmSync(outside, { recursive: true, force: true })
+    }
   })
 
   it('refuses trace paths outside the run root', async () => {

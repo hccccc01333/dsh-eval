@@ -7,7 +7,7 @@
  */
 
 import { readFile } from 'node:fs/promises'
-import { dirname, isAbsolute, resolve } from 'node:path'
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { load } from 'js-yaml'
 import { z } from 'zod'
 import { hashBenchmarkInputs } from './digest.ts'
@@ -94,6 +94,7 @@ const benchmarkSchema = z.object({
   trials: z.number().int().positive().default(1),
   concurrency: z.number().int().positive().default(1),
   timeoutMs: z.number().int().positive().default(600_000),
+  allowExternalPaths: z.boolean().default(false),
   seed: z.number().int().default(0),
   cases: z.array(benchmarkCaseSchema).min(1),
   pricing: z.record(z.string().min(1), pricingSchema).optional(),
@@ -127,18 +128,30 @@ const benchmarkSchema = z.object({
  * @param baseDir - absolute directory the benchmark file lives in.
  * @returns the resolved runtime case.
  */
+/** Resolve a referenced path without letting a third-party benchmark read outside its directory. */
+function resolveInputPath(value: string, baseDir: string, allowExternal: boolean, field: string): string {
+  const resolved = resolve(baseDir, value)
+  if (allowExternal) return resolved
+  const rel = relative(baseDir, resolved)
+  if (isAbsolute(value) || rel === '' || rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
+    throw new Error(`${field} "${value}" escapes the benchmark directory`)
+  }
+  return resolved
+}
+
 async function resolveCase(
   parsed: z.infer<typeof benchmarkCaseSchema>,
   baseDir: string,
+  allowExternalPaths: boolean,
 ): Promise<BenchmarkCase> {
   const prompt = parsed.prompt
-    ?? await readFile(resolve(baseDir, parsed.promptFile as string), 'utf8')
+    ?? await readFile(resolveInputPath(parsed.promptFile as string, baseDir, allowExternalPaths, 'promptFile'), 'utf8')
   return {
     id: parsed.id,
     prompt,
     ...(parsed.timeoutMs !== undefined ? { timeoutMs: parsed.timeoutMs } : {}),
     ...(parsed.workspace !== undefined
-      ? { workspace: isAbsolute(parsed.workspace) ? parsed.workspace : resolve(baseDir, parsed.workspace) }
+      ? { workspace: resolveInputPath(parsed.workspace, baseDir, allowExternalPaths, 'workspace') }
       : {}),
     ...(parsed.expected !== undefined
       ? {
@@ -173,7 +186,7 @@ export async function parseBenchmark(text: string, baseDir: string): Promise<Ben
   const parsed = benchmarkSchema.parse(value)
   const cases: BenchmarkCase[] = []
   for (const caseValue of parsed.cases) {
-    cases.push(await resolveCase(caseValue, baseDir))
+    cases.push(await resolveCase(caseValue, baseDir, parsed.allowExternalPaths))
   }
   const pricing = parsed.pricing
   const judge = parsed.judge
@@ -183,6 +196,7 @@ export async function parseBenchmark(text: string, baseDir: string): Promise<Ben
     model: parsed.model,
     profile: parsed.profile,
     command: parsed.command,
+    allowExternalPaths: parsed.allowExternalPaths,
     trials: parsed.trials,
     concurrency: parsed.concurrency,
     timeoutMs: parsed.timeoutMs,
@@ -193,7 +207,7 @@ export async function parseBenchmark(text: string, baseDir: string): Promise<Ben
       ? { judge: { provider: judge.provider, model: judge.model ?? parsed.model, ...(judge.rubric !== undefined ? { rubric: judge.rubric } : {}), maxScore: judge.maxScore } }
       : {}),
     ...(replay !== undefined
-      ? { replay: { dir: isAbsolute(replay.dir) ? replay.dir : resolve(baseDir, replay.dir) } }
+      ? { replay: { dir: resolveInputPath(replay.dir, baseDir, parsed.allowExternalPaths, 'replay.dir') } }
       : {}),
     baseDir,
   }
