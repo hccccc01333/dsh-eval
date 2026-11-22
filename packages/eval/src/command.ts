@@ -92,7 +92,7 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     .description('Run agent evaluations over headless dsh profiles and report trace-based metrics.')
     .helpOption('-h, --help', 'show this help')
     .action(() => {
-      program.error('error: eval needs a subcommand: run <benchmark.yaml> or report <run.json>')
+      program.error('error: eval needs a subcommand: run <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, or import <format> <log.jsonl>')
     })
   const run = program.command('run').description('run a benchmark and write its JSON report')
   run
@@ -104,6 +104,12 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     .option('--profile <name>', 'override the spawned dsh profile')
     .action((benchmarkPath: string, options: RunCommandOptions) => {
       const dshCommand = splitCommand(options.dsh)
+      // An explicitly supplied but empty launcher is a typo, not "use the
+      // default": silently falling back hides the mistake behind a run whose
+      // only symptom is an empty stderr and failed trials.
+      if (options.dsh !== undefined && dshCommand === undefined) {
+        program.error('error: --dsh must contain a command')
+      }
       publish({
         kind: 'run',
         benchmarkPath,

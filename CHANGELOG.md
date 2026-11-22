@@ -30,6 +30,17 @@
   ids are assigned by occurrence order on each side, so tool latency is folded
   instead of dropped. A single content object is also recognized as message
   text, not only a block array.
+- **A whitespace-only `--dsh` is rejected at parse time** instead of silently
+  falling back to the default launcher. A run with failed trials now also writes
+  the first failure reasons to stderr, rather than exiting with only a bare
+  "no completed trials" line on stdout.
+- **The bare-invocation hint lists all four subcommands** (`run`, `report`,
+  `compare`, `import`), not just the first two.
+- **`test:pack` now verifies wildcard exports.** `./src/*` is expanded to the
+  source tree and every file must be packed; previously removing
+  `src/**/*.ts` from `files` passed the smoke test unnoticed.
+- **Documentation matches the tree.** Both READMEs report 137 tests, and a
+  session-log discovery test is renamed for the behavior it actually asserts.
 
 ## 0.4.0 — 2026-10-26
 

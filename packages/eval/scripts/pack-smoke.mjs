@@ -24,6 +24,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -84,18 +85,39 @@ function declarationTarget(target) {
 }
 
 /**
- * Collect every literal path an `exports` map can resolve to.
+ * Collect literal `exports` targets and the prefixes of wildcard subpaths.
+ * A wildcard such as `./src/*` promises to ship its source tree; skipping it
+ * would let someone remove `src/**\/*.ts` from `files` without this test caring.
  * @param {unknown} value - a node of the `exports` field.
- * @param {string[]} out - accumulator.
+ * @param {string[]} out - literal target accumulator.
+ * @param {string[]} wildcards - wildcard prefix accumulator (e.g. `src/`).
  */
-function collectExportTargets(value, out) {
+function collectExportTargets(value, out, wildcards) {
   if (typeof value === 'string') {
-    if (!value.includes('*')) out.push(value.replace(/^\.\//u, ''))
+    const target = value.replace(/^\.\//u, '')
+    if (target.includes('*')) wildcards.push(target.slice(0, target.indexOf('*')))
+    else out.push(target)
     return
   }
   if (value !== null && typeof value === 'object') {
-    for (const nested of Object.values(value)) collectExportTargets(nested, out)
+    for (const nested of Object.values(value)) collectExportTargets(nested, out, wildcards)
   }
+}
+
+/**
+ * List every source file under a wildcard export prefix, recursively.
+ * @param {string} dir - absolute directory to walk.
+ * @param {string} prefix - package-relative prefix already traversed.
+ * @returns {string[]} package-relative paths.
+ */
+function collectSourceFiles(dir, prefix) {
+  const result = []
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const relative = `${prefix}${entry.name}`
+    if (entry.isDirectory()) result.push(...collectSourceFiles(join(dir, entry.name), `${relative}/`))
+    else result.push(relative)
+  }
+  return result
 }
 
 /**
@@ -183,14 +205,29 @@ for (const file of files) {
   }
 }
 
-// 3 — every exports/main/types target is packed.
+// 3 — every exports/main/types target is packed, wildcard subtrees included.
 const targets = []
-collectExportTargets(manifest.exports, targets)
+const wildcardPrefixes = []
+collectExportTargets(manifest.exports, targets, wildcardPrefixes)
 for (const field of ['main', 'types']) {
   if (typeof manifest[field] === 'string') targets.push(manifest[field].replace(/^\.\//u, ''))
 }
 for (const target of new Set(targets)) {
   if (!packed.has(target)) fail(`package.json points at ${target}, which is not packed`)
+}
+for (const prefix of new Set(wildcardPrefixes)) {
+  const dir = join(pkgDir, ...prefix.replace(/\/+$/u, '').split('/'))
+  let sources
+  try {
+    sources = collectSourceFiles(dir, prefix)
+  } catch {
+    fail(`wildcard export ${prefix}* does not name a source directory`)
+    continue
+  }
+  if (sources.length === 0) fail(`wildcard export ${prefix}* matches no source files`)
+  for (const file of sources) {
+    if (!packed.has(file)) fail(`wildcard export target ${file} is not packed`)
+  }
 }
 
 // 4 — the reassembled package imports through its own exports map.

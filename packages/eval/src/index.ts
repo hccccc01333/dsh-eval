@@ -106,6 +106,17 @@ export async function executeEval(
     })
     await writeRunReport(run, values.outPath)
     io.stdout.write(`Wrote ${values.outPath} (${run.cases.length} trials, ${summary(run)})\n`)
+    // A failed trial lives in the JSON report, but a CLI run must also say why
+    // on stderr — otherwise an empty stdout/stderr looks like a clean failure.
+    const failed = run.cases.filter(result => result.status === 'error')
+    if (failed.length > 0) {
+      const sample = failed.slice(0, 3).map((result) => {
+        /* v8 ignore next 2 -- runner always sets `error` on error trials; the fallback guards hand-edited reports. */
+        const detail = result.error ?? 'unknown error'
+        return `${result.caseId}#${result.trial}: ${detail}`
+      }).join('\n')
+      io.stderr.write(`dsh eval: ${failed.length} trial(s) failed:\n${sample}\n`)
+    }
     return run.aggregate === null ? 1 : 0
   } catch (error) {
     io.stderr.write(`dsh eval: ${error instanceof Error ? error.message : String(error)}\n`)

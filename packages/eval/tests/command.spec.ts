@@ -240,17 +240,18 @@ describe('dsh-eval command composition', () => {
     const observed = await bootEval(['run', benchmarkPath, '--out', outPath, '--dsh', `${process.execPath} ${FAKE_SCRIPT}`])
     expect(observed.exits).toEqual([1])
     expect(observed.out).toContain('no completed trials')
+    expect(observed.err).toContain('trial(s) failed')
+    expect(observed.err).toContain('no session log found')
   })
 
-  it('treats a whitespace-only --dsh override as absent and reports the spawn failure', async () => {
+  it('rejects a whitespace-only --dsh override instead of silently using the default', async () => {
     const dir = tempDir()
     const benchmarkPath = benchmarkYaml(dir)
     const outPath = join(dir, 'run.json')
-    process.env.FAKE_DASH_MODE = 'log'
     const observed = await bootEval(['run', benchmarkPath, '--out', outPath, '--dsh', '   '])
     expect(observed.exits).toEqual([1])
-    expect(observed.out).toContain('no completed trials')
-    expect(observed.err).toBe('')
+    expect(observed.err).toContain('--dsh must contain a command')
+    expect(existsSync(outPath)).toBe(false)
   })
 
   it('fails loudly for a missing benchmark file', async () => {

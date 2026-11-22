@@ -95,7 +95,7 @@ describe('dsh-eval primary-log discovery', () => {
     expect(await findPrimarySessionLog(root)).toBe(newest)
   })
 
-  it('keeps an existing top-level log when a newer log is nested', async () => {
+  it('keeps the newer nested log over an older top-level log', async () => {
     const root = tempDir()
     const nestedDir = join(root, 'a')
     mkdirSync(nestedDir, { recursive: true })
