@@ -277,6 +277,37 @@ function renderCalibration(summary: CalibrationSummary): string[] {
   return lines
 }
 
+/**
+ * Render a run as machine-readable JSON, including every derived block shown
+ * in the markdown report. Raw trial results are kept so consumers can drill
+ * into a single case without parsing another file.
+ * @param run - the run record.
+ * @returns a JSON string ending in a newline.
+ */
+export function renderReportJson(run: EvalRun): string {
+  return `${JSON.stringify({
+    benchmark: run.benchmark,
+    model: run.model,
+    createdAt: run.createdAt,
+    trials: run.trials,
+    seed: run.seed,
+    tempRoot: run.tempRoot,
+    judge: run.judge ?? null,
+    pricing: run.pricing ?? null,
+    grading: run.grading ?? null,
+    aggregate: run.aggregate ?? null,
+    coverage: computeCoverage(run),
+    reliability: {
+      task: computeReliability(run, 'task'),
+      toolSelection: computeReliability(run, 'tool-selection'),
+    },
+    precision: computePrecision(run),
+    agreement: computeAgreement(run),
+    calibration: computeCalibration(run),
+    cases: run.cases,
+  })}\n`
+}
+
 export function renderMarkdownReport(run: EvalRun): string {
   const judge = run.judge
   const judged = judge !== undefined

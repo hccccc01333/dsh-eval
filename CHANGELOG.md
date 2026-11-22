@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Structured reports and leaderboards.** `dsh eval report --json` emits the
+  run plus every derived summary block (coverage, reliability, precision,
+  agreement, calibration) and raw trials as one JSON object; `dsh eval
+  leaderboard --json` emits ranked rows with gaps. Markdown stays the default.
 - **Machine-readable gate verdict.** `dsh eval gate ... --json` emits one JSON
   object with the pass flag, thresholds, checks and case regressions, keeping
   the same exit code as the markdown form.

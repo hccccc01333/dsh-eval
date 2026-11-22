@@ -32,6 +32,8 @@ export type EvalStartupValues =
     runPath: string
     /** Print a compact terminal summary instead of the full markdown report. */
     brief?: boolean
+    /** Emit machine-readable JSON instead of markdown. */
+    json?: boolean
   }
   | {
     kind: 'compare'
@@ -45,6 +47,7 @@ export type EvalStartupValues =
   | {
     kind: 'leaderboard'
     runPaths: readonly string[]
+    json?: boolean
   }
   | {
     kind: 'gate'
@@ -89,6 +92,7 @@ interface RunCommandOptions {
 /** Options accepted by `eval report`. */
 interface ReportCommandOptions {
   brief?: boolean
+  json?: boolean
 }
 
 /** Options accepted by `eval rejudge`. */
@@ -191,12 +195,18 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
         quiet: options.quiet === true,
       })
     })
-  const report = program.command('report').description('render a persisted run JSON as markdown')
+  const report = program.command('report').description('render a persisted run JSON as markdown or JSON')
   report
     .argument('<run.json>', 'path to a run report')
     .option('--brief', 'print a compact terminal summary instead of the full report')
+    .option('--json', 'emit machine-readable JSON instead of markdown')
     .action((runPath: string, options: ReportCommandOptions) => {
-      publish({ kind: 'report', runPath, ...(options.brief ? { brief: true } : {}) })
+      publish({
+        kind: 'report',
+        runPath,
+        ...(options.brief ? { brief: true } : {}),
+        json: options.json === true,
+      })
     })
   const compare = program.command('compare').description('compare two persisted run reports as a markdown table')
   compare
@@ -214,8 +224,9 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
   const leaderboard = program.command('leaderboard').description('rank persisted runs by pooled task success')
   leaderboard
     .argument('<run.json...>', 'paths to run reports')
-    .action((runPaths: string[]) => {
-      publish({ kind: 'leaderboard', runPaths })
+    .option('--json', 'emit a machine-readable JSON leaderboard')
+    .action((runPaths: string[], options: { json?: boolean }) => {
+      publish({ kind: 'leaderboard', runPaths, json: options.json === true })
     })
   const gate = program.command('gate').description('fail a CI build when a candidate run regresses against a baseline')
   gate

@@ -19,12 +19,12 @@ import { compareRuns, pairedCases, renderCompareMarkdown, renderPairedCases } fr
 import { writeDashboard } from './dashboard.ts'
 import { evaluateGate, renderGate, renderGateJson } from './gate.ts'
 import { importTraceFile } from './import.ts'
-import { buildLeaderboard, renderLeaderboard } from './leaderboard.ts'
+import { buildLeaderboard, renderLeaderboard, renderLeaderboardJson } from './leaderboard.ts'
 import { llmJudgeChat, type JudgeChat } from './judge.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
 import { rejudgeRun } from './rejudge.ts'
 import { renderBenchmarkSummary } from './validate.ts'
-import { renderBriefReport, renderMarkdownReport, writeRunReport, loadRunReport } from './report.ts'
+import { renderBriefReport, renderMarkdownReport, renderReportJson, writeRunReport, loadRunReport } from './report.ts'
 import { runBenchmark } from './runner.ts'
 import type { EvalTrialResult } from './types.ts'
 
@@ -118,7 +118,9 @@ export async function executeEval(
     }
     if (values.kind === 'report') {
       const run = await loadRunReport(values.runPath)
-      io.stdout.write(values.brief ? renderBriefReport(run) : renderMarkdownReport(run))
+      io.stdout.write(values.json === true
+        ? renderReportJson(run)
+        : values.brief ? renderBriefReport(run) : renderMarkdownReport(run))
       return 0
     }
     if (values.kind === 'compare') {
@@ -135,10 +137,11 @@ export async function executeEval(
     }
     if (values.kind === 'leaderboard') {
       const runs = await Promise.all(values.runPaths.map(async path => loadRunReport(path)))
-      io.stdout.write(renderLeaderboard(buildLeaderboard(runs.map(run => ({
+      const entries = buildLeaderboard(runs.map(run => ({
         label: `${run.benchmark} — ${run.model}`,
         run,
-      })))))
+      })))
+      io.stdout.write(values.json === true ? renderLeaderboardJson(entries) : renderLeaderboard(entries))
       return 0
     }
     if (values.kind === 'gate') {

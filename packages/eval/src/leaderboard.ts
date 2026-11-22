@@ -87,6 +87,15 @@ export function buildLeaderboard(runs: readonly { label: string; run: EvalRun }[
   return rows
 }
 
+/**
+ * Render leaderboard rows as machine-readable JSON.
+ * @param rows - rows from {@link buildLeaderboard}.
+ * @returns a JSON string ending in a newline.
+ */
+export function renderLeaderboardJson(rows: readonly LeaderboardEntry[]): string {
+  return `${JSON.stringify({ rankedBy: 'taskSuccess', rows })}\n`
+}
+
 /** Format a rate or a dash for markdown. */
 function rate(value: number | null): string {
   return value === null ? '–' : `${(value * 100).toFixed(1)}%`

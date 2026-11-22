@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildLeaderboard, renderLeaderboard } from '../src/leaderboard.ts'
+import { buildLeaderboard, renderLeaderboard, renderLeaderboardJson } from '../src/leaderboard.ts'
 import type { EvalRun } from '../src/types.ts'
 
 const METRICS = {
@@ -84,6 +84,19 @@ describe('dsh-eval leaderboard', () => {
       ['first', 1, null], ['second', 2, null],
     ])
     expect(renderLeaderboard(rows)).toContain('| 1 | first | 1/1 | – | 100.0% | – | – | – | – | – |')
+  })
+
+  it('renders a machine-readable leaderboard', () => {
+    const rows = buildLeaderboard([
+      { label: 'b — strong', run: graded(0.9, 'strong') },
+      { label: 'b — weak', run: graded(0.4, 'weak') },
+    ])
+    const parsed = JSON.parse(renderLeaderboardJson(rows)) as {
+      rankedBy: string; rows: { rank: number; label: string; gapFromBest: number | null }[]
+    }
+    expect(parsed.rankedBy).toBe('taskSuccess')
+    expect(parsed.rows.map(row => row.label)).toEqual(['b — strong', 'b — weak'])
+    expect(parsed.rows[1]!.gapFromBest).toBeCloseTo(0.5)
   })
 
   it('renders an empty leaderboard header', () => {

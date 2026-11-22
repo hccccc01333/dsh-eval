@@ -227,6 +227,9 @@ describe('dsh-eval command composition', () => {
     const brief = await bootEval(['report', runPath, '--brief'])
     expect(brief.exits).toEqual([0])
     expect(brief.out).toBe('# reported — m\n- trials: 0/0 completed\n')
+    const structured = await bootEval(['report', runPath, '--json'])
+    expect(structured.exits).toEqual([0])
+    expect(JSON.parse(structured.out) as { benchmark: string }).toMatchObject({ benchmark: 'reported' })
   })
 
   it('rejudges a stored run through the CLI', async () => {
@@ -512,6 +515,11 @@ describe('dsh-eval command composition', () => {
     expect(observed.out).toContain('# Leaderboard')
     expect(observed.out.indexOf('strong')).toBeLessThan(observed.out.indexOf('middle'))
     expect(observed.out.indexOf('middle')).toBeLessThan(observed.out.indexOf('weak'))
+
+    const structured = await bootEval(['leaderboard', ...paths, '--json'])
+    expect(structured.exits).toEqual([0])
+    const parsed = JSON.parse(structured.out) as { rows: { label: string; rank: number }[] }
+    expect(parsed.rows.map(row => row.label)).toEqual(['b — strong', 'b — middle', 'b — weak'])
   })
 
   it('validates a benchmark through the CLI', async () => {

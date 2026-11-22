@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { loadRunReport, renderBriefReport, renderMarkdownReport, writeRunReport } from '../src/report.ts'
+import { loadRunReport, renderBriefReport, renderMarkdownReport, renderReportJson, writeRunReport } from '../src/report.ts'
 import type { EvalRun } from '../src/types.ts'
 
 const dirs: string[] = []
@@ -67,6 +67,23 @@ describe('dsh-eval report persistence and rendering', () => {
     const root = join(dir, 'bad-root.json')
     writeFileSync(root, '[]')
     await expect(loadRunReport(root)).rejects.toThrow('(root)')
+  })
+
+  it('renders a machine-readable report with the same derived blocks', () => {
+    const run = buildRun({ benchmark: 'structured' })
+    const parsed = JSON.parse(renderReportJson(run)) as {
+      benchmark: string; seed: number; coverage: { completed: number }
+      reliability: { task: unknown }; precision: unknown
+      agreement: unknown; calibration: unknown; cases: unknown[]
+    }
+    expect(parsed.benchmark).toBe('structured')
+    expect(parsed.seed).toBe(run.seed)
+    expect(parsed.coverage.completed).toBeGreaterThanOrEqual(0)
+    expect(parsed.reliability.task).toBeDefined()
+    expect(parsed.precision).toBeDefined()
+    expect(parsed.agreement).toBeDefined()
+    expect(parsed.calibration).toBeDefined()
+    expect(parsed.cases).toHaveLength(run.cases.length)
   })
 
   it('renders completed and failed trials plus the aggregate row', () => {
