@@ -116,8 +116,9 @@ Each trial runs in a private temp workspace with an isolated `DSH_HOME` and non-
 | Final answer score / hallucination | LLM judge verdict from `judge` config |
 
 Parsed benchmark YAML is hashed with SHA-256; the digest is stored in every run
-and shown by `report`, `validate` and the HTML dashboard, so a result can be tied
-back to the exact benchmark definition that produced it.
+and shown by `report`, `validate` and the HTML dashboard. The hash covers the
+YAML source only — prompt files, workspace trees and CLI option overrides are
+captured separately in the run's `caseInputs` and option fields, not in the digest.
 
 ## CLI
 

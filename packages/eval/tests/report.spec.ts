@@ -39,11 +39,16 @@ describe('dsh-eval report persistence and rendering', () => {
     const path = join(dir, 'nested', 'run.json')
     const run = buildRun({
       benchmark: 'roundtrip',
+      benchmarkSha256: 'c'.repeat(64),
       caseInputs: [{ caseId: 'c', prompt: 'p', answer: '42' }],
     })
     await writeRunReport(run, path)
     expect(readFileSync(path, 'utf8')).toMatch(/"benchmark": "roundtrip"/u)
-    expect(await loadRunReport(path)).toEqual(run)
+    const loaded = await loadRunReport(path)
+    expect(loaded).toEqual(run)
+    expect(renderMarkdownReport(loaded)).toContain(`- benchmark sha256: ${'c'.repeat(64)}`)
+    expect(JSON.parse(renderReportJson(loaded)) as { benchmarkSha256: string })
+      .toMatchObject({ benchmarkSha256: 'c'.repeat(64) })
   })
 
   it('rejects invalid JSON and non-report JSON', async () => {
@@ -386,6 +391,7 @@ describe('dsh-eval report persistence and rendering', () => {
     }
     const brief = renderBriefReport(buildRun({
       benchmark: 'suite', model: 'm2',
+      benchmarkSha256: 'd'.repeat(64),
       seed: 7,
       aggregate: { ...metrics },
       grading: {
@@ -401,6 +407,7 @@ describe('dsh-eval report persistence and rendering', () => {
       ],
     }))
     expect(brief).toContain('# suite — m2')
+    expect(brief).toContain('- source: dddddddddddd')
     expect(brief).toContain('- trials: 3/4 completed · 1 unscored (0 timeouts, 1 errors)')
     expect(brief).toContain('- tool success: 100.0%')
     expect(brief).toContain('- steps / tokens / cost per trial: 2.0 / 10 / $0.000001')

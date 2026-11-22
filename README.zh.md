@@ -115,7 +115,9 @@ pricing:
 | 最终答案得分 / 幻觉 | `judge` 配置给出的 LLM 评审裁决 |
 
 解析 benchmark YAML 时会计算 SHA-256,摘要写入每个 run,并在 `report`、
-`validate` 和 HTML 仪表盘中展示,从而把结果追溯到产生它的确切 benchmark 定义。
+`validate` 和 HTML 仪表盘中展示。摘要仅覆盖 YAML 源文本;prompt 文件、
+workspace 目录和 CLI 选项覆盖分别记录在 run 的 `caseInputs` 与选项字段中,
+不计入该摘要。
 
 ## CLI
 

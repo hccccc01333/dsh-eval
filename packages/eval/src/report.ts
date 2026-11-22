@@ -103,6 +103,7 @@ const judgeConfigSchema = z.object({
 const runReportSchema = z.object({
   benchmark: z.string(),
   model: z.string(),
+  benchmarkSha256: z.string().regex(/^[0-9a-f]{64}$/u).optional(),
   createdAt: z.number(),
   trials: z.number(),
   seed: z.number(),
@@ -227,6 +228,8 @@ export function renderBriefReport(run: EvalRun): string {
   const agreement = computeAgreement(run)
   const lines = [
     `# ${run.benchmark} — ${run.model}`,
+    ...(run.benchmarkSha256 === undefined ? [] :
+      [`- source: ${run.benchmarkSha256.slice(0, 12)}`]),
     `- trials: ${coverage.completed}/${coverage.total} completed${coverage.unscored === 0
       ? ''
       : ` · ${coverage.unscored} unscored (${coverage.timeouts} timeouts, ${coverage.errors} errors)`}`,
@@ -290,6 +293,7 @@ export function renderReportJson(run: EvalRun): string {
   return `${JSON.stringify({
     benchmark: run.benchmark,
     model: run.model,
+    benchmarkSha256: run.benchmarkSha256 ?? null,
     createdAt: run.createdAt,
     trials: run.trials,
     seed: run.seed,

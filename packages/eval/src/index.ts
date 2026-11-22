@@ -100,14 +100,14 @@ function summary(run: Awaited<ReturnType<typeof runBenchmark>>): string {
 }
 
 /** Print derived text, or write it to a file and confirm the path. */
-async function emitText(io: EvalIo, text: string, outPath?: string): Promise<void> {
+async function emitText(io: EvalIo, text: string, outPath?: string, detail = ''): Promise<void> {
   if (outPath === undefined) {
     io.stdout.write(text)
     return
   }
   await mkdir(dirname(resolve(outPath)), { recursive: true })
   await writeFile(outPath, text, 'utf8')
-  io.stdout.write(`Wrote ${outPath}\n`)
+  io.stdout.write(`Wrote ${outPath}${detail}\n`)
 }
 
 /**
@@ -154,7 +154,7 @@ export async function executeEval(
     if (values.kind === 'export') {
       const run = await loadRunReport(values.runPath)
       const csv = renderTrialsCsv(run)
-      await emitText(io, csv, values.outPath)
+      await emitText(io, csv, values.outPath, ` (${run.cases.length} trials)`)
       return 0
     }
     if (values.kind === 'validate') {

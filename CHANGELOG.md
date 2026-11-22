@@ -271,6 +271,12 @@
   usage hint lists every subcommand.
 - **Strict pass@1 precision aligns with reliability.** A run with no graded
   task trial now reports no interval instead of a misleading 0%.
+- **Benchmark digests survive the report loader.** `benchmarkSha256` is now part
+  of the validated run schema and appears in markdown, brief, JSON and dashboard
+  output; rejudged reports keep the field. The documented scope is the YAML
+  source only.
+- **CSV export keeps its trial-count confirmation** after the shared `--out`
+  writer refactor.
 - **Rejudge trace paths are resolved before the tempRoot check.** A hand-edited
   report can no longer use `root/../outside.jsonl` to make the judge read and
   ship an arbitrary local `.jsonl` file.
