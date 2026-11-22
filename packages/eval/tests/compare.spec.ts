@@ -150,8 +150,22 @@ describe('dsh-eval comparison', () => {
       metric: 'paired steps delta (B-A)',
       a: '–',
       b: '–',
-      delta: '+1.0',
+      delta: '–',
+      inference: '+1.0',
     })
+  })
+
+  it('renders inference in its own table instead of the delta column', () => {
+    const a = buildRun({ cases: [trial('c', 1, true, 2, 10)] })
+    const b = buildRun({ cases: [trial('c', 1, false, 3, 15)] })
+    const markdown = renderCompareMarkdown(compareRuns(a, b))
+    expect(markdown).toContain('| metric | run A | run B | delta (B - A) |')
+    expect(markdown).toContain('## Paired inference')
+    expect(markdown).toContain('| quantity | value |')
+    expect(markdown).toMatch(/\| paired steps delta \(B-A\) \| \+1\.0 \|/u)
+    expect(markdown).not.toContain('| paired steps delta (B-A) | – | – | +1.0 |')
+    // Runs without a paired sample have no inference section at all.
+    expect(renderCompareMarkdown(compareRuns(buildRun(), buildRun()))).not.toContain('Paired inference')
   })
 
   it('falls back to judge scores for paired win/lose/tie', () => {
@@ -180,13 +194,14 @@ describe('dsh-eval comparison', () => {
     expect(scoreRow?.a).toBe('–')
     // Three pairs carry enough data for a bootstrap interval, widened to 98.8%
     // because the report also prints the p-value and two other intervals.
-    expect(scoreRow?.delta).toMatch(/^\+0\.0 \[98\.8% CI -\d\.\d, \+\d\.\d\]$/u)
+    expect(scoreRow?.inference).toMatch(/^\+0\.0 \[98\.8% CI -\d\.\d, \+\d\.\d\]$/u)
     // Three pairs, one win and one loss: the sign test has nothing to separate them.
     expect(rows.find(row => row.metric === 'paired final answer score p (sign test, Bonferroni ×4)')).toEqual({
       metric: 'paired final answer score p (sign test, Bonferroni ×4)',
       a: '–',
       b: '–',
-      delta: '1.000 (n=2)',
+      delta: '–',
+      inference: '1.000 (n=2)',
     })
   })
 
@@ -218,7 +233,7 @@ describe('dsh-eval comparison', () => {
     // steps and token intervals exist (no judge), so Bonferroni ×3 applies.
     const pRow = compareRuns(noWins, allWins)
       .find(row => row.metric === 'paired task success p (sign test, Bonferroni ×3)')
-    expect(pRow?.delta).toBe('0.094 (n=6)')
+    expect(pRow?.inference).toBe('0.094 (n=6)')
 
     const twelve = buildRun({
       cases: Array.from({ length: 12 }, (_, index) => ({
@@ -237,7 +252,7 @@ describe('dsh-eval comparison', () => {
     // Raw 2 / 2^12 is below the print precision, but ×3 is not.
     expect(
       compareRuns(twelve, twelveWins)
-        .find(row => row.metric === 'paired task success p (sign test, Bonferroni ×3)')?.delta,
+        .find(row => row.metric === 'paired task success p (sign test, Bonferroni ×3)')?.inference,
     ).toBe('0.001 (n=12)')
 
     // Twenty clean sweeps stay below the precision even after ×3.
@@ -253,7 +268,7 @@ describe('dsh-eval comparison', () => {
     })
     expect(
       compareRuns(twenty, twentyWins)
-        .find(row => row.metric === 'paired task success p (sign test, Bonferroni ×3)')?.delta,
+        .find(row => row.metric === 'paired task success p (sign test, Bonferroni ×3)')?.inference,
     ).toBe('<0.001 (n=20)')
   })
 

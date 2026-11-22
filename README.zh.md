@@ -22,6 +22,7 @@
 - 配对 A/B：同 case 的胜/负/平统计
 - 配对推断：对不一致对做精确符号检验，每个均值差给出固定种子 bootstrap 区间，并对报告内的整个推断族做 Bonferroni 校正
 - 可靠性：从 trial 直接推导每个 case 的 pass@1 / pass@k / pass^k、不稳定 case 列表、最难 case 排名，以及把超时/失败 trial 保留在分母中的严格通过率
+- 精度：单 run 通过率的固定种子 bootstrap 区间，以及延迟 p50/p95，让小样本 run 坦白展示不确定性
 - 并发 trial：`concurrency` / `--concurrency` 让多个 case × trial 同时跑，结果顺序不变
 - keyless 回放：有 key 时录一次，CI 里从录制日志复现
 - 跨 harness 导入：`dsh eval import codex|claude-code <log> --out run.json`
@@ -30,7 +31,7 @@
 
 ## 状态
 
-`dsh-eval@0.4.0` · 151 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.4.0` · 156 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 `0.3.1` 起可安装：`0.3.0` 的 tarball 漏掉了入口 import 的运行时模块，导致每次安装都报 `ERR_MODULE_NOT_FOUND`。详见 [CHANGELOG.md](CHANGELOG.md)。
 

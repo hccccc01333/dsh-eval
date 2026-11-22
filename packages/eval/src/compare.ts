@@ -26,6 +26,8 @@ export interface CompareRow {
   b: string
   /** Signed delta (`b - a`) for numeric rows, or a dash for text rows. */
   delta: string
+  /** Inference about a paired comparison, rendered in a separate table. */
+  inference?: string
 }
 
 /** Paired same-case statistics over two runs. */
@@ -255,6 +257,12 @@ export function compareRuns(a: EvalRun, b: EvalRun): CompareRow[] {
   )
   const paired = pairedCompare(a, b)
   if (paired !== null) {
+    // A p-value or a confidence interval is evidence about the pairing, not a
+    // signed difference between two run-level numbers. Keep it out of the
+    // `delta (B - A)` column so that column only ever contains real differences.
+    const inference = (metric: string, value: string): CompareRow => ({
+      metric, a: '–', b: '–', delta: '–', inference: value,
+    })
     rows.push(
       { metric: 'paired trials', a: String(paired.pairs), b: String(paired.pairs), delta: '–' },
       {
@@ -263,24 +271,22 @@ export function compareRuns(a: EvalRun, b: EvalRun): CompareRow[] {
         b: '–',
         delta: '–',
       },
-      {
-        metric: `paired ${paired.primaryMetric} p (sign test, Bonferroni ×${paired.correction.comparisons})`,
-        a: '–',
-        b: '–',
-        delta: `${formatPValue(paired.correction.adjustedPValue)} (n=${paired.test.discordant})`,
-      },
-      ...(paired.stepsDelta === null ? [] : [{
-        metric: 'paired steps delta (B-A)', a: '–', b: '–',
-        delta: formatPairedDelta(paired.stepsDelta, paired.correction.intervalConfidence),
-      }]),
-      ...(paired.tokensDelta === null ? [] : [{
-        metric: 'paired tokens delta (B-A)', a: '–', b: '–',
-        delta: formatPairedDelta(paired.tokensDelta, paired.correction.intervalConfidence),
-      }]),
-      ...(paired.scoreDelta === null ? [] : [{
-        metric: 'paired final-answer delta (B-A)', a: '–', b: '–',
-        delta: formatPairedDelta(paired.scoreDelta, paired.correction.intervalConfidence),
-      }]),
+      inference(
+        `paired ${paired.primaryMetric} p (sign test, Bonferroni ×${paired.correction.comparisons})`,
+        `${formatPValue(paired.correction.adjustedPValue)} (n=${paired.test.discordant})`,
+      ),
+      ...(paired.stepsDelta === null ? [] : [inference(
+        'paired steps delta (B-A)',
+        formatPairedDelta(paired.stepsDelta, paired.correction.intervalConfidence),
+      )]),
+      ...(paired.tokensDelta === null ? [] : [inference(
+        'paired tokens delta (B-A)',
+        formatPairedDelta(paired.tokensDelta, paired.correction.intervalConfidence),
+      )]),
+      ...(paired.scoreDelta === null ? [] : [inference(
+        'paired final-answer delta (B-A)',
+        formatPairedDelta(paired.scoreDelta, paired.correction.intervalConfidence),
+      )]),
     )
   }
   return rows
@@ -292,12 +298,24 @@ export function compareRuns(a: EvalRun, b: EvalRun): CompareRow[] {
  * @returns the markdown text.
  */
 export function renderCompareMarkdown(rows: readonly CompareRow[]): string {
+  const metrics = rows.filter(row => row.inference === undefined)
+  const inference = rows.filter(row => row.inference !== undefined)
   return [
     '# Compare',
     '',
     '| metric | run A | run B | delta (B - A) |',
     '|---|---|---|---|',
-    ...rows.map(row => `| ${row.metric} | ${row.a} | ${row.b} | ${row.delta} |`),
+    ...metrics.map(row => `| ${row.metric} | ${row.a} | ${row.b} | ${row.delta} |`),
     '',
+    ...(inference.length === 0 ? [] : [
+      '## Paired inference',
+      '',
+      'Values below describe the paired sample, not a run-level difference.',
+      '',
+      '| quantity | value |',
+      '|---|---|',
+      ...inference.map(row => `| ${row.metric} | ${row.inference} |`),
+      '',
+    ]),
   ].join('\n')
 }

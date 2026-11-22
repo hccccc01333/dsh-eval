@@ -275,6 +275,37 @@ describe('dsh-eval report persistence and rendering', () => {
     expect(markdown).toContain('- judge failures: 2')
   })
 
+  it('prints single-run intervals and latency percentiles', () => {
+    const metrics = {
+      turns: 1, steps: 1, toolCalls: 0, toolResults: 0, toolSuccess: 0, toolSuccessRate: null,
+      invalidToolCalls: 0, retries: 0,
+      tokens: { inputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
+      totalTokens: 0, contextTokens: 0, llmMs: 0, toolMs: 0, ttftMs: 0,
+      latencyMs: 100, costUsd: null,
+    }
+    const markdown = renderMarkdownReport(buildRun({
+      cases: [1, 2, 3].map(trialNo => ({
+        caseId: 'c', trial: trialNo, status: 'completed' as const, exitCode: 0, timedOut: false,
+        grade: { taskSuccess: trialNo !== 2, toolSelectionAccuracy: null },
+        metrics: { ...metrics, latencyMs: trialNo * 100 },
+      })),
+    }))
+    expect(markdown).toContain('## Precision')
+    expect(markdown).toMatch(/- task success: 66\.7% \[95% CI .*\] \(n=3\)/u)
+    expect(markdown).toContain('- latency p50/p95: 200 / 290 ms')
+    // One trial cannot support an interval; the rate still prints without one.
+    const single = renderMarkdownReport(buildRun({
+      cases: [{
+        caseId: 'c', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        grade: { taskSuccess: true, toolSelectionAccuracy: null }, metrics,
+      }],
+    }))
+    expect(single).toContain('- task success: 100.0% (n=1)')
+    expect(single).not.toContain('95% CI')
+    // A run with no trials has no precision section at all.
+    expect(renderMarkdownReport(buildRun())).not.toContain('## Precision')
+  })
+
   it('shows the unscored denominator and the strict rate', () => {
     const markdown = renderMarkdownReport(buildRun({
       trials: 3,

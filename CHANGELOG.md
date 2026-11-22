@@ -4,6 +4,12 @@
 
 ### Added
 
+- **Single-run precision.** The report gained a Precision block: seeded
+  percentile-bootstrap 95% intervals for task/tool pass rates (2000 resamples by
+  default, seeded from the run) with an `n=` count, plus latency p50/p95. A
+  one-trial run prints the rate without an interval rather than implying false
+  precision. Derived from stored trials at render time, so old reports gain it
+  too.
 - **Gold answers and visible judge failures.** A case can set
   `expected.answer`; the judge prompt now includes it and instructs the model to
   score factual agreement rather than fluency. A failed chat call or an
@@ -34,6 +40,15 @@
   when all four quantities are present). The family size adapts to which
   intervals actually have data, so a run without a judge is corrected over
   three quantities rather than four. `stats.ts` exports `bonferroni` for reuse.
+
+### Changed
+
+- **Paired inference now lives in its own table.** `compare` previously put the
+  sign-test p-value and bootstrap intervals in the `delta (B - A)` column, where
+  they read as run-level differences rather than evidence about the paired
+  sample. `CompareRow` gained an optional `inference` field and the renderer
+  emits a `## Paired inference` table (`quantity | value`) for those rows,
+  leaving the delta column strictly for signed differences.
 
 ### Fixed
 

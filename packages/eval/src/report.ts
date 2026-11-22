@@ -7,6 +7,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { z } from 'zod'
+import { computePrecision, type RateInterval, type RunPrecision } from './precision.ts'
 import { computeCoverage, computeReliability, type ReliabilitySummary } from './reliability.ts'
 import type { EvalRun } from './types.ts'
 
@@ -167,9 +168,30 @@ function renderReliability(summary: ReliabilitySummary): string[] {
   return [...lines, '']
 }
 
+/** Render the single-run precision block; callers pass only a populated summary. */
+function renderPrecision(summary: RunPrecision): string[] {
+  const rateLine = (label: string, interval: RateInterval | null): string[] => {
+    if (interval === null) return []
+    const uncertainty = interval.lower === null || interval.upper === null
+      ? ''
+      : ` [95% CI ${(interval.lower * 100).toFixed(1)}%, ${(interval.upper * 100).toFixed(1)}%]`
+    return [`- ${label}: ${(interval.rate * 100).toFixed(1)}%${uncertainty} (n=${interval.trials})`]
+  }
+  return [
+    '## Precision',
+    '',
+    ...rateLine('task success', summary.task),
+    ...rateLine('tool selection accuracy', summary.toolSelection),
+    ...(summary.latencyP50 === null || summary.latencyP95 === null
+      ? []
+      : [`- latency p50/p95: ${summary.latencyP50.toFixed(0)} / ${summary.latencyP95.toFixed(0)} ms`]),
+    '',
+  ]
+}
+
 /**
  * Render a run report as a markdown table: one row per trial plus the
- * aggregate row, followed by reliability summaries for every graded dimension.
+ * aggregate row, followed by reliability and precision summaries.
  * @param run - the run record to render.
  * @returns the markdown text.
  */
@@ -235,6 +257,9 @@ export function renderMarkdownReport(run: EvalRun): string {
   const taskReliability = computeReliability(run, 'task')
   const toolReliability = computeReliability(run, 'tool-selection')
   const coverage = computeCoverage(run)
+  const precision = computePrecision(run)
+  const hasPrecision = precision.task !== null || precision.toolSelection !== null
+    || precision.latencyP50 !== null
   const coverageLine = coverage.unscored === 0
     ? `- trials: ${coverage.completed}/${coverage.total} completed`
     : `- trials: ${coverage.completed}/${coverage.total} completed · ${coverage.unscored} unscored (${coverage.timeouts} timeouts, ${coverage.errors} errors)`
@@ -255,5 +280,6 @@ export function renderMarkdownReport(run: EvalRun): string {
     '',
     ...(taskReliability === null ? [] : renderReliability(taskReliability)),
     ...(toolReliability === null ? [] : renderReliability(toolReliability)),
+    ...(hasPrecision ? renderPrecision(precision) : []),
   ].join('\n')
 }
