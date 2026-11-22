@@ -57,7 +57,7 @@ pricing:
 | `cases[].id` | 必填 | 稳定的 case id。 |
 | `cases[].prompt` / `cases[].promptFile` | 二选一 | 任务文本，内联或相对 benchmark 文件解析。 |
 | `cases[].workspace` | 缺省 | 复制进每个 trial 的工作区树，相对或绝对路径。 |
-| `cases[].expected` | 缺省 | 脚本化评分：对记录到的工具调用名匹配 —— `tool`（旧子串）、`tools`（全部列出的子串）、`toolAnyOf`（至少一个）、`toolRegex`（加载时校验）、`toolNot`（都不出现），所有配置同时成立才算命中；`checkArgv`（推荐）、`check`（旧字符串形式，支持引号）或 `checkShell`（显式启用，支持管道/重定向）是 agent 退出后在 trial 工作区运行的命令（退出码 0 = 任务成功）；`answer` 是交给 judge 的金标答案；`answerRegex`（加载时校验）匹配最终 assistant 回复，在没有配置 check 命令时决定 `taskSuccess`，从而无需 judge 也能做确定性评分。填了就必须至少给一个，且最多一种 check 模式。check 进程以独立进程组运行，超时整组终止。 |
+| `cases[].expected` | 缺省 | 脚本化评分：对记录到的工具调用名匹配 —— `tool`（旧子串）、`tools`（全部列出的子串）、`toolAnyOf`（至少一个）、`toolRegex`（加载时校验）、`toolNot`（都不出现），所有配置同时成立才算命中；`checkArgv`（推荐）、`check`（旧字符串形式，支持引号）或 `checkShell`（显式启用，支持管道/重定向）是 agent 退出后在 trial 工作区运行的命令（退出码 0 = 任务成功）；`answer` 是交给 judge 的金标答案；`answerRegex`（加载时校验）匹配最终 assistant 回复，在没有配置 check 命令时决定 `taskSuccess`，从而无需 judge 也能做确定性评分。只匹配最终回答的前 4096 个字符；同时配置 check 命令与 `answerRegex` 会被 `validate` 警告，因为此时正则会被忽略。填了就必须至少给一个，且最多一种 check 模式。check 进程以独立进程组运行，超时整组终止。 |
 | `pricing` | 缺省 | 以模型 id 为键的每百万 token 美元价；未配置的模型报 `costUsd: null`。 |
 
 ### Judge

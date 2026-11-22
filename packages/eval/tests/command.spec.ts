@@ -381,6 +381,9 @@ describe('dsh-eval command composition', () => {
     const observed = await bootEval(['--help'])
     expect(observed.exits).toEqual([0])
     expect(observed.out).toContain('dsh --profile eval')
+    expect(observed.out).toContain('Examples:')
+    expect(observed.out).toContain('validate benchmark.yaml')
+    expect(observed.out).toContain('gate candidate.json --baseline base.json')
   })
 
   it('rejects a bare invocation', async () => {

@@ -79,6 +79,14 @@ describe('dsh-eval benchmark preflight', () => {
     }))
     expect(withRegex.gradedCases).toBe(1)
     expect(withRegex.checks).toBe(1)
+    const redundant = summarizeBenchmark(benchmark({
+      cases: [{
+        id: 'both', prompt: 'p',
+        expected: { check: 'true', answerRegex: '^42$' },
+      }],
+    }))
+    expect(redundant.checks).toBe(1)
+    expect(redundant.warnings).toContain('case both combines a check command with answerRegex — the regex is ignored')
   })
 
   it('warns that replay runs need rejudging for judge scores', () => {

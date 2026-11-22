@@ -43,6 +43,7 @@ export function summarizeBenchmark(benchmark: Benchmark): BenchmarkSummary {
   let gradedCases = 0
   let goldAnswers = 0
   let shellChecks = 0
+  const warnings: string[] = []
   for (const item of benchmark.cases) {
     const expected = item.expected
     if (expected === undefined) continue
@@ -50,7 +51,15 @@ export function summarizeBenchmark(benchmark: Benchmark): BenchmarkSummary {
     if (expected.answer !== undefined) goldAnswers += 1
     if (expected.check !== undefined) checks += 1
     if (expected.checkArgv !== undefined) checks += 1
-    if (expected.answerRegex !== undefined) checks += 1
+    const hasCheck = expected.check !== undefined || expected.checkArgv !== undefined
+      || expected.checkShell !== undefined
+    if (expected.answerRegex !== undefined) {
+      if (hasCheck) {
+        warnings.push(`case ${item.id} combines a check command with answerRegex — the regex is ignored`)
+      } else {
+        checks += 1
+      }
+    }
     if (expected.checkShell !== undefined) {
       checks += 1
       shellChecks += 1
@@ -58,7 +67,6 @@ export function summarizeBenchmark(benchmark: Benchmark): BenchmarkSummary {
     toolConstraints += [expected.tool, expected.tools, expected.toolAnyOf, expected.toolRegex, expected.toolNot]
       .filter(value => value !== undefined).length
   }
-  const warnings: string[] = []
   if (gradedCases === 0) warnings.push('no case has scripted expectations — results depend entirely on the judge')
   if (checks === 0 && toolConstraints === 0) {
     warnings.push('no case checks tool use or task success — the run will produce only cost and latency data')

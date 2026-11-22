@@ -143,6 +143,12 @@
 
 ### Fixed
 
+- **Answer regex grading degrades safely.** A malformed hand-built
+  `answerRegex` now fails the case instead of erroring the trial, input is
+  capped at 4096 characters to avoid stalling the event loop, and preflight
+  warns (without double-counting) when a check command makes the regex unused.
+- **CLI help shows a workflow.** `dsh --profile eval --help` now ends with
+  copyable examples from validate through the CI gate.
 - **Structured JSON keeps raw numbers and complete runs.** `compare --json`
   now includes a `metrics` object with numeric values alongside the formatted
   `rows`; `report --json` includes `caseInputs`, so its output can feed

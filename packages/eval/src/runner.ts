@@ -173,7 +173,14 @@ async function gradeTrial(
     }
   } else if (expected.answerRegex !== undefined) {
     // Deterministic final-answer grading: no command, no LLM needed.
-    taskSuccess = new RegExp(expected.answerRegex, 'u').test(finalAnswerOf(trace))
+    // The schema validates at load; hand-built benchmarks degrade to failure.
+    try {
+      // Cap the input so a pathological pattern cannot block the event loop
+      // on an unbounded assistant reply.
+      taskSuccess = new RegExp(expected.answerRegex, 'u').test(finalAnswerOf(trace).slice(0, 4096))
+    } catch {
+      taskSuccess = false
+    }
   }
   return { taskSuccess, toolSelectionAccuracy }
 }

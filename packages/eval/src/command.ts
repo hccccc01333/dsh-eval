@@ -159,6 +159,15 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     .name('dsh --profile eval')
     .description('Run agent evaluations over headless dsh profiles and report trace-based metrics.')
     .helpOption('-h, --help', 'show this help')
+    .addHelpText('after', `
+Examples:
+  dsh --profile eval validate benchmark.yaml
+  dsh --profile eval run benchmark.yaml --out run.json
+  dsh --profile eval report run.json --brief
+  dsh --profile eval compare base.json candidate.json
+  dsh --profile eval dashboard base.json candidate.json --out eval.html
+  dsh --profile eval gate candidate.json --baseline base.json --max-drop 0.05
+`)
     .action(() => {
       program.error('error: eval needs a subcommand: run <benchmark.yaml>, validate <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, rejudge <run.json>, dashboard <run.json>, leaderboard <run.json>..., gate <candidate.json>, or import <format> <log.jsonl>')
     })

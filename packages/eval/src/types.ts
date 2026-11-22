@@ -198,7 +198,7 @@ export interface EvalTrialResult {
 
 /** Scripted grading outcome for one trial. */
 export interface EvalGrade {
-  /** Whether the check command exited 0, or null when no check is configured. */
+  /** Whether the check command exited 0 or the answer regex matched; null when neither is configured. */
   taskSuccess: boolean | null
   /** Whether an expected tool was called, or null when no tool is configured. */
   toolSelectionAccuracy: boolean | null
@@ -218,7 +218,7 @@ export interface EvalJudgeVerdict {
 
 /** Pooled grading rates over completed trials. */
 export interface EvalRunGrading {
-  /** Pooled task-success rate, or null when no trial carried a check. */
+  /** Pooled task-success rate, or null when no trial carried a check or answer regex. */
   taskSuccessRate: number | null
   /** Pooled tool-selection-accuracy rate, or null when no trial carried an expected tool. */
   toolSelectionAccuracyRate: number | null

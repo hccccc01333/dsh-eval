@@ -329,6 +329,13 @@ describe('dsh-eval benchmark runner', () => {
       cases: [{ id: 'regex', prompt: 'p', expected: { answerRegex: '^Bye$' } }],
     }), { tempRoot: tempDir() })
     expect(failing.cases[0]?.grade).toEqual({ taskSuccess: false, toolSelectionAccuracy: null })
+
+    const malformed = await runBenchmark(buildBenchmark({
+      trials: 1,
+      cases: [{ id: 'regex', prompt: 'p', expected: { answerRegex: '[' } }],
+    }), { tempRoot: tempDir() })
+    expect(malformed.cases[0]?.status).toBe('completed')
+    expect(malformed.cases[0]?.grade).toEqual({ taskSuccess: false, toolSelectionAccuracy: null })
   })
 
   it('matches every configured tool expectation', async () => {
