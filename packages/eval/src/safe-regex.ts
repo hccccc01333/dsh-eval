@@ -4,7 +4,8 @@
  * A benchmark author can write a catastrophic backtracking pattern, and the
  * matched text comes from the agent under evaluation. Running such a pattern on
  * the main thread would hang the whole evaluator, so each test runs in a
- * disposable worker and is terminated when it exceeds its budget.
+ * disposable worker and is terminated when it exceeds its budget. The budget
+ * includes worker startup, so it is generous enough for high concurrency.
  *
  * @module dsh-eval/safe-regex
  */
@@ -23,6 +24,7 @@ try {
 
 /** Run one pattern against a batch of inputs within a shared worker budget. */
 function runRegex(pattern: string, inputs: readonly string[], timeoutMs: number): Promise<boolean> {
+  if (inputs.length === 0) return Promise.resolve(false)
   const worker = new Worker(WORKER_SOURCE, {
     eval: true,
     workerData: { pattern, inputs },
@@ -50,7 +52,7 @@ function runRegex(pattern: string, inputs: readonly string[], timeoutMs: number)
  * Test a validated pattern against one untrusted input with a hard time budget.
  * @throws when the pattern is invalid or the budget is exceeded.
  */
-export function safeRegexTest(pattern: string, input: string, timeoutMs = 250): Promise<boolean> {
+export function safeRegexTest(pattern: string, input: string, timeoutMs = 2000): Promise<boolean> {
   return runRegex(pattern, [input], timeoutMs)
 }
 
@@ -64,7 +66,7 @@ export function safeRegexTest(pattern: string, input: string, timeoutMs = 250): 
 export function safeRegexTestAny(
   pattern: string,
   inputs: readonly string[],
-  timeoutMs = 250,
+  timeoutMs = 2000,
 ): Promise<boolean> {
   return runRegex(pattern, inputs, timeoutMs)
 }

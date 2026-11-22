@@ -26,6 +26,7 @@ export type EvalStartupValues =
     dshCommand?: readonly string[]
     profile?: string
     quiet?: boolean
+    allowExternalPaths?: boolean
   }
   | {
     kind: 'report'
@@ -55,6 +56,7 @@ export type EvalStartupValues =
     benchmarkPath: string
     json?: boolean
     outPath?: string
+    allowExternalPaths?: boolean
   }
   | {
     kind: 'leaderboard'
@@ -102,6 +104,7 @@ interface RunCommandOptions {
   dsh?: string
   profile?: string
   quiet?: boolean
+  allowExternalPaths?: boolean
 }
 
 /** Options accepted by `eval report`. */
@@ -201,6 +204,7 @@ Examples:
     .option('--dsh <cmd>', 'override the dsh launcher command, space-separated')
     .option('--profile <name>', 'override the spawned dsh profile')
     .option('--quiet', 'suppress per-trial progress lines')
+    .option('--allow-external-paths', 'allow benchmark-referenced files outside the benchmark directory (trusted benchmarks only)')
     .action((benchmarkPath: string, options: RunCommandOptions) => {
       let dshCommand: readonly string[] | undefined
       try {
@@ -225,6 +229,7 @@ Examples:
         ...(dshCommand !== undefined ? { dshCommand } : {}),
         ...(options.profile !== undefined ? { profile: options.profile } : {}),
         quiet: options.quiet === true,
+        allowExternalPaths: options.allowExternalPaths === true,
       })
     })
   const report = program.command('report').description('render a persisted run JSON as markdown or JSON')
@@ -263,8 +268,13 @@ Examples:
     .argument('<benchmark.yaml>', 'path to a benchmark document')
     .option('--json', 'emit a machine-readable preflight summary')
     .option('--out <path>', 'write the preflight summary to a file instead of stdout')
-    .action((benchmarkPath: string, options: { json?: boolean; out?: string }) => {
-      publish({ kind: 'validate', benchmarkPath, json: options.json === true, ...optionalOut(options) })
+    .option('--allow-external-paths', 'allow benchmark-referenced files outside the benchmark directory (trusted benchmarks only)')
+    .action((benchmarkPath: string, options: { json?: boolean; out?: string; allowExternalPaths?: boolean }) => {
+      publish({
+        kind: 'validate', benchmarkPath, json: options.json === true,
+        allowExternalPaths: options.allowExternalPaths === true,
+        ...optionalOut(options),
+      })
     })
   const leaderboard = program.command('leaderboard').description('rank persisted runs by pooled task success')
   leaderboard

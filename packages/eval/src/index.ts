@@ -158,7 +158,9 @@ export async function executeEval(
       return 0
     }
     if (values.kind === 'validate') {
-      const benchmark = await loadBenchmark(values.benchmarkPath)
+      const benchmark = await loadBenchmark(values.benchmarkPath, {
+        allowExternalPaths: values.allowExternalPaths === true,
+      })
       await emitText(io, values.json === true
         ? renderBenchmarkJson(benchmark)
         : renderBenchmarkSummary(benchmark), values.outPath)
@@ -205,7 +207,9 @@ export async function executeEval(
       io.stdout.write(`Wrote ${values.outPath} (${judgedCount}/${rejudged.cases.length} judged)\n`)
       return 0
     }
-    const benchmark = await loadBenchmark(values.benchmarkPath)
+    const benchmark = await loadBenchmark(values.benchmarkPath, {
+      allowExternalPaths: values.allowExternalPaths === true,
+    })
     const run = await runBenchmark(benchmark, {
       ...(values.trials !== undefined ? { trials: values.trials } : {}),
       ...(values.concurrency !== undefined ? { concurrency: values.concurrency } : {}),

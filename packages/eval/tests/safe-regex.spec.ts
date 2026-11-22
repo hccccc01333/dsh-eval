@@ -13,6 +13,13 @@ describe('dsh-eval time-boxed regex', () => {
     expect(await safeRegexTestAny('^read_', [])).toBe(false)
   })
 
+  it('does not time out benign patterns under high concurrency', async () => {
+    const results = await Promise.all(Array.from({ length: 32 }, () =>
+      safeRegexTestAny('^read_', ['list', 'read_file'])))
+    expect(results).toHaveLength(32)
+    expect(results.every(Boolean)).toBe(true)
+  })
+
   it('reports invalid patterns without escaping the worker', async () => {
     await expect(safeRegexTest('(', 'text')).rejects.toThrow('regex failed')
   })

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -193,6 +193,51 @@ describe('dsh-eval benchmark loading', () => {
     ].join('\n'), dir)).rejects.toThrow('escapes the benchmark directory')
   })
 
+  it('ignores an external-path opt-in embedded in the benchmark document', async () => {
+    const dir = tempDir()
+    const benchmark = [
+      'name: escape',
+      'model: m',
+      'allowExternalPaths: true',
+      'cases:',
+      '  - id: a',
+      '    prompt: inline',
+      `    workspace: ${join(dir, '..', 'outside')}`,
+      '',
+    ].join('\n')
+    await expect(parseBenchmark(benchmark, dir))
+      .rejects.toThrow('escapes the benchmark directory')
+  })
+
+  it('accepts the benchmark directory itself as a workspace', async () => {
+    const dir = tempDir()
+    const benchmark = await parseBenchmark([
+      'name: local',
+      'model: m',
+      'cases:',
+      '  - id: a',
+      '    prompt: p',
+      '    workspace: .',
+      '',
+    ].join('\n'), dir)
+    expect(benchmark.cases[0]?.workspace).toBe(dir)
+  })
+
+  it('rejects prompt files reached through a symlink outside the directory', async () => {
+    const dir = tempDir()
+    const outside = tempDir()
+    writeFileSync(join(outside, 'secret.md'), 'classified')
+    symlinkSync(outside, join(dir, 'link'), 'junction')
+    await expect(parseBenchmark([
+      'name: escape',
+      'model: m',
+      'cases:',
+      '  - id: a',
+      '    promptFile: link/secret.md',
+      '',
+    ].join('\n'), dir)).rejects.toThrow('escapes the benchmark directory')
+  })
+
   it('keeps absolute workspace paths and inline prompts as-is', async () => {
     const dir = tempDir()
     const absolute = join(dir, 'abs')
@@ -201,14 +246,13 @@ describe('dsh-eval benchmark loading', () => {
       'model: m',
       'trials: 3',
       'timeoutMs: 500',
-      'allowExternalPaths: true',
       'seed: 7',
       'profile: custom',
       'command: [pnpm, dsh]',
       'concurrency: 4',
       `cases:\n  - id: a\n    prompt: inline\n    workspace: ${absolute}`,
       '',
-    ].join('\n'), dir)
+    ].join('\n'), dir, { allowExternalPaths: true })
     expect(benchmark.profile).toBe('custom')
     expect(benchmark.command).toEqual(['pnpm', 'dsh'])
     expect(benchmark.trials).toBe(3)
@@ -308,7 +352,6 @@ describe('dsh-eval benchmark loading', () => {
     const benchmark = await parseBenchmark([
       'name: replayed',
       'model: m',
-      'allowExternalPaths: true',
       'replay:',
       '  dir: ./replays',
       'cases:',
@@ -325,14 +368,13 @@ describe('dsh-eval benchmark loading', () => {
     const benchmark = await parseBenchmark([
       'name: replayed',
       'model: m',
-      'allowExternalPaths: true',
       'replay:',
       `  dir: ${absolute}`,
       'cases:',
       '  - id: a',
       '    prompt: p',
       '',
-    ].join('\n'), dir)
+    ].join('\n'), dir, { allowExternalPaths: true })
     expect(benchmark.replay).toEqual({ dir: absolute })
   })
 

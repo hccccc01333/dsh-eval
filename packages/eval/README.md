@@ -54,7 +54,7 @@ pricing:
 | `concurrency` | `1` | Case x trial executions allowed in flight at once; `1` keeps the run strictly serial. |
 | `timeoutMs` | `600000` | Per-trial timeout; the direct child is killed on expiry. |
 | `seed` | `0` | Base seed: trial n receives `DSH_EVAL_SEED=seed+n-1` in its environment, and the value also seeds report bootstraps. A harness must read that variable for deterministic sampling. |
-| `allowExternalPaths` | `false` | Allow `promptFile`, `workspace` and `replay.dir` outside the benchmark directory. Only enable for trusted local benchmarks; third-party documents are contained by default. |
+| `allowExternalPaths` | `false` | Ignored inside the YAML itself. The trusted operator enables external `promptFile`, `workspace` and `replay.dir` paths with `dsh --profile eval run <file> --allow-external-paths` (also accepted by `validate`); third-party documents are contained by default. |
 | `cases[].id` | required | Stable case id. |
 | `cases[].prompt` / `cases[].promptFile` | exactly one | Task text, inline or relative to the benchmark file. |
 | `cases[].workspace` | absent | Workspace tree copied into each trial, relative or absolute. |

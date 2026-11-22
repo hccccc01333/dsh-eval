@@ -6,7 +6,7 @@
  * @module dsh-eval/benchmark
  */
 
-import { readFile } from 'node:fs/promises'
+import { readFile, realpath } from 'node:fs/promises'
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { load } from 'js-yaml'
 import { z } from 'zod'
@@ -128,12 +128,34 @@ const benchmarkSchema = z.object({
  * @param baseDir - absolute directory the benchmark file lives in.
  * @returns the resolved runtime case.
  */
-/** Resolve a referenced path without letting a third-party benchmark read outside its directory. */
-function resolveInputPath(value: string, baseDir: string, allowExternal: boolean, field: string): string {
+/**
+ * Resolve a referenced path without letting a third-party benchmark read
+ * outside its directory. The override is caller-supplied (CLI/API), never
+ * taken from the document itself.
+ */
+async function resolveInputPath(
+  value: string,
+  baseDir: string,
+  allowExternal: boolean,
+  field: string,
+): Promise<string> {
   const resolved = resolve(baseDir, value)
   if (allowExternal) return resolved
   const rel = relative(baseDir, resolved)
-  if (isAbsolute(value) || rel === '' || rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
+  if (isAbsolute(value) || rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
+    throw new Error(`${field} "${value}" escapes the benchmark directory`)
+  }
+  // Compare real paths so a symlink inside the directory cannot point at a
+  // file outside it. A missing path is left for readFile() to report.
+  let real: string
+  try {
+    real = await realpath(resolved)
+  } catch {
+    return resolved
+  }
+  const realRoot = await realpath(baseDir)
+  const realRel = relative(realRoot, real)
+  if (realRel === '..' || realRel.startsWith(`..${sep}`) || isAbsolute(realRel)) {
     throw new Error(`${field} "${value}" escapes the benchmark directory`)
   }
   return resolved
@@ -145,13 +167,13 @@ async function resolveCase(
   allowExternalPaths: boolean,
 ): Promise<BenchmarkCase> {
   const prompt = parsed.prompt
-    ?? await readFile(resolveInputPath(parsed.promptFile as string, baseDir, allowExternalPaths, 'promptFile'), 'utf8')
+    ?? await readFile(await resolveInputPath(parsed.promptFile as string, baseDir, allowExternalPaths, 'promptFile'), 'utf8')
   return {
     id: parsed.id,
     prompt,
     ...(parsed.timeoutMs !== undefined ? { timeoutMs: parsed.timeoutMs } : {}),
     ...(parsed.workspace !== undefined
-      ? { workspace: resolveInputPath(parsed.workspace, baseDir, allowExternalPaths, 'workspace') }
+      ? { workspace: await resolveInputPath(parsed.workspace, baseDir, allowExternalPaths, 'workspace') }
       : {}),
     ...(parsed.expected !== undefined
       ? {
@@ -178,15 +200,28 @@ async function resolveCase(
  * @param baseDir - absolute directory used to resolve prompt and workspace paths.
  * @returns the validated benchmark.
  */
-export async function parseBenchmark(text: string, baseDir: string): Promise<Benchmark> {
+/** Trusted caller options; the benchmark document itself cannot set these. */
+export interface BenchmarkLoadOptions {
+  /** Permit referenced paths outside the benchmark directory. */
+  allowExternalPaths?: boolean
+}
+
+export async function parseBenchmark(
+  text: string,
+  baseDir: string,
+  options: BenchmarkLoadOptions = {},
+): Promise<Benchmark> {
   const value = load(text)
   if (typeof value !== 'object' || value === null) {
     throw new Error('benchmark document must be a YAML mapping')
   }
   const parsed = benchmarkSchema.parse(value)
+  // `allowExternalPaths` in YAML is accepted for backward compatibility but
+  // ignored: only the operator running the CLI/API may widen the boundary.
+  const allowExternalPaths = options.allowExternalPaths === true
   const cases: BenchmarkCase[] = []
   for (const caseValue of parsed.cases) {
-    cases.push(await resolveCase(caseValue, baseDir, parsed.allowExternalPaths))
+    cases.push(await resolveCase(caseValue, baseDir, allowExternalPaths))
   }
   const pricing = parsed.pricing
   const judge = parsed.judge
@@ -196,7 +231,7 @@ export async function parseBenchmark(text: string, baseDir: string): Promise<Ben
     model: parsed.model,
     profile: parsed.profile,
     command: parsed.command,
-    allowExternalPaths: parsed.allowExternalPaths,
+    allowExternalPaths,
     trials: parsed.trials,
     concurrency: parsed.concurrency,
     timeoutMs: parsed.timeoutMs,
@@ -207,7 +242,7 @@ export async function parseBenchmark(text: string, baseDir: string): Promise<Ben
       ? { judge: { provider: judge.provider, model: judge.model ?? parsed.model, ...(judge.rubric !== undefined ? { rubric: judge.rubric } : {}), maxScore: judge.maxScore } }
       : {}),
     ...(replay !== undefined
-      ? { replay: { dir: resolveInputPath(replay.dir, baseDir, parsed.allowExternalPaths, 'replay.dir') } }
+      ? { replay: { dir: await resolveInputPath(replay.dir, baseDir, allowExternalPaths, 'replay.dir') } }
       : {}),
     baseDir,
   }
@@ -219,7 +254,10 @@ export async function parseBenchmark(text: string, baseDir: string): Promise<Ben
  * @param path - path to the benchmark YAML file.
  * @returns the validated benchmark.
  */
-export async function loadBenchmark(path: string): Promise<Benchmark> {
+export async function loadBenchmark(
+  path: string,
+  options: BenchmarkLoadOptions = {},
+): Promise<Benchmark> {
   const absolute = resolve(path)
-  return parseBenchmark(await readFile(absolute, 'utf8'), dirname(absolute))
+  return parseBenchmark(await readFile(absolute, 'utf8'), dirname(absolute), options)
 }

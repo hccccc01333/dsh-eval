@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Bugbot review fixes.** The regex worker budget now covers startup under
+  high concurrency; `allowExternalPaths` must come from the trusted CLI/API
+  rather than the benchmark document; path containment follows symlinks; and
+  `workspace: .` remains valid.
 - **Lower regex overhead.** Tool-name matching shares one worker across the
   whole batch instead of spawning one per recorded tool call.
 - **Untrusted-input hardening.** Regex grading runs in a time-boxed worker so
