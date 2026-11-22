@@ -44,6 +44,7 @@ export type EvalStartupValues =
   | {
     kind: 'validate'
     benchmarkPath: string
+    json?: boolean
   }
   | {
     kind: 'leaderboard'
@@ -220,8 +221,9 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
   const validate = program.command('validate').description('validate a benchmark file and print a preflight summary')
   validate
     .argument('<benchmark.yaml>', 'path to a benchmark document')
-    .action((benchmarkPath: string) => {
-      publish({ kind: 'validate', benchmarkPath })
+    .option('--json', 'emit a machine-readable preflight summary')
+    .action((benchmarkPath: string, options: { json?: boolean }) => {
+      publish({ kind: 'validate', benchmarkPath, json: options.json === true })
     })
   const leaderboard = program.command('leaderboard').description('rank persisted runs by pooled task success')
   leaderboard

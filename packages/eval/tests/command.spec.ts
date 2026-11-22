@@ -534,6 +534,9 @@ describe('dsh-eval command composition', () => {
     expect(observed.exits).toEqual([0])
     expect(observed.out).toContain('# Benchmark: command-smoke')
     expect(observed.out).toContain('Validated: command-smoke is ready to run.')
+    const structured = await bootEval(['validate', benchmarkPath, '--json'])
+    expect(structured.exits).toEqual([0])
+    expect(JSON.parse(structured.out) as { name: string }).toMatchObject({ name: 'command-smoke' })
 
     const invalidPath = join(dir, 'invalid.yml')
     writeFileSync(invalidPath, 'name: bad\nmodel: m\ncases:\n  - id: a\n    prompt: p\n    expected:\n      check: "a"\n      checkShell: "b"\n')

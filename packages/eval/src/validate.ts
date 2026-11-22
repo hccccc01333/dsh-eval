@@ -11,12 +11,33 @@
 
 import type { Benchmark } from './types.ts'
 
+/** Structured preflight result, shared by the markdown and JSON renderers. */
+export interface BenchmarkSummary {
+  name: string
+  model: string
+  profile: string
+  command: readonly string[]
+  trials: number
+  concurrency: number
+  timeoutMs: number
+  seed: number
+  cases: number
+  gradedCases: number
+  goldAnswers: number
+  checks: number
+  toolConstraints: number
+  judge: { provider: string; model: string; maxScore: number } | null
+  replay: string | null
+  pricing: boolean
+  warnings: string[]
+}
+
 /**
- * Render a validated benchmark summary with actionable warnings.
+ * Derive a structured preflight summary from a validated benchmark.
  * @param benchmark - a parsed benchmark document.
- * @returns markdown ending in a newline.
+ * @returns counts, configuration and actionable warnings.
  */
-export function renderBenchmarkSummary(benchmark: Benchmark): string {
+export function summarizeBenchmark(benchmark: Benchmark): BenchmarkSummary {
   let checks = 0
   let toolConstraints = 0
   let gradedCases = 0
@@ -50,27 +71,67 @@ export function renderBenchmarkSummary(benchmark: Benchmark): string {
   if (benchmark.replay !== undefined && benchmark.judge === undefined) {
     warnings.push('replay runs have no live judge; use `dsh eval rejudge` after the run if judge scores are needed')
   }
+  const judge = benchmark.judge
+  return {
+    name: benchmark.name,
+    model: benchmark.model,
+    profile: benchmark.profile,
+    command: benchmark.command,
+    trials: benchmark.trials,
+    concurrency: benchmark.concurrency,
+    timeoutMs: benchmark.timeoutMs,
+    seed: benchmark.seed,
+    cases: benchmark.cases.length,
+    gradedCases,
+    goldAnswers,
+    checks,
+    toolConstraints,
+    judge: judge === undefined ? null : {
+      provider: judge.provider, model: judge.model, maxScore: judge.maxScore,
+    },
+    replay: benchmark.replay === undefined ? null : benchmark.replay.dir,
+    pricing: benchmark.pricing !== undefined,
+    warnings,
+  }
+}
+
+/**
+ * Render a validated benchmark summary with actionable warnings.
+ * @param benchmark - a parsed benchmark document.
+ * @returns markdown ending in a newline.
+ */
+export function renderBenchmarkSummary(benchmark: Benchmark): string {
+  const summary = summarizeBenchmark(benchmark)
   const lines = [
-    `# Benchmark: ${benchmark.name}`,
+    `# Benchmark: ${summary.name}`,
     '',
-    `- model: ${benchmark.model}`,
-    `- profile: ${benchmark.profile}`,
-    `- command: ${benchmark.command.join(' ')}`,
-    `- trials per case: ${benchmark.trials}`,
-    `- concurrency: ${benchmark.concurrency}`,
-    `- timeout: ${benchmark.timeoutMs} ms`,
-    `- seed: ${benchmark.seed} (trial n receives DSH_EVAL_SEED = ${benchmark.seed} + n - 1)`,
-    `- cases: ${benchmark.cases.length} (${gradedCases} graded, ${goldAnswers} with gold answers)`,
-    `- expectations: ${checks} check(s), ${toolConstraints} tool constraint(s)`,
-    `- judge: ${benchmark.judge === undefined ? 'none' : `${benchmark.judge.model} on ${benchmark.judge.provider} (max ${benchmark.judge.maxScore})`}`,
-    `- replay: ${benchmark.replay === undefined ? 'live' : benchmark.replay.dir}`,
-    `- pricing: ${benchmark.pricing === undefined ? 'none' : 'configured'}`,
+    `- model: ${summary.model}`,
+    `- profile: ${summary.profile}`,
+    `- command: ${summary.command.join(' ')}`,
+    `- trials per case: ${summary.trials}`,
+    `- concurrency: ${summary.concurrency}`,
+    `- timeout: ${summary.timeoutMs} ms`,
+    `- seed: ${summary.seed} (trial n receives DSH_EVAL_SEED = ${summary.seed} + n - 1)`,
+    `- cases: ${summary.cases} (${summary.gradedCases} graded, ${summary.goldAnswers} with gold answers)`,
+    `- expectations: ${summary.checks} check(s), ${summary.toolConstraints} tool constraint(s)`,
+    `- judge: ${summary.judge === null ? 'none' : `${summary.judge.model} on ${summary.judge.provider} (max ${summary.judge.maxScore})`}`,
+    `- replay: ${summary.replay ?? 'live'}`,
+    `- pricing: ${summary.pricing ? 'configured' : 'none'}`,
     '',
-    `Validated: ${benchmark.name} is ready to run.`,
+    `Validated: ${summary.name} is ready to run.`,
     '',
   ]
-  if (warnings.length > 0) {
-    lines.push('## Warnings', '', ...warnings.map(warning => `- ${warning}`), '')
+  if (summary.warnings.length > 0) {
+    lines.push('## Warnings', '', ...summary.warnings.map(warning => `- ${warning}`), '')
   }
   return lines.join('\n')
+}
+
+/**
+ * Render a preflight summary as machine-readable JSON.
+ * @param benchmark - a parsed benchmark document.
+ * @returns a JSON string ending in a newline.
+ */
+export function renderBenchmarkJson(benchmark: Benchmark): string {
+  return `${JSON.stringify(summarizeBenchmark(benchmark))}\n`
 }

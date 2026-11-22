@@ -95,6 +95,7 @@ describe('dsh-eval leaderboard', () => {
       rankedBy: string; rows: { rank: number; label: string; gapFromBest: number | null }[]
     }
     expect(parsed.rankedBy).toBe('taskSuccess')
+    expect(rows[0]).toMatchObject({ benchmark: 'b', model: 'strong' })
     expect(parsed.rows.map(row => row.label)).toEqual(['b — strong', 'b — weak'])
     expect(parsed.rows[1]!.gapFromBest).toBeCloseTo(0.5)
   })

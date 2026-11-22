@@ -23,7 +23,7 @@ import { buildLeaderboard, renderLeaderboard, renderLeaderboardJson } from './le
 import { llmJudgeChat, type JudgeChat } from './judge.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
 import { rejudgeRun } from './rejudge.ts'
-import { renderBenchmarkSummary } from './validate.ts'
+import { renderBenchmarkJson, renderBenchmarkSummary } from './validate.ts'
 import { renderBriefReport, renderMarkdownReport, renderReportJson, writeRunReport, loadRunReport } from './report.ts'
 import { runBenchmark } from './runner.ts'
 import type { EvalTrialResult } from './types.ts'
@@ -136,7 +136,10 @@ export async function executeEval(
       return 0
     }
     if (values.kind === 'validate') {
-      io.stdout.write(renderBenchmarkSummary(await loadBenchmark(values.benchmarkPath)))
+      const benchmark = await loadBenchmark(values.benchmarkPath)
+      io.stdout.write(values.json === true
+        ? renderBenchmarkJson(benchmark)
+        : renderBenchmarkSummary(benchmark))
       return 0
     }
     if (values.kind === 'leaderboard') {

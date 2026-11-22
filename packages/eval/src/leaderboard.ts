@@ -16,6 +16,8 @@ import type { EvalRun } from './types.ts'
 /** One ranked run. */
 export interface LeaderboardEntry {
   label: string
+  benchmark: string
+  model: string
   rank: number
   completed: number
   total: number
@@ -54,6 +56,8 @@ export function buildLeaderboard(runs: readonly { label: string; run: EvalRun }[
     const reliability = computeReliability(run, 'task')
     return {
       label,
+      benchmark: run.benchmark,
+      model: run.model,
       completed: coverage.completed,
       total: coverage.total,
       taskSuccess: run.grading?.taskSuccessRate ?? null,

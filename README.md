@@ -30,7 +30,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - Cross-harness import: `dsh eval import codex|claude-code <log> --out run.json`
 - `dsh eval report run.json` — Markdown report with per-trial scores, pooled rates, reliability and precision blocks; `--brief` prints a compact terminal summary, `--json` emits all derived blocks as structured data
 - `dsh eval dashboard a.json [b.json ...] --out report.html` — standalone dark-mode-aware HTML dashboard: one run, two-run comparison, or a leaderboard for three or more, no external assets
-- `dsh eval validate benchmark.yaml` — preflight a benchmark and warn about weak evidence before spending tokens
+- `dsh eval validate benchmark.yaml [--json]` — preflight a benchmark and warn about weak evidence before spending tokens
 - `dsh eval leaderboard a.json b.json c.json` — rank any number of runs by task success with gap-to-leader; `--json` for automation
 - `dsh eval gate candidate.json --baseline base.json --max-drop 0.05 [--max-cost-increase 0.1 --max-latency-increase 0.2]` — CI quality and resource-budget gate
 - `dsh eval compare v1.json v2.json` — signed `B - A` table plus paired inference; `--json` for structured output
@@ -38,7 +38,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 
 ## Status
 
-`dsh-eval@0.4.0` · 237 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.4.0` · 238 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 
@@ -122,7 +122,7 @@ Each trial runs in a private temp workspace with an isolated `DSH_HOME` and non-
 | `dsh eval report run.json --brief` | Print a compact terminal summary without the per-trial table |
 | `dsh eval report run.json --json` | Emit the run and all derived blocks as JSON |
 | `dsh eval dashboard a.json [b.json ...] --out report.html` | Write a standalone HTML dashboard or multi-run leaderboard |
-| `dsh eval validate benchmark.yaml` | Preflight a benchmark and print evidence warnings |
+| `dsh eval validate benchmark.yaml [--json]` | Preflight a benchmark with evidence warnings |
 | `dsh eval leaderboard a.json b.json ... [--json]` | Rank multiple runs with optional JSON output |
 | `dsh eval gate candidate.json --baseline base.json [--json]` | Fail CI on regressions; `--json` emits a machine-readable verdict |
 | `dsh eval compare base.json candidate.json [--json]` | Compare two runs with deltas and paired inference |

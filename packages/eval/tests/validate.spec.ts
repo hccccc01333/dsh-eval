@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Benchmark } from '../src/types.ts'
-import { renderBenchmarkSummary } from '../src/validate.ts'
+import { renderBenchmarkJson, renderBenchmarkSummary, summarizeBenchmark } from '../src/validate.ts'
 
 function benchmark(overrides: Partial<Benchmark> = {}): Benchmark {
   return {
@@ -52,6 +52,28 @@ describe('dsh-eval benchmark preflight', () => {
     expect(summary).toContain('## Warnings')
     expect(summary).toContain('- judge is configured but no case supplies a gold answer')
     expect(summary).toContain('- 1 shell check(s) need a trusted benchmark file')
+  })
+
+  it('exposes the same preflight facts and warnings as JSON', () => {
+    const parsed = JSON.parse(renderBenchmarkJson(benchmark({
+      judge: { provider: 'p', model: 'j', maxScore: 10 },
+      cases: [{ id: 'raw', prompt: 'p' }, {
+        id: 'shell', prompt: 'p', expected: { checkShell: 'echo ok | grep ok' },
+      }],
+    }))) as {
+      name: string; cases: number; checks: number
+      judge: { provider: string; model: string; maxScore: number } | null
+      replay: string | null; pricing: boolean; warnings: string[]
+    }
+    expect(parsed.name).toBe('smoke')
+    expect(parsed.cases).toBe(2)
+    expect(parsed.checks).toBe(1)
+    expect(parsed.judge).toEqual({ provider: 'p', model: 'j', maxScore: 10 })
+    expect(parsed.replay).toBeNull()
+    expect(parsed.pricing).toBe(false)
+    expect(parsed.warnings).toContain('judge is configured but no case supplies a gold answer — score calibration will be weak')
+    expect(summarizeBenchmark(benchmark({ cases: [{ id: 'raw', prompt: 'p' }] })).warnings.length)
+      .toBeGreaterThan(0)
   })
 
   it('warns that replay runs need rejudging for judge scores', () => {

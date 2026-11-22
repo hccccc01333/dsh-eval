@@ -407,11 +407,55 @@ export function renderCompareMarkdown(rows: readonly CompareRow[]): string {
  * @returns a JSON string ending in a newline.
  */
 export function renderCompareJson(a: EvalRun, b: EvalRun): string {
+  const completed = (run: EvalRun): number => run.cases.filter(result => result.status === 'completed').length
+  const cases = pairedCases(a, b)
   return `${JSON.stringify({
     baseline: { benchmark: a.benchmark, model: a.model },
     candidate: { benchmark: b.benchmark, model: b.model },
+    // `rows` keeps the formatted table for parity with the CLI; `metrics`
+    // carries raw numbers so automation never parses a display string.
     rows: compareRuns(a, b),
+    metrics: {
+      completedTrials: { a: completed(a), b: completed(b) },
+      unscoredTrials: {
+        a: computeCoverage(a).unscored,
+        b: computeCoverage(b).unscored,
+      },
+      aggregate: ['steps', 'toolSuccessRate', 'invalidToolCalls', 'retries',
+        'totalTokens', 'costUsd', 'latencyMs'].reduce<Record<string, { a: number | null; b: number | null }>>(
+        (out, key) => {
+          const field = key as 'steps' | 'toolSuccessRate' | 'invalidToolCalls'
+            | 'retries' | 'totalTokens' | 'costUsd' | 'latencyMs'
+          out[key] = {
+            a: a.aggregate?.[field] ?? null,
+            b: b.aggregate?.[field] ?? null,
+          }
+          return out
+        }, {},
+      ),
+      grading: ['taskSuccessRate', 'toolSelectionAccuracyRate', 'judgeFailures'].reduce<Record<string, { a: number | null; b: number | null }>>(
+        (out, key) => {
+          const field = key as keyof NonNullable<EvalRun['grading']>
+          out[key] = {
+            a: a.grading?.[field] ?? null,
+            b: b.grading?.[field] ?? null,
+          }
+          return out
+        }, {},
+      ),
+      reliability: {
+        taskStrictPassAt1: {
+          a: computeReliability(a, 'task')?.strictPassAt1 ?? null,
+          b: computeReliability(b, 'task')?.strictPassAt1 ?? null,
+        },
+        taskPassAtK: {
+          a: computeReliability(a, 'task')?.passAtK ?? null,
+          b: computeReliability(b, 'task')?.passAtK ?? null,
+        },
+      },
+    },
     paired: pairedCompare(a, b),
-    cases: pairedCases(a, b) ?? [],
+    caseOutcomesMeasured: cases !== null,
+    cases,
   })}\n`
 }

@@ -492,7 +492,8 @@ export async function runBenchmark(benchmark: Benchmark, options: RunOptions = {
       const progress = ++finished
       // Observational callbacks must never abort a run or discard its report.
       try {
-        options.onProgress?.(result, progress, tasks.length)
+        // Handles synchronous throws and rejected async observers alike.
+        void Promise.resolve(options.onProgress?.(result, progress, tasks.length)).catch(() => {})
       } catch {
         /* v8 ignore next -- a broken observer is deliberately swallowed. */
       }

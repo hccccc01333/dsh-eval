@@ -70,12 +70,17 @@ describe('dsh-eval report persistence and rendering', () => {
   })
 
   it('renders a machine-readable report with the same derived blocks', () => {
-    const run = buildRun({ benchmark: 'structured' })
+    const run = buildRun({
+      benchmark: 'structured',
+      caseInputs: [{ caseId: 'c', prompt: 'p', answer: '42' }],
+    })
     const parsed = JSON.parse(renderReportJson(run)) as {
       benchmark: string; seed: number; coverage: { completed: number }
       reliability: { task: unknown }; precision: unknown
       agreement: unknown; calibration: unknown; cases: unknown[]
+      caseInputs: { caseId: string }[]
     }
+    expect(parsed.caseInputs).toEqual([{ caseId: 'c', prompt: 'p', answer: '42' }])
     expect(parsed.benchmark).toBe('structured')
     expect(parsed.seed).toBe(run.seed)
     expect(parsed.coverage.completed).toBeGreaterThanOrEqual(0)

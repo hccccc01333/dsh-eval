@@ -296,6 +296,7 @@ export function renderReportJson(run: EvalRun): string {
     pricing: run.pricing ?? null,
     grading: run.grading ?? null,
     aggregate: run.aggregate ?? null,
+    caseInputs: run.caseInputs ?? [],
     coverage: computeCoverage(run),
     reliability: {
       task: computeReliability(run, 'task'),

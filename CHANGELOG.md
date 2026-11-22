@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Structured preflight.** `dsh eval validate --json` emits the same counts,
+  configuration and weak-evidence warnings as the markdown summary, so a CI
+  lint step can act on them without scraping text.
 - **Structured comparison.** `dsh eval compare --json` emits the comparison
   rows, paired inference statistics and classified case outcomes as one JSON
   object, completing the machine-readable read-only command set.
@@ -136,10 +139,17 @@
 
 ### Fixed
 
-- **Progress observers cannot abort a run.** A throwing `onProgress` callback
-  is now isolated from trial execution, so completed results and the run report
-  survive a broken observer. Progress text also strips ANSI/control sequences
-  and is length-capped before reaching a terminal.
+- **Structured JSON keeps raw numbers and complete runs.** `compare --json`
+  now includes a `metrics` object with numeric values alongside the formatted
+  `rows`; `report --json` includes `caseInputs`, so its output can feed
+  `rejudge`. `cases` is null (with `caseOutcomesMeasured: false`) when a paired
+  comparison has no measured primary metric, instead of contradicting the
+  aggregate tie count. Leaderboard rows also carry `benchmark` and `model`
+  separately rather than only a formatted label.
+- **Progress observers cannot abort a run.** A throwing or rejecting
+  `onProgress` callback is now isolated from trial execution, so completed
+  results and the run report survive a broken observer. Progress text also
+  strips ANSI/control sequences and is length-capped before reaching a terminal.
 - **Skipped budget checks no longer claim a baseline is "unpriced".** The note
   now says metrics are unavailable, which is accurate for both cost and latency.
 - **Leaderboards with no task-success data no longer print rank 0.** Runs whose

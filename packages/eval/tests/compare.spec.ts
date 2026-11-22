@@ -139,19 +139,26 @@ describe('dsh-eval comparison', () => {
     const b = buildRun({ benchmark: 'candidate', cases: [trial('c', 1, false, 3, 12, 4)] })
     const parsed = JSON.parse(renderCompareJson(a, b)) as {
       baseline: { benchmark: string }; candidate: { benchmark: string }
-      rows: { metric: string }[]; paired: { pairs: number } | null
-      cases: { outcome: string }[]
+      rows: { metric: string }[]
+      metrics: { completedTrials: { a: number; b: number }; aggregate: Record<string, { a: number | null }> }
+      paired: { pairs: number } | null
+      caseOutcomesMeasured: boolean
+      cases: { outcome: string }[] | null
     }
     expect(parsed.baseline.benchmark).toBe('base')
     expect(parsed.candidate.benchmark).toBe('candidate')
     expect(parsed.rows.map(row => row.metric)).toContain('benchmark')
+    expect(parsed.metrics.completedTrials).toEqual({ a: 1, b: 1 })
+    expect(parsed.metrics.aggregate.costUsd).toBeDefined()
     expect(parsed.paired?.pairs).toBe(1)
-    expect(parsed.cases.map(item => item.outcome)).toEqual(['A better'])
+    expect(parsed.caseOutcomesMeasured).toBe(true)
+    expect(parsed.cases?.map(item => item.outcome)).toEqual(['A better'])
     const unpaired = JSON.parse(renderCompareJson(buildRun(), buildRun())) as {
-      paired: unknown; cases: unknown[]
+      paired: unknown; cases: unknown[] | null; caseOutcomesMeasured: boolean
     }
     expect(unpaired.paired).toBeNull()
-    expect(unpaired.cases).toEqual([])
+    expect(unpaired.cases).toBeNull()
+    expect(unpaired.caseOutcomesMeasured).toBe(false)
   })
 
   it('classifies and renders the paired cases behind the sign test', () => {
@@ -185,6 +192,12 @@ describe('dsh-eval comparison', () => {
     })
     expect(pairedCases(bare('a'), bare('b'))).toBeNull()
     expect(pairedCompare(bare('a'), bare('b'))?.ties).toBe(1)
+    const json = JSON.parse(renderCompareJson(bare('a'), bare('b'))) as {
+      paired: { pairs: number } | null; caseOutcomesMeasured: boolean; cases: unknown
+    }
+    expect(json.paired?.pairs).toBe(1)
+    expect(json.caseOutcomesMeasured).toBe(false)
+    expect(json.cases).toBeNull()
   })
 
   it('falls back to judge scores for case outcomes and sanitizes case ids', () => {

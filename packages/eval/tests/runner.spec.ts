@@ -101,6 +101,13 @@ describe('dsh-eval benchmark runner', () => {
       onProgress: () => { throw new Error('observer failure') },
     })
     expect(run.cases).toHaveLength(2)
+
+    process.env.FAKE_DASH_MODE = 'log'
+    const withAsyncObserver = await runBenchmark(buildBenchmark({ trials: 1 }), {
+      tempRoot: tempDir(),
+      onProgress: () => Promise.reject(new Error('async observer failure')) as unknown as void,
+    })
+    expect(withAsyncObserver.cases).toHaveLength(1)
   })
 
   it('persists case inputs so a stored run can be re-judged', async () => {
