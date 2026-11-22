@@ -293,6 +293,10 @@ describe('dsh-eval command composition', () => {
     const compared = await bootEval(['dashboard', runPath, runPath, '--out', outPath])
     expect(compared.exits).toEqual([0])
     expect(readFileSync(outPath, 'utf8')).toContain('<h2>Run comparison</h2>')
+
+    const leaderboarded = await bootEval(['dashboard', runPath, runPath, runPath, '--out', outPath])
+    expect(leaderboarded.exits).toEqual([0])
+    expect(readFileSync(outPath, 'utf8')).toContain('<h1>Leaderboard</h1>')
   })
 
   it('parses judge override flags for rejudge', async () => {

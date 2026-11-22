@@ -4,6 +4,10 @@
 
 ### Added
 
+- **HTML leaderboard page.** `dsh eval dashboard a.json b.json c.json` now
+  accepts three or more runs and writes a standalone leaderboard page with the
+  same ranking, rates and gap-to-leader column as `dsh eval leaderboard`. The
+  CSS is shared across all dashboard variants, keeping the page self-contained.
 - **Benchmark preflight.** `dsh eval validate benchmark.yaml` parses a
   benchmark with the run loader, prints a readable summary and warns about
   weak-evidence configurations before any tokens are spent.

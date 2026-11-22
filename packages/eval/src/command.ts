@@ -230,17 +230,12 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
         allowIncomplete: options.allowIncomplete === true,
       })
     })
-  const dashboard = program.command('dashboard').description('render a persisted run as a standalone HTML dashboard')
+  const dashboard = program.command('dashboard').description('render persisted runs as a standalone HTML dashboard or leaderboard')
   dashboard
-    .argument('<run-a.json>', 'path to a run report')
-    .argument('[run-b.json]', 'optional second run to compare in the same page')
+    .argument('<run.json...>', 'one run, two to compare, or three+ for a leaderboard')
     .option('--out <path>', 'output HTML path', 'eval-dashboard.html')
-    .action((runPathA: string, runPathB: string | undefined, options: { out: string }) => {
-      publish({
-        kind: 'dashboard',
-        runPaths: runPathB === undefined ? [runPathA] : [runPathA, runPathB],
-        outPath: options.out,
-      })
+    .action((runPaths: string[], options: { out: string }) => {
+      publish({ kind: 'dashboard', runPaths, outPath: options.out })
     })
   const rejudge = program.command('rejudge').description('re-judge a stored run from its traces without re-running the agent')
   rejudge

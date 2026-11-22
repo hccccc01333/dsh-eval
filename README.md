@@ -29,7 +29,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - Keyless replay: record once with a key, replay in CI from recorded logs
 - Cross-harness import: `dsh eval import codex|claude-code <log> --out run.json`
 - `dsh eval report run.json` — Markdown report with per-trial scores, pooled rates, reliability and precision blocks; `--brief` prints a compact terminal summary
-- `dsh eval dashboard a.json b.json --out report.html` — standalone dark-mode-aware HTML dashboard with optional two-run comparison, no external assets
+- `dsh eval dashboard a.json [b.json ...] --out report.html` — standalone dark-mode-aware HTML dashboard: one run, two-run comparison, or a leaderboard for three or more, no external assets
 - `dsh eval validate benchmark.yaml` — preflight a benchmark and warn about weak evidence before spending tokens
 - `dsh eval leaderboard a.json b.json c.json` — rank any number of runs by task success with gap-to-leader
 - `dsh eval gate candidate.json --baseline base.json --max-drop 0.05` — CI quality gate that fails on regressions
@@ -38,7 +38,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 
 ## Status
 
-`dsh-eval@0.4.0` · 222 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.4.0` · 224 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 
@@ -120,7 +120,7 @@ Each trial runs in a private temp workspace with an isolated `DSH_HOME` and non-
 | `dsh eval run benchmark.yaml --out run.json` | Execute the benchmark and write the JSON run |
 | `dsh eval report run.json` | Render a run as Markdown |
 | `dsh eval report run.json --brief` | Print a compact terminal summary without the per-trial table |
-| `dsh eval dashboard a.json [b.json] --out report.html` | Write a standalone HTML dashboard, optionally comparing two runs |
+| `dsh eval dashboard a.json [b.json ...] --out report.html` | Write a standalone HTML dashboard or multi-run leaderboard |
 | `dsh eval validate benchmark.yaml` | Preflight a benchmark and print evidence warnings |
 | `dsh eval leaderboard a.json b.json ...` | Rank multiple runs by task success |
 | `dsh eval gate candidate.json --baseline base.json` | Fail CI when quality regresses beyond `--max-drop` |

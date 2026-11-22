@@ -176,6 +176,32 @@ describe('dsh-eval HTML dashboard', () => {
     expect(html).not.toContain('Changed cases</h2>')
   })
 
+  it('renders a leaderboard page for three or more runs', () => {
+    const first = buildRun({ benchmark: 'first' })
+    const second = buildRun({ benchmark: 'second' })
+    const third = buildRun({ benchmark: 'third' })
+    const html = renderDashboard([first, second, third])
+    expect(html).toContain('<h1>Leaderboard</h1>')
+    expect(html).toContain('<th>Strict pass@1</th>')
+    expect(html).toContain('<td>first — model</td>')
+    expect(html).toContain('dsh eval compare')
+    expect(html).not.toContain('<h2>Trials</h2>')
+  })
+
+  it('shows signed gaps in the leaderboard page', () => {
+    const graded = (benchmark: string, rate: number): EvalRun => buildRun({
+      benchmark,
+      grading: {
+        taskSuccessRate: rate, toolSelectionAccuracyRate: null,
+        finalAnswerScore: null, hallucinationRate: null,
+      },
+    })
+    const html = renderDashboard([graded('top', 0.9), graded('mid', 0.6), graded('low', 0.3)])
+    expect(html).toContain('<td>leader</td>')
+    expect(html).toContain('<td>-30.0pp</td>')
+    expect(html).toContain('<td>-60.0pp</td>')
+  })
+
   it('lists changed cases in the two-run comparison', () => {
     const passed = buildRun({ benchmark: 'base' })
     const failed = buildRun({
