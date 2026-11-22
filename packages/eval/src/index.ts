@@ -19,6 +19,7 @@ import { compareRuns, renderCompareMarkdown } from './compare.ts'
 import { importTraceFile } from './import.ts'
 import { llmJudgeChat, type JudgeChat } from './judge.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
+import { rejudgeRun } from './rejudge.ts'
 import { renderBriefReport, renderMarkdownReport, writeRunReport, loadRunReport } from './report.ts'
 import { runBenchmark } from './runner.ts'
 
@@ -101,6 +102,17 @@ export async function executeEval(
       const a = await loadRunReport(values.runPathA)
       const b = await loadRunReport(values.runPathB)
       io.stdout.write(renderCompareMarkdown(compareRuns(a, b)))
+      return 0
+    }
+    if (values.kind === 'rejudge') {
+      if (services.judgeChat === undefined) throw new Error('rejudge: no LLM chat seam is available')
+      const run = await loadRunReport(values.runPath)
+      const rejudged = await rejudgeRun(run, services.judgeChat, values.judge)
+      await writeRunReport(rejudged, values.outPath)
+      const judgedCount = rejudged.cases.filter(result =>
+        result.judge?.finalAnswerScore !== null && result.judge?.finalAnswerScore !== undefined,
+      ).length
+      io.stdout.write(`Wrote ${values.outPath} (${judgedCount}/${rejudged.cases.length} judged)\n`)
       return 0
     }
     const benchmark = await loadBenchmark(values.benchmarkPath)

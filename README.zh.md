@@ -28,10 +28,11 @@
 - 跨 harness 导入：`dsh eval import codex|claude-code <log> --out run.json`
 - `dsh eval report run.json` —— 带每个 trial 评分、合并比率、可靠性与精度区块的 Markdown 报告；`--brief` 输出紧凑的终端摘要
 - `dsh eval compare v1.json v2.json` —— 带符号的 `B - A` 对比表
+- `dsh eval rejudge run.json --out rejudged.json` —— 用新判官模型或 rubric 离线重评分，无需重跑 agent
 
 ## 状态
 
-`dsh-eval@0.4.0` · 160 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.4.0` · 168 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 `0.3.1` 起可安装：`0.3.0` 的 tarball 漏掉了入口 import 的运行时模块，导致每次安装都报 `ERR_MODULE_NOT_FOUND`。详见 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -114,6 +115,7 @@ pricing:
 | `dsh eval report run.json` | 把 run 渲染为 Markdown |
 | `dsh eval report run.json --brief` | 省略逐 trial 表格，输出紧凑终端摘要 |
 | `dsh eval compare base.json candidate.json` | 对比两个 run，给出带符号的 `B - A` 差值 |
+| `dsh eval rejudge run.json --out rejudged.json` | 离线重评分已保存的 trace，写入新报告 |
 | `dsh eval import codex\|claude-code log.jsonl --out run.json` | 把外部 session 日志导入为单 trial run |
 
 `dsh eval run` 还支持 `--trials`、`--concurrency`、`--dsh`、`--profile` 覆盖 benchmark 文档，`dsh eval import` 支持 `--case-id`。

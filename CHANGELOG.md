@@ -4,6 +4,14 @@
 
 ### Added
 
+- **`dsh eval rejudge`.** Re-judge a stored run from its harvested traces and
+  persisted case inputs without re-running the agent. `--judge-model` (plus
+  optional provider, rubric, and max-score flags) supplies or replaces the judge
+  config, which makes the keyless replay-then-judge workflow usable. Only judge
+  verdicts and grading change. A failed call keeps an already usable verdict
+  with a `judgeError` marker, and trace paths are validated to stay inside the
+  run's `tempRoot` so an edited report cannot send arbitrary local files to the
+  judge model.
 - **Reproducible trial seeds and re-judgeable reports.** Trial n now receives
   `DSH_EVAL_SEED = seed + n - 1` in its child environment, so harnesses that
   read it can sample deterministically; the base seed still drives report

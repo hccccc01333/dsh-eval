@@ -127,7 +127,41 @@ The directory holds one tree per trial named `<caseId>-<trial>/`, with child
 logs riding alongside: `recorded/fix-tests-001-1/session.jsonl`. A missing
 fixture fails that trial, and `judge` cannot be combined with `replay` in one
 run. The npm release of the replay plugin lags the source workspace, so replay
-runs require a source-mode harness checkout.
+runs require a source-mode harness checkout. Trace paths are re-read from the
+report during re-judging and must be absolute `.jsonl` files inside `tempRoot`,
+so an edited report cannot make the judge ship an arbitrary local file to an
+LLM.
+
+## Offline re-judging
+
+Because `judge` and `replay` cannot share a run, judge a recorded run in a
+second phase:
+
+```sh
+dsh eval rejudge recorded-run.json --out judged-run.json
+```
+
+`rejudge` loads the run's harvested traces and its persisted `caseInputs`,
+rebuilds each verdict through the injected judge seam, and re-aggregates the
+grading summary. Metrics, scripted grades, trial outcomes, and error details are
+untouched; only `judge` verdicts and `grading` change. The input report is never
+overwritten (`--out` must differ). Reports written before `caseInputs` existed
+are rejected with a field-specific diagnostic rather than silently judged with
+an empty prompt.
+
+A judge can be supplied or replaced at re-judge time, which is what makes the
+replay workflow usable (a replay run has no stored judge config):
+
+```sh
+dsh eval rejudge recorded-run.json --out judged.json \
+  --judge-model deepseek-v4 --judge-provider deepseek \
+  --judge-rubric "Prefer concise, correct fixes." --judge-max-score 10
+```
+
+Only `--judge-model` is required to override; the other flags default to
+`deepseek`, `10`, and no rubric. The effective config is written into the new
+report. If a judge call fails, an already usable verdict is kept with a
+`judgeError` marker instead of being erased by an outage.
 
 ## Importing external traces
 

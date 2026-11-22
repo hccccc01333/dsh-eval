@@ -114,6 +114,26 @@ replay:
 
 该目录下每个 trial 一棵树，命名为 `<caseId>-<trial>/`，子日志与其并列：`recorded/fix-tests-001-1/session.jsonl`。缺夹具会让该 trial 失败；`judge` 不能与 `replay` 出现在同一个 run 里。回放插件的 npm 发布版滞后于源码工作区，因此回放需要源码模式的 harness 检出。
 
+## 离线重评分
+
+由于 `judge` 与 `replay` 不能在同一个 run 里共存，可把评审拆成两阶段：
+
+```sh
+dsh eval rejudge recorded-run.json --out judged-run.json
+```
+
+`rejudge` 从报告记录的 trace 路径与 `caseInputs` 重建判官 prompt，为每个 trial 重新生成裁决，并重新汇总 grading。指标、脚本评分、trial 结果与错误详情保持不变，只有 `judge` 裁决与 `grading` 变化。输入报告不会被覆盖（`--out` 必须不同）。没有 `caseInputs` 的旧报告会收到明确诊断，而不会用空 prompt 悄悄重评。trace 路径必须是 `tempRoot` 内的绝对 `.jsonl` 路径，避免被篡改的报告诱使判官把本地任意文件发给 LLM。
+
+重评时可以指定或替换判官配置 —— 这是回放工作流可用的前提（回放 run 没有保存 judge 配置）：
+
+```sh
+dsh eval rejudge recorded-run.json --out judged.json \
+  --judge-model deepseek-v4 --judge-provider deepseek \
+  --judge-rubric "答案正确且简洁" --judge-max-score 10
+```
+
+覆盖配置只需 `--judge-model`，其余默认 `deepseek`、`10` 与无 rubric；实际使用的配置会写入新报告。若判官调用失败，已有的有效裁决会被保留并标注 `judgeError`，不会被一次故障抹掉。
+
 ## 导入外部 trace
 
 `dsh eval import codex|claude-code <session.jsonl> --out run.json` 把 Codex 或 Claude Code 的 session 日志导入成一个单 trial 的 run，并折叠出指标：

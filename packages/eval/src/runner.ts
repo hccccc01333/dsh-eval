@@ -146,7 +146,7 @@ function pooledRate(items: readonly EvalTrialResult[], select: (grade: EvalGrade
 }
 
 /** Reduce completed trials' grades into pooled run-level rates. */
-function gradingOf(results: readonly EvalTrialResult[]): EvalRunGrading | null {
+export function aggregateGrading(results: readonly EvalTrialResult[]): EvalRunGrading | null {
   const taskSuccessRate = pooledRate(results, grade => grade?.taskSuccess ?? null)
   const toolSelectionAccuracyRate = pooledRate(results, grade => grade?.toolSelectionAccuracy ?? null)
   const finalScores = results
@@ -442,6 +442,6 @@ export async function runBenchmark(benchmark: Benchmark, options: RunOptions = {
       ...(caseValue.expected?.answer !== undefined ? { answer: caseValue.expected.answer } : {}),
     })),
     aggregate: aggregateMetrics(completed.map(result => result.metrics)),
-    grading: gradingOf(completed),
+    grading: aggregateGrading(completed),
   }
 }

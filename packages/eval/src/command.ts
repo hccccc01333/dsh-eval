@@ -7,10 +7,12 @@
  * @module dsh-eval/command
  */
 
+import { resolve } from 'node:path'
 import { Command } from 'commander'
 import type { Context } from '@deepseek-ai/cordis'
 import { parseCmdline } from '@deepseek-ai/dsh-cmdline'
 import type { ImportFormat } from './import.ts'
+import type { BenchmarkJudge } from './types.ts'
 
 /** What the eval app resolved from its command line. */
 export type EvalStartupValues =
@@ -35,6 +37,13 @@ export type EvalStartupValues =
     runPathB: string
   }
   | {
+    kind: 'rejudge'
+    runPath: string
+    outPath: string
+    /** Optional judge configuration overriding the one stored in the run. */
+    judge?: BenchmarkJudge
+  }
+  | {
     kind: 'import'
     format: ImportFormat
     path: string
@@ -54,6 +63,15 @@ interface RunCommandOptions {
 /** Options accepted by `eval report`. */
 interface ReportCommandOptions {
   brief?: boolean
+}
+
+/** Options accepted by `eval rejudge`. */
+interface RejudgeCommandOptions {
+  out: string
+  judgeModel?: string
+  judgeProvider?: string
+  judgeRubric?: string
+  judgeMaxScore?: number
 }
 
 /** Options accepted by `eval import`. */
@@ -99,7 +117,7 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     .description('Run agent evaluations over headless dsh profiles and report trace-based metrics.')
     .helpOption('-h, --help', 'show this help')
     .action(() => {
-      program.error('error: eval needs a subcommand: run <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, or import <format> <log.jsonl>')
+      program.error('error: eval needs a subcommand: run <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, rejudge <run.json>, or import <format> <log.jsonl>')
     })
   const run = program.command('run').description('run a benchmark and write its JSON report')
   run
@@ -140,6 +158,33 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     .argument('<run-b.json>', 'candidate run report')
     .action((runPathA: string, runPathB: string) => {
       publish({ kind: 'compare', runPathA, runPathB })
+    })
+  const rejudge = program.command('rejudge').description('re-judge a stored run from its traces without re-running the agent')
+  rejudge
+    .argument('<run.json>', 'path to a run report with judge config and case inputs')
+    .option('--out <path>', 'output run JSON path; must differ from the input', 'rejudged-run.json')
+    .option('--judge-model <id>', 'judge model id; also enables overriding the stored judge config')
+    .option('--judge-provider <name>', 'judge provider route, default deepseek')
+    .option('--judge-rubric <text>', 'rubric appended to the judge prompt')
+    .option('--judge-max-score <n>', 'maximum judge score', positiveInteger(program, '--judge-max-score'))
+    .action((runPath: string, options: RejudgeCommandOptions) => {
+      const samePath = resolve(runPath).toLowerCase() === resolve(options.out).toLowerCase()
+      if (samePath) {
+        program.error('error: --out must differ from the input run report')
+      }
+      publish({
+        kind: 'rejudge',
+        runPath,
+        outPath: options.out,
+        ...(options.judgeModel === undefined ? {} : {
+          judge: {
+            provider: options.judgeProvider ?? 'deepseek',
+            model: options.judgeModel,
+            maxScore: options.judgeMaxScore ?? 10,
+            ...(options.judgeRubric === undefined ? {} : { rubric: options.judgeRubric }),
+          },
+        }),
+      })
     })
   const importer = program.command('import').description('import an external harness session log as a run report')
   importer

@@ -1,14 +1,15 @@
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { Context } from '@deepseek-ai/cordis'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
 import Include from '@deepseek-ai/cordis-plugin-include'
 import { internals as cmdlineInternals, provideCmdline } from '@deepseek-ai/dsh-cmdline'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { evalCommand, type EvalStartupValues } from '../src/command.ts'
 import { apply, executeEval, internals, resolveJudgeChat } from '../src/index.ts'
-import { writeRunReport } from '../src/report.ts'
+import { loadRunReport, writeRunReport } from '../src/report.ts'
 import type { EvalRun } from '../src/types.ts'
 
 const FAKE_SCRIPT = fileURLToPath(new URL('./fixtures/fake-dsh.mjs', import.meta.url))
@@ -191,6 +192,69 @@ describe('dsh-eval command composition', () => {
     const brief = await bootEval(['report', runPath, '--brief'])
     expect(brief.exits).toEqual([0])
     expect(brief.out).toBe('# reported — m\n- trials: 0/0 completed\n')
+  })
+
+  it('rejudges a stored run through the CLI', async () => {
+    const dir = tempDir()
+    const runPath = join(dir, 'run.json')
+    const outPath = join(dir, 'rejudged.json')
+    const run: EvalRun = {
+      benchmark: 'rj', model: 'm', createdAt: 1, trials: 1, seed: 0, pricing: null,
+      judge: { provider: 'p', model: 'j', maxScore: 10 },
+      tempRoot: dirname(FIXTURE_LOG),
+      caseInputs: [{ caseId: 'c', prompt: 'Solve.' }],
+      cases: [{ caseId: 'c', trial: 1, status: 'completed', exitCode: 0, timedOut: false, tracePaths: [FIXTURE_LOG] }],
+      aggregate: null,
+      grading: null,
+    }
+    await writeRunReport(run, runPath)
+    const out: string[] = []
+    const io = { stdout: { write: (chunk: string) => { out.push(chunk); return true } }, stderr: { write: () => {} } }
+    const code = await executeEval(
+      { kind: 'rejudge', runPath, outPath }, io,
+      { judgeChat: async () => '{"finalAnswerScore": 7, "hallucination": false}' },
+    )
+    expect(code).toBe(0)
+    expect(out.join('')).toContain('Wrote ' + outPath + ' (1/1 judged)')
+    const rejudged = await loadRunReport(outPath)
+    expect(rejudged.cases[0]?.judge?.finalAnswerScore).toBe(7)
+    expect(rejudged.grading?.finalAnswerScore).toBe(7)
+
+    const noSeam = await executeEval({ kind: 'rejudge', runPath, outPath }, io)
+    expect(noSeam).toBe(1)
+    expect(existsSync(outPath)).toBe(true)
+
+    const inPlace = await bootEval(['rejudge', runPath, '--out', runPath])
+    expect(inPlace.exits).toEqual([1])
+    expect(inPlace.err).toContain('--out must differ')
+
+    // The subcommand publishes through the real CLI path; without an LLM
+    // service the app must fail with a diagnostic rather than silently pass.
+    const noLlm = await bootEval(['rejudge', runPath, '--out', outPath])
+    expect(noLlm.exits).toEqual([1])
+    expect(noLlm.err).toContain('no LLM chat seam')
+  })
+
+  it('parses judge override flags for rejudge', async () => {
+    const published: EvalStartupValues[] = []
+    const program = evalCommand(value => published.push(value))
+    await program.parseAsync([
+      'node', 'dsh', 'rejudge', 'run.json',
+      '--judge-model', 'judge-v2', '--judge-provider', 'openai',
+      '--judge-rubric', 'Be strict.', '--judge-max-score', '20',
+    ])
+    expect(published[0]).toMatchObject({
+      kind: 'rejudge',
+      runPath: 'run.json',
+      judge: { model: 'judge-v2', provider: 'openai', rubric: 'Be strict.', maxScore: 20 },
+    })
+
+    await program.parseAsync(['node', 'dsh', 'rejudge', 'run.json', '--judge-model', 'judge-v3'])
+    expect(published[1]).toMatchObject({
+      kind: 'rejudge',
+      judge: { model: 'judge-v3', provider: 'deepseek', maxScore: 10 },
+    })
+    expect((published[1] as { judge?: { rubric?: string } }).judge?.rubric).toBeUndefined()
   })
 
   it('prints help and exits 0 without running', async () => {

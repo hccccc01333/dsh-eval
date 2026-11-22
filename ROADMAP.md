@@ -15,13 +15,12 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
 
 ## P1 — offline re-judging
 
-- **`dsh eval rejudge run.json [--out ...]`.** Now unblocked by `caseInputs`.
-  Reuse `loadRunReport`,
-  `loadTrace`/`mergeTraces` over `tracePaths`, `tryJudgeTrial`, and the stored
-  `run.judge` config; re-aggregate grading and write a new report. This also
-  enables a keyless two-phase workflow: replay a run without a judge, then
-  re-judge the recorded traces with an LLM seam. Truly offline re-judging
-  (no LLM at all) would additionally require recording judge prompts/replies.
+- ✅ **`dsh eval rejudge run.json --out ...`** (done). Rebuilds verdicts from
+  stored traces, accepts `--judge-model`/`--judge-provider`/`--judge-rubric`/
+  `--judge-max-score` overrides (needed because replay runs have no judge
+  config), preserves usable prior verdicts on judge outages, and validates
+  trace paths stay inside `tempRoot`. Truly offline re-judging with no LLM at
+  all would still require recording judge prompts/replies.
 
 ## P1 — scripted grading
 
