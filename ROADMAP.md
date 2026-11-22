@@ -49,6 +49,9 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
 - ✅ **Case-level paired outcomes.** `compare` and the two-run dashboard name
   the concrete case x trials behind a significant sign test, using the same
   primary metric and capped output for large benchmarks.
+- ✅ **Significance-gated CI.** `dsh eval gate --require-significance` only
+  fails confirmed regressions and closes the gate when evidence is missing or
+  underpowered.
 - ✅ **Paired statistical power.** `compare` reports the attainable p-value
   floor and required discordant sample size; `validate` warns when a benchmark
   cannot produce enough pairs for a corrected sign test.

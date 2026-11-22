@@ -315,6 +315,15 @@ describe('dsh-eval command composition', () => {
       '--max-cost-increase', '0.1', '--max-latency-increase', '0.2',
     ])
     expect(published.at(-1)).toMatchObject({ maxCostIncrease: 0.1, maxLatencyIncrease: 0.2 })
+    await parser.parseAsync([
+      'node', 'eval', 'gate', candidatePath, '--baseline', baselinePath, '--require-significance',
+    ])
+    expect(published.at(-1)).toMatchObject({ requireSignificance: true })
+    const significant = await bootEval([
+      'gate', candidatePath, '--baseline', baselinePath, '--require-significance', '--json',
+    ])
+    expect(significant.exits).toEqual([1])
+    expect(JSON.parse(significant.out) as { passed: boolean }).toMatchObject({ passed: false })
     expect((await bootEval([
       'gate', candidatePath, '--baseline', baselinePath, '--max-cost-increase', '2',
     ])).err).toContain('between 0 and 1')

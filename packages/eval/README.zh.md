@@ -127,7 +127,7 @@ Markdown 报告会为每个评分维度（任务成功、工具选择准确率�
 
 `dsh eval gate candidate.json --baseline base.json --max-drop 0.05` 把 run 对比变成构建判定。它先检查完成 trial 数与未评分 trial 数，再检查任务成功率、工具选择准确率、strict pass@1 与判官得分。所有质量指标都归一化到 0..1（判官得分除以对应 run 的 `maxScore`），因此一个容差适用于所有指标。命令输出 PASS/FAIL 表格，任何指标回退超过容差即以 1 退出，可直接作为 CI 必需步骤。
 
-可选的 `--max-cost-increase 0.1` 与 `--max-latency-increase 0.2` 增加相对资源预算：质量不变但成本翻倍的候选同样会失败。预算行显示绝对值与相对差值；基线缺失该指标时跳过，候选缺失则判失败。极小的相对容差（基数的 1e-9）只用于吸收浮点噪声，不会掩盖真实超限。加 `--json` 可把同一判定输出为单个 JSON 对象（`passed`、各阈值、`checks`、`regressions`），便于 CI 仪表盘和自动化消费。
+可选的 `--max-cost-increase 0.1` 与 `--max-latency-increase 0.2` 增加相对资源预算：质量不变但成本翻倍的候选同样会失败。预算行显示绝对值与相对差值；基线缺失该指标时跳过，候选缺失则判失败。极小的相对容差（基数的 1e-9）只用于吸收浮点噪声，不会掩盖真实超限。加 `--json` 可把同一判定输出为单个 JSON 对象（`passed`、各阈值、`checks`、`regressions`），便于 CI 仪表盘和自动化消费。`--require-significance` 增加配对符号检验判定行：只有统计确认的回退才会让门禁失败；没有配对样本、检验功效不足或其他无法判定的情况会直接失败，不会把噪声波动悄悄放过。
 
 存在配对 trial 时，判定还会列出最多 5 个从通过翻转为失败（或判官分数下降）的 case x trial，case id 会做 markdown 净化；失败的门禁因此能直接指出该查哪里，而不只是一个百分比。基线缺失的指标记为 "baseline ungraded" 并通过；候选 run 缺失的指标则判失败，不会被悄悄跳过。若 benchmark 有意改变 trial 数量，可传 `--allow-incomplete` 跳过覆盖度检查。
 

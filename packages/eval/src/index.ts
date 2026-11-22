@@ -160,7 +160,8 @@ export async function executeEval(
         ...(values.maxCostIncrease === undefined ? {} : { maxCostIncrease: values.maxCostIncrease }),
         ...(values.maxLatencyIncrease === undefined ? {} : { maxLatencyIncrease: values.maxLatencyIncrease }),
       }
-      const result = evaluateGate(baseline, candidate, values.maxDrop, values.allowIncomplete, budgets)
+      const result = evaluateGate(baseline, candidate, values.maxDrop, values.allowIncomplete, budgets,
+        values.requireSignificance === true ? { requireSignificance: true } : {})
       io.stdout.write(values.json === true ? renderGateJson(result) : renderGate(result))
       return result.passed ? 0 : 1
     }

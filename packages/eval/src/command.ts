@@ -59,6 +59,7 @@ export type EvalStartupValues =
     maxCostIncrease?: number
     maxLatencyIncrease?: number
     allowIncomplete: boolean
+    requireSignificance?: boolean
     json?: boolean
   }
   | {
@@ -249,6 +250,7 @@ Examples:
     .option('--max-cost-increase <ratio>', 'largest tolerated cost/trial increase over baseline, 0..1', unitRatio(program, '--max-cost-increase'))
     .option('--max-latency-increase <ratio>', 'largest tolerated latency/trial increase over baseline, 0..1', unitRatio(program, '--max-latency-increase'))
     .option('--allow-incomplete', 'do not fail on extra unscored trials')
+    .option('--require-significance', 'only fail quality drops confirmed by a paired sign test')
     .option('--json', 'emit a machine-readable JSON verdict instead of markdown')
     .action((candidatePath: string, options: {
       baseline?: string
@@ -256,6 +258,7 @@ Examples:
       maxCostIncrease?: number
       maxLatencyIncrease?: number
       allowIncomplete?: boolean
+      requireSignificance?: boolean
       json?: boolean
     }) => {
       if (options.baseline === undefined) program.error('error: gate needs --baseline <path>')
@@ -267,6 +270,7 @@ Examples:
         ...(options.maxCostIncrease === undefined ? {} : { maxCostIncrease: options.maxCostIncrease }),
         ...(options.maxLatencyIncrease === undefined ? {} : { maxLatencyIncrease: options.maxLatencyIncrease }),
         allowIncomplete: options.allowIncomplete === true,
+        requireSignificance: options.requireSignificance === true,
         json: options.json === true,
       })
     })

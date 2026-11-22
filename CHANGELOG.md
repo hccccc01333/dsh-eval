@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Statistical significance mode for the CI gate.** `dsh eval gate
+  --require-significance` adds a paired-sign-test row and only fails quality
+  drops the test confirms. Unpaired, underpowered or undecidable comparisons
+  fail closed; budget checks remain unconditional.
 - **Sign-test power diagnostics.** `compare` now reports the best corrected
   p-value a finite paired sample can ever produce and, when it cannot reach
   alpha, the minimum discordant pairs required. `validate` warns before a run

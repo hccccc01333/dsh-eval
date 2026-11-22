@@ -9,6 +9,7 @@
  * @module dsh-eval/gate
  */
 
+import { pairedCompare } from './compare.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
 import type { EvalRun } from './types.ts'
 
@@ -20,7 +21,7 @@ export interface GateCheck {
   delta: number | null
   passed: boolean
   /** Count checks print integers; rates print percentages; budgets print money/time. */
-  unit?: 'count' | 'usd' | 'ms'
+  unit?: 'count' | 'usd' | 'ms' | 'p'
   note?: string
 }
 
@@ -50,6 +51,15 @@ export interface GateResult {
 export interface GateBudgets {
   maxCostIncrease?: number | null
   maxLatencyIncrease?: number | null
+}
+
+/** Optional significance mode for a gate run. */
+export interface GateOptions {
+  /**
+   * Only treat quality drops as failures when the paired sign test confirms a
+   * regression. Insufficient or underpowered evidence fails closed.
+   */
+  requireSignificance?: boolean
 }
 
 /** Normalized judge score for a run, or null when ungraded. */
@@ -108,6 +118,7 @@ function compareRate(
   baseline: number | null,
   candidate: number | null,
   maxDrop: number,
+  suppressDrop = false,
 ): GateCheck {
   if (baseline === null) {
     return { metric, baseline, candidate, delta: null, passed: true, note: 'baseline ungraded' }
@@ -116,7 +127,11 @@ function compareRate(
     return { metric, baseline, candidate, delta: null, passed: false, note: 'candidate ungraded' }
   }
   const delta = candidate - baseline
-  return { metric, baseline, candidate, delta, passed: delta >= -maxDrop }
+  if (delta >= -maxDrop) return { metric, baseline, candidate, delta, passed: true }
+  if (suppressDrop) {
+    return { metric, baseline, candidate, delta, passed: true, note: 'drop not statistically confirmed' }
+  }
+  return { metric, baseline, candidate, delta, passed: false }
 }
 
 /** Compare two resource figures against a relative increase budget. */
@@ -146,6 +161,7 @@ function compareBudget(
  * @param maxDrop - largest tolerated regression on the 0..1 scale.
  * @param allowIncomplete - skip the trial-coverage checks when true.
  * @param budgets - optional relative cost and latency increase limits.
+ * @param options - optional significance mode for quality regressions.
  * @returns the per-metric checks and the overall decision.
  */
 export function evaluateGate(
@@ -154,6 +170,7 @@ export function evaluateGate(
   maxDrop: number,
   allowIncomplete = false,
   budgets: GateBudgets = {},
+  options: GateOptions = {},
 ): GateResult {
   const baseCoverage = computeCoverage(baseline)
   const candCoverage = computeCoverage(candidate)
@@ -173,14 +190,37 @@ export function evaluateGate(
       })
     }
   }
+  let suppressQualityDrops = false
+  if (options.requireSignificance === true) {
+    const paired = pairedCompare(baseline, candidate)
+    const worse = paired !== null && paired.losses > paired.wins
+    const powered = paired?.power.detectable === true
+    const confirmed = paired !== null && worse && powered
+      && paired.correction.adjustedPValue <= paired.correction.alpha
+    const clear = paired !== null && !confirmed && (powered || !worse)
+    suppressQualityDrops = clear
+    checks.push({
+      metric: 'paired significance',
+      baseline: paired?.power.bestAdjustedP ?? null,
+      candidate: paired?.correction.adjustedPValue ?? null,
+      delta: paired === null ? null
+        : paired.correction.adjustedPValue - paired.power.bestAdjustedP,
+      passed: confirmed || clear,
+      unit: 'p',
+      note: paired === null ? 'no paired trials'
+        : !powered && worse ? 'underpowered sign test'
+          : confirmed ? 'regression confirmed'
+            : 'no statistically confirmed regression',
+    })
+  }
   checks.push(
     compareRate('task success', baseline.grading?.taskSuccessRate ?? null,
-      candidate.grading?.taskSuccessRate ?? null, maxDrop),
+      candidate.grading?.taskSuccessRate ?? null, maxDrop, suppressQualityDrops),
     compareRate('tool selection', baseline.grading?.toolSelectionAccuracyRate ?? null,
-      candidate.grading?.toolSelectionAccuracyRate ?? null, maxDrop),
+      candidate.grading?.toolSelectionAccuracyRate ?? null, maxDrop, suppressQualityDrops),
     compareRate('strict pass@1 (task)', baseTask?.strictPassAt1 ?? null,
-      candTask?.strictPassAt1 ?? null, maxDrop),
-    compareRate('judge score', scoreRate(baseline), scoreRate(candidate), maxDrop),
+      candTask?.strictPassAt1 ?? null, maxDrop, suppressQualityDrops),
+    compareRate('judge score', scoreRate(baseline), scoreRate(candidate), maxDrop, suppressQualityDrops),
   )
   if (budgets.maxCostIncrease !== undefined && budgets.maxCostIncrease !== null) {
     checks.push(compareBudget('cost/trial', baseline.aggregate?.costUsd ?? null,
@@ -198,7 +238,7 @@ export function evaluateGate(
       ? {} : { maxCostIncrease: budgets.maxCostIncrease }),
     ...(budgets.maxLatencyIncrease === undefined || budgets.maxLatencyIncrease === null
       ? {} : { maxLatencyIncrease: budgets.maxLatencyIncrease }),
-    regressions: findRegressions(baseline, candidate, maxDrop),
+    regressions: suppressQualityDrops ? [] : findRegressions(baseline, candidate, maxDrop),
   }
 }
 
@@ -208,6 +248,7 @@ function format(value: number | null, check: GateCheck): string {
   if (check.unit === 'count') return String(value)
   if (check.unit === 'usd') return `$${value.toFixed(6)}`
   if (check.unit === 'ms') return `${value.toFixed(1)} ms`
+  if (check.unit === 'p') return value.toFixed(4)
   return `${(value * 100).toFixed(1)}%`
 }
 
@@ -216,6 +257,7 @@ function formatDelta(value: number | null, check: GateCheck): string {
   if (value === null) return '–'
   const sign = value >= 0 ? '+' : ''
   if (check.unit === 'count') return `${sign}${value}`
+  if (check.unit === 'p') return `${sign}${value.toFixed(4)}`
   if (check.unit === 'usd' || check.unit === 'ms') {
     const relative = check.baseline === null || check.baseline === 0
       ? null : (value / check.baseline) * 100

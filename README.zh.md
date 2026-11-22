@@ -31,13 +31,13 @@
 - `dsh eval dashboard a.json [b.json ...] --out report.html` —— 独立 HTML 仪表盘：单个 run、双 run 对比，或三个及以上 run 的排行榜，自动适配深色模式，无外部依赖
 - `dsh eval validate benchmark.yaml [--json]` —— 运行前预检 benchmark，在花 token 前提示证据薄弱环节
 - `dsh eval leaderboard a.json b.json c.json` —— 按任务成功率给任意数量的 run 排名，并显示与领先者的差距；`--json` 便于自动化消费
-- `dsh eval gate candidate.json --baseline base.json --max-drop 0.05 [--max-cost-increase 0.1 --max-latency-increase 0.2]` —— CI 质量与资源预算门禁
+- `dsh eval gate candidate.json --baseline base.json --max-drop 0.05 [--require-significance] [--json]` —— CI 质量与资源预算门禁；显著性模式只在统计确认回退时失败
 - `dsh eval compare v1.json v2.json` —— 带符号的 `B - A` 对比表和配对推断；`--json` 输出结构化数据
 - `dsh eval rejudge run.json --out rejudged.json` —— 用新判官模型或 rubric 离线重评分，无需重跑 agent
 
 ## 状态
 
-`dsh-eval@0.4.0` · 242 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.4.0` · 244 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 `0.3.1` 起可安装：`0.3.0` 的 tarball 漏掉了入口 import 的运行时模块，导致每次安装都报 `ERR_MODULE_NOT_FOUND`。详见 [CHANGELOG.md](CHANGELOG.md)。
 

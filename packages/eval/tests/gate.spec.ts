@@ -113,6 +113,76 @@ describe('dsh-eval CI gate', () => {
     expect(renderGate(result)).not.toContain('max tolerated cost increase')
   })
 
+  it('confirms a regression only when the paired sign test supports it', () => {
+    const cases = (success: boolean) => Array.from({ length: 6 }, (_, index) => ({
+      caseId: `c${index + 1}`, trial: 1, status: 'completed' as const,
+      exitCode: 0, timedOut: false,
+      grade: { taskSuccess: success, toolSelectionAccuracy: null },
+    }))
+    const grading = (rate: number) => ({
+      taskSuccessRate: rate, toolSelectionAccuracyRate: null,
+      finalAnswerScore: null, hallucinationRate: null,
+    })
+    const baseline = buildRun({ cases: cases(true), grading: grading(1) })
+    const candidate = buildRun({ cases: cases(false), grading: grading(0) })
+    const confirmed = evaluateGate(baseline, candidate, 0.1, false, {}, { requireSignificance: true })
+    expect(confirmed.passed).toBe(false)
+    expect(confirmed.checks.find(check => check.metric === 'paired significance'))
+      .toMatchObject({ passed: true, note: 'regression confirmed' })
+    expect(confirmed.regressions).toHaveLength(6)
+
+    const baselineMixed = cases(true).map((item, index) => index < 2
+      ? { ...item, grade: { taskSuccess: false, toolSelectionAccuracy: null } } : item)
+    const candidateWithWins = cases(false).map((item, index) => index < 2
+      ? { ...item, grade: { taskSuccess: true, toolSelectionAccuracy: null } } : item)
+    const noisy = evaluateGate(
+      buildRun({ cases: baselineMixed, grading: grading(4 / 6) }),
+      buildRun({ cases: candidateWithWins, grading: grading(2 / 6) }),
+      0.1, false, {}, { requireSignificance: true })
+    expect(noisy.passed).toBe(true)
+    expect(noisy.checks.find(check => check.metric === 'paired significance'))
+      .toMatchObject({ passed: true, note: 'no statistically confirmed regression' })
+    expect(noisy.checks.find(check => check.metric === 'task success'))
+      .toMatchObject({ passed: true, note: 'drop not statistically confirmed' })
+    expect(noisy.regressions).toEqual([])
+    expect(renderGate(noisy)).toContain('0.6875')
+  })
+
+  it('fails closed when significance cannot be established', () => {
+    const grading = (rate: number) => ({
+      taskSuccessRate: rate, toolSelectionAccuracyRate: null,
+      finalAnswerScore: null, hallucinationRate: null,
+    })
+    const one = buildRun({
+      cases: [{
+        caseId: 'a', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        grade: { taskSuccess: true, toolSelectionAccuracy: null },
+      }], grading: grading(1),
+    })
+    const other = buildRun({
+      ...one, cases: [{
+        caseId: 'b', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        grade: { taskSuccess: false, toolSelectionAccuracy: null },
+      }], grading: grading(0),
+    })
+    const unpaired = evaluateGate(one, other, 0.1, false, {}, { requireSignificance: true })
+    expect(unpaired.checks.find(check => check.metric === 'paired significance'))
+      .toMatchObject({ passed: false, note: 'no paired trials' })
+
+    const four = (success: boolean) => Array.from({ length: 4 }, (_, index) => ({
+      caseId: `c${index + 1}`, trial: 1, status: 'completed' as const,
+      exitCode: 0, timedOut: false,
+      grade: { taskSuccess: success, toolSelectionAccuracy: null },
+    }))
+    const underpowered = evaluateGate(
+      buildRun({ cases: four(true), grading: grading(1) }),
+      buildRun({ cases: four(false), grading: grading(0) }),
+      0.1, false, {}, { requireSignificance: true },
+    )
+    expect(underpowered.checks.find(check => check.metric === 'paired significance'))
+      .toMatchObject({ passed: false, note: 'underpowered sign test' })
+  })
+
   it('emits a machine-readable verdict with the same numbers', () => {
     const result = evaluateGate(
       buildRun({ aggregate: METRICS }),

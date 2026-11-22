@@ -188,7 +188,10 @@ baseline metric skips that budget, while a missing candidate metric fails
 closed. A tiny relative tolerance absorbs floating-point noise at 1e-9 of the
 baseline without masking a real overrun. Add `--json` to emit the same verdict
 as a single JSON object (`passed`, thresholds, `checks`, `regressions`) for CI
-dashboards and automation.
+dashboards and automation. `--require-significance` adds a paired-sign-test
+row: a quality drop only fails the gate when the sign test confirms a
+regression, while an unpaired, underpowered or otherwise undecidable comparison
+fails closed rather than silently passing a noisy drop.
 
 When paired trials exist, the verdict also lists up to five case x trials that
 flipped from pass to fail (or lost judge score), with case ids sanitized for
