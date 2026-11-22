@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Leaderboard shows paired evidence against the leader.** Each non-leading
+  row reports a Bonferroni-corrected sign-test verdict, so a small point-estimate
+  gap is no longer mistaken for a real ranking change.
 - **Sharper benchmark preflight.** Duplicate case ids and single-trial
   reliability limits now warn before tokens are spent, and a run with neither
   scripted expectations nor a judge is explicitly reported as unable to

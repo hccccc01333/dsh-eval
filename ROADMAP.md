@@ -57,6 +57,9 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
 - ✅ **Paired statistical power.** `compare` reports the attainable p-value
   floor and required discordant sample size; `validate` warns when a benchmark
   cannot produce enough pairs for a corrected sign test.
+- ✅ **Statistically guarded leaderboards.** Non-leading rows carry a
+  Bonferroni-corrected paired verdict against the leader, separating real gaps
+  from ranking noise.
 - ✅ **Judge calibration diagnostics.** Full reports and the dashboard now show
   normalized score means for scripted passes/failures, their separation, an
   AUC-style ranking accuracy, and up to five concrete disagreement cases —

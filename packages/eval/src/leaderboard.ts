@@ -5,13 +5,28 @@
  * answers the wider "which of these runs is currently best" question. Ranks
  * use pooled task success with deterministic tie-breakers, and every row shows
  * how far it trails the leader. This is a screening view, not a significance
- * test: use `compare` for the paired decision between two close runs.
+ * test, but each non-leader row carries a Bonferroni-corrected paired verdict
+ * against the leader so a one-point lead is not mistaken for a real gap.
  *
  * @module dsh-eval/leaderboard
  */
 
+import { pairedCompare } from './compare.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
 import type { EvalRun } from './types.ts'
+
+/** Paired evidence that a row really trails the current leader. */
+export interface LeaderboardSignificance {
+  /** Adjusted p-value after both the compare family and leaderboard family. */
+  adjustedP: number
+  /** Whether the smallest attainable p-value can reach alpha at this sample size. */
+  detectable: boolean
+  /** Whether the paired primary metric moved against the row. */
+  worse: boolean
+  /** Machine-readable interpretation of the comparison. */
+  verdict: 'significantly-behind' | 'behind-not-significant' | 'ahead-or-tied'
+    | 'underpowered' | 'unpaired'
+}
 
 /** One ranked run. */
 export interface LeaderboardEntry {
@@ -28,6 +43,8 @@ export interface LeaderboardEntry {
   costUsd: number | null
   latencyMs: number | null
   gapFromBest: number | null
+  /** Paired verdict against the leader; null for the leader itself. */
+  significance: LeaderboardSignificance | null
 }
 
 /** Normalize a pooled judge score using the run's configured scale. */
@@ -51,10 +68,11 @@ function descending(a: number | null, b: number | null): number {
  * @returns ranked rows with ties sharing a rank.
  */
 export function buildLeaderboard(runs: readonly { label: string; run: EvalRun }[]): LeaderboardEntry[] {
+  const runByEntry = new Map<LeaderboardEntry, EvalRun>()
   const rows: LeaderboardEntry[] = runs.map(({ label, run }) => {
     const coverage = computeCoverage(run)
     const reliability = computeReliability(run, 'task')
-    return {
+    const entry: LeaderboardEntry = {
       label,
       benchmark: run.benchmark,
       model: run.model,
@@ -67,8 +85,11 @@ export function buildLeaderboard(runs: readonly { label: string; run: EvalRun }[
       costUsd: run.aggregate?.costUsd ?? null,
       latencyMs: run.aggregate?.latencyMs ?? null,
       gapFromBest: null,
+      significance: null,
       rank: 0,
     }
+    runByEntry.set(entry, run)
+    return entry
   })
   rows.sort((a, b) => descending(a.taskSuccess, b.taskSuccess)
     || descending(a.strictPassAt1, b.strictPassAt1)
@@ -88,6 +109,32 @@ export function buildLeaderboard(runs: readonly { label: string; run: EvalRun }[
     row.rank = lastRank
     row.gapFromBest = best === null || row.taskSuccess === null ? null : best - row.taskSuccess
   })
+  const leader = rows.find(row => row.rank === 1)
+  const leaderRun = leader === undefined ? undefined : runByEntry.get(leader)
+  const family = Math.max(1, rows.length - 1)
+  if (leaderRun !== undefined) {
+    for (const row of rows) {
+      if (row === leader) continue
+      const paired = pairedCompare(leaderRun, runByEntry.get(row)!)
+      if (paired === null) {
+        row.significance = {
+          adjustedP: 1, detectable: false, worse: false, verdict: 'unpaired',
+        }
+        continue
+      }
+      const worse = paired.losses > paired.wins
+      const adjustedP = Math.min(1, paired.correction.adjustedPValue * family)
+      const detectable = paired.power.detectable
+      row.significance = {
+        adjustedP,
+        detectable,
+        worse,
+        verdict: !detectable ? 'underpowered'
+          : worse && adjustedP <= paired.correction.alpha ? 'significantly-behind'
+            : worse ? 'behind-not-significant' : 'ahead-or-tied',
+      }
+    }
+  }
   return rows
 }
 
@@ -112,6 +159,13 @@ function gap(value: number | null, rank: number): string {
   return `-${(value * 100).toFixed(1)}pp`
 }
 
+/** Format the paired verdict against the leader. */
+function significance(value: LeaderboardSignificance | null): string {
+  if (value === null) return 'leader'
+  if (value.verdict === 'unpaired') return 'unpaired'
+  return `${value.verdict} (p=${value.adjustedP.toFixed(3)})`
+}
+
 /**
  * Render a leaderboard as markdown.
  * @param rows - rows from {@link buildLeaderboard}.
@@ -122,14 +176,14 @@ export function renderLeaderboard(rows: readonly LeaderboardEntry[]): string {
     '# Leaderboard',
     '',
     '- ranked by pooled task success; ties share a rank',
-    '- screening view only — use `dsh eval compare` for paired inference between two runs',
+    '- ranks are a screening view; `vs leader` applies a Bonferroni-corrected paired sign test',
     '',
-    '| rank | run | completed | task | strict pass@1 | tool | judge | cost/trial | latency/trial | Δ best |',
-    '|---|---|---|---|---|---|---|---|---|---|',
+    '| rank | run | completed | task | strict pass@1 | tool | judge | cost/trial | latency/trial | Δ best | vs leader |',
+    '|---|---|---|---|---|---|---|---|---|---|---|',
   ]
   for (const row of rows) {
     const label = row.label.replace(/[\r\n|]/gu, ' ')
-    lines.push(`| ${row.rank} | ${label} | ${row.completed}/${row.total} | ${rate(row.taskSuccess)} | ${rate(row.strictPassAt1)} | ${rate(row.toolSelection)} | ${rate(row.judgeScore)} | ${row.costUsd === null ? '–' : `$${row.costUsd.toFixed(6)}`} | ${row.latencyMs === null ? '–' : `${row.latencyMs.toFixed(1)} ms`} | ${gap(row.gapFromBest, row.rank)} |`)
+    lines.push(`| ${row.rank} | ${label} | ${row.completed}/${row.total} | ${rate(row.taskSuccess)} | ${rate(row.strictPassAt1)} | ${rate(row.toolSelection)} | ${rate(row.judgeScore)} | ${row.costUsd === null ? '–' : `$${row.costUsd.toFixed(6)}`} | ${row.latencyMs === null ? '–' : `${row.latencyMs.toFixed(1)} ms`} | ${gap(row.gapFromBest, row.rank)} | ${significance(row.significance)} |`)
   }
   return `${lines.join('\n')}\n`
 }

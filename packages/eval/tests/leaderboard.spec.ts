@@ -47,8 +47,8 @@ describe('dsh-eval leaderboard', () => {
     ])
     expect(rows[1]!.gapFromBest).toBeCloseTo(0.2)
     const markdown = renderLeaderboard(rows)
-    expect(markdown).toContain('| 1 | b — strong | 1/1 | 90.0% | 100.0% | 90.0% | 90.0% | $0.000002 | 120.0 ms | leader |')
-    expect(markdown).toContain('| 2 | b — middle | 1/1 | 70.0% | 100.0% | 70.0% | 70.0% | $0.000002 | 120.0 ms | -20.0pp |')
+    expect(markdown).toContain('| 1 | b — strong | 1/1 | 90.0% | 100.0% | 90.0% | 90.0% | $0.000002 | 120.0 ms | leader | leader |')
+    expect(markdown).toContain('| 2 | b — middle | 1/1 | 70.0% | 100.0% | 70.0% | 70.0% | $0.000002 | 120.0 ms | -20.0pp | underpowered (p=1.000) |')
   })
 
   it('shares a rank for ties and breaks ties deterministically', () => {
@@ -72,7 +72,7 @@ describe('dsh-eval leaderboard', () => {
     expect(rows[1]!.gapFromBest).toBeNull()
     expect(rows[2]!.taskSuccess).toBeNull()
     const markdown = renderLeaderboard(rows)
-    expect(markdown).toContain('| 3 | x bad name | 1/1 | – | 100.0% | – | – | – | – | – |')
+    expect(markdown).toContain('| 3 | x bad name | 1/1 | – | 100.0% | – | – | – | – | – | underpowered (p=1.000) |')
   })
 
   it('still ranks judge-only runs whose task success is null', () => {
@@ -83,7 +83,7 @@ describe('dsh-eval leaderboard', () => {
     expect(rows.map(row => [row.label, row.rank, row.gapFromBest])).toEqual([
       ['first', 1, null], ['second', 2, null],
     ])
-    expect(renderLeaderboard(rows)).toContain('| 1 | first | 1/1 | – | 100.0% | – | – | – | – | – |')
+    expect(renderLeaderboard(rows)).toContain('| 1 | first | 1/1 | – | 100.0% | – | – | – | – | – | leader |')
   })
 
   it('renders a machine-readable leaderboard', () => {
@@ -98,6 +98,77 @@ describe('dsh-eval leaderboard', () => {
     expect(rows[0]).toMatchObject({ benchmark: 'b', model: 'strong' })
     expect(parsed.rows.map(row => row.label)).toEqual(['b — strong', 'b — weak'])
     expect(parsed.rows[1]!.gapFromBest).toBeCloseTo(0.5)
+  })
+
+  it('labels paired evidence against the leader', () => {
+    const pairedRun = (task: readonly boolean[], model: string): EvalRun => run({
+      model,
+      grading: {
+        taskSuccessRate: task.filter(Boolean).length / task.length,
+        toolSelectionAccuracyRate: null, finalAnswerScore: null, hallucinationRate: null,
+      },
+      cases: task.map((success, index) => ({
+        caseId: `c${index + 1}`, trial: 1, status: 'completed' as const,
+        exitCode: 0, timedOut: false,
+        grade: { taskSuccess: success, toolSelectionAccuracy: null },
+      })),
+    })
+    const allTrue = pairedRun(Array(8).fill(true) as boolean[], 'strong')
+    const allFalse = pairedRun(Array(8).fill(false) as boolean[], 'weak')
+    const rows = buildLeaderboard([
+      { label: 'strong', run: allTrue }, { label: 'weak', run: allFalse },
+    ])
+    expect(rows[0]!.significance).toBeNull()
+    expect(rows[1]!.significance).toMatchObject({
+      verdict: 'significantly-behind', worse: true, detectable: true,
+    })
+    expect(renderLeaderboard(rows)).toContain('significantly-behind (p=0.008)')
+
+    const mixed = pairedRun([true, true, true, true, true, false, false, false], 'mixed')
+    const reverse = pairedRun([false, false, false, false, false, true, true, true], 'reverse')
+    const noisy = buildLeaderboard([
+      { label: 'mixed', run: mixed }, { label: 'reverse', run: reverse },
+    ])
+    expect(noisy[1]!.significance?.verdict).toBe('behind-not-significant')
+
+    const judgeLeader = run({
+      model: 'judge-leader',
+      grading: {
+        taskSuccessRate: 0.9, toolSelectionAccuracyRate: null,
+        finalAnswerScore: 2, hallucinationRate: 0,
+      },
+      cases: Array.from({ length: 8 }, (_, index) => ({
+        caseId: `c${index + 1}`, trial: 1, status: 'completed' as const,
+        exitCode: 0, timedOut: false,
+        grade: { taskSuccess: index < 7, toolSelectionAccuracy: null },
+        judge: { finalAnswerScore: 2, hallucination: false },
+      })),
+    })
+    const judgeChallenger = run({
+      model: 'judge-challenger',
+      grading: {
+        taskSuccessRate: 0.6, toolSelectionAccuracyRate: null,
+        finalAnswerScore: 8, hallucinationRate: 0,
+      },
+      cases: Array.from({ length: 8 }, (_, index) => ({
+        caseId: `c${index + 1}`, trial: 1, status: 'completed' as const,
+        exitCode: 0, timedOut: false,
+        grade: { taskSuccess: null, toolSelectionAccuracy: null },
+        judge: { finalAnswerScore: 8, hallucination: false },
+      })),
+    })
+    const ahead = buildLeaderboard([
+      { label: 'judge-leader', run: judgeLeader },
+      { label: 'judge-challenger', run: judgeChallenger },
+    ])
+    expect(ahead[0]!.label).toBe('judge-leader')
+    expect(ahead[1]!.significance?.verdict).toBe('ahead-or-tied')
+
+    const unpaired = buildLeaderboard([
+      { label: 'strong', run: allTrue },
+      { label: 'other', run: run({ model: 'other', cases: [] }) },
+    ])
+    expect(unpaired[1]!.significance?.verdict).toBe('unpaired')
   })
 
   it('renders an empty leaderboard header', () => {
