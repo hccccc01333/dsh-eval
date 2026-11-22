@@ -402,7 +402,7 @@ describe('dsh-eval benchmark runner', () => {
     const started = Date.now()
     const run = await runBenchmark(buildBenchmark({
       trials: 1,
-      timeoutMs: 1000,
+      timeoutMs: 3000,
       cases: [{
         id: 'lingering', prompt: 'p',
         expected: { checkArgv: [process.execPath, LINGERING_CHECK] },

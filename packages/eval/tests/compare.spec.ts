@@ -287,6 +287,13 @@ describe('dsh-eval comparison', () => {
       delta: '–',
       inference: '1.000 (n=2)',
     })
+    expect(rows.find(row => row.metric === 'paired sign-test power (α=0.05)')).toEqual({
+      metric: 'paired sign-test power (α=0.05)',
+      a: '–',
+      b: '–',
+      delta: '–',
+      inference: 'unreachable: best p 1.000; need ≥8 discordant pairs',
+    })
   })
 
   it('prints an exact sign-test p-value and collapses tiny ones', () => {

@@ -4,6 +4,11 @@
 
 ### Added
 
+- **Sign-test power diagnostics.** `compare` now reports the best corrected
+  p-value a finite paired sample can ever produce and, when it cannot reach
+  alpha, the minimum discordant pairs required. `validate` warns before a run
+  whose maximum possible pairs are below that floor, so a `p = 1` is not read
+  as evidence of no difference.
 - **Deterministic final-answer grading.** `expected.answerRegex` (validated at
   load) matches the final assistant message and sets `taskSuccess` when no
   check command is configured, so a benchmark can grade answers without an LLM

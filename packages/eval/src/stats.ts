@@ -37,6 +37,68 @@ export interface PairedDelta {
   pairs: number
 }
 
+/** Power ceiling of an exact sign test with a finite number of discordant pairs. */
+export interface SignTestPower {
+  /** Discordant pairs the test actually has. */
+  discordant: number
+  /** Number of quantities in the printed inference family. */
+  comparisons: number
+  /** Family-wise error rate the family controls. */
+  alpha: number
+  /** Smallest raw p-value any outcome with this sample could produce. */
+  bestRawP: number
+  /** Smallest Bonferroni-adjusted p-value any outcome could produce. */
+  bestAdjustedP: number
+  /** Wins in the favoured direction needed for significance, or null when impossible. */
+  minimumWins: number | null
+  /** Smallest discordant sample that could reach the corrected alpha. */
+  minimumDiscordant: number
+  /** Whether the current sample can reach the corrected alpha at all. */
+  detectable: boolean
+}
+
+/**
+ * Report how much a finite paired sample can ever say under an exact sign test.
+ *
+ * With `n` discordant pairs the strongest evidence is a clean sweep, whose
+ * two-sided p-value is `2^(1-n)`; the printed Bonferroni family multiplies it.
+ * Below that floor no observed outcome can reach alpha, so a non-significant
+ * result is uninformative rather than evidence of no difference.
+ * @param discordant - number of win/loss pairs; ties drop out.
+ * @param comparisons - size of the inference family, at least one.
+ * @param alpha - family-wise error rate, default `0.05`.
+ * @returns the achievable p-value floor, required wins and minimum sample size.
+ */
+export function signTestPower(
+  discordant: number,
+  comparisons: number,
+  alpha = 0.05,
+): SignTestPower {
+  const floor = (n: number): number => n === 0 ? 1 : Math.min(1, 2 ** (1 - n))
+  const bestRawP = floor(discordant)
+  const bestAdjustedP = Math.min(1, bestRawP * comparisons)
+  let minimumWins: number | null = null
+  for (let tail = 0; tail <= Math.floor(discordant / 2); tail++) {
+    const adjusted = Math.min(1, signTest(tail, discordant - tail).pValue * comparisons)
+    if (adjusted <= alpha) {
+      minimumWins = discordant - tail
+      break
+    }
+  }
+  let minimumDiscordant = 0
+  while (Math.min(1, floor(minimumDiscordant) * comparisons) > alpha) minimumDiscordant += 1
+  return {
+    discordant,
+    comparisons,
+    alpha,
+    bestRawP,
+    bestAdjustedP,
+    minimumWins,
+    minimumDiscordant,
+    detectable: bestAdjustedP <= alpha,
+  }
+}
+
 /** Bonferroni family-wise correction shared by a p-value and its sibling intervals. */
 export interface FamilyWiseCorrection {
   /** Number of inference quantities in the family (the p-value plus intervals). */

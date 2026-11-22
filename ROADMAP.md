@@ -49,6 +49,9 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
 - ✅ **Case-level paired outcomes.** `compare` and the two-run dashboard name
   the concrete case x trials behind a significant sign test, using the same
   primary metric and capped output for large benchmarks.
+- ✅ **Paired statistical power.** `compare` reports the attainable p-value
+  floor and required discordant sample size; `validate` warns when a benchmark
+  cannot produce enough pairs for a corrected sign test.
 - ✅ **Judge calibration diagnostics.** Full reports and the dashboard now show
   normalized score means for scripted passes/failures, their separation, an
   AUC-style ranking accuracy, and up to five concrete disagreement cases —

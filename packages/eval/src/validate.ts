@@ -77,6 +77,11 @@ export function summarizeBenchmark(benchmark: Benchmark): BenchmarkSummary {
   if (shellChecks > 0) {
     warnings.push(`${shellChecks} shell check(s) need a trusted benchmark file (pipes and redirection are enabled)`)
   }
+  const maxPairs = benchmark.cases.length * benchmark.trials
+  const minimumDiscordant = benchmark.judge === undefined ? 6 : 8
+  if (maxPairs < minimumDiscordant) {
+    warnings.push(`at most ${maxPairs} paired trials; a Bonferroni-corrected sign test needs ≥${minimumDiscordant} discordant pairs to reach α=0.05`)
+  }
   if (benchmark.replay !== undefined && benchmark.judge === undefined) {
     warnings.push('replay runs have no live judge; use `dsh eval rejudge` after the run if judge scores are needed')
   }

@@ -22,6 +22,7 @@ function benchmark(overrides: Partial<Benchmark> = {}): Benchmark {
 describe('dsh-eval benchmark preflight', () => {
   it('summarizes a fully configured benchmark without warnings', () => {
     const summary = renderBenchmarkSummary(benchmark({
+      trials: 4,
       judge: { provider: 'p', model: 'j', maxScore: 10 },
       pricing: { m: { inputUsdPerMTokens: 1, cacheReadUsdPerMTokens: 1, cacheWriteUsdPerMTokens: 1, outputUsdPerMTokens: 1 } },
     }))
@@ -36,6 +37,12 @@ describe('dsh-eval benchmark preflight', () => {
     expect(summary).toContain('- pricing: configured')
     expect(summary).toContain('Validated: smoke is ready to run.')
     expect(summary).not.toContain('## Warnings')
+  })
+
+  it('warns when the benchmark cannot supply enough paired trials for a corrected sign test', () => {
+    const summary = renderBenchmarkSummary(benchmark())
+    expect(summary).toContain('at most 2 paired trials')
+    expect(summary).toContain('needs ≥6 discordant pairs')
   })
 
   it('warns about weak evidence and unsafe shell checks', () => {

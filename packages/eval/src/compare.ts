@@ -11,9 +11,11 @@ import {
   bonferroni,
   pairedDelta,
   signTest,
+  signTestPower,
   type FamilyWiseCorrection,
   type PairedDelta,
   type SignTestOutcome,
+  type SignTestPower,
 } from './stats.ts'
 
 /** One compared metric row. */
@@ -46,6 +48,8 @@ export interface PairedStats {
   test: SignTestOutcome
   /** Bonferroni correction shared by the printed p-value and delta intervals. */
   correction: FamilyWiseCorrection
+  /** Whether the discordant sample can reach the corrected alpha at all. */
+  power: SignTestPower
   /** Paired step delta (`b - a`) with its bootstrap interval, or null when no pair is numeric. */
   stepsDelta: PairedDelta | null
   /** Paired token delta (`b - a`) with its bootstrap interval, or null when no pair is numeric. */
@@ -197,6 +201,7 @@ export function pairedCompare(a: EvalRun, b: EvalRun): PairedStats | null {
     primaryMetric,
     test,
     correction,
+    power: signTestPower(test.discordant, comparisons, correction.alpha),
     stepsDelta: pairedDelta(stepDeltas, { confidence: correction.intervalConfidence }),
     tokensDelta: pairedDelta(tokenDeltas, { confidence: correction.intervalConfidence }),
     scoreDelta: pairedDelta(scoreDeltas, { confidence: correction.intervalConfidence }),
@@ -354,6 +359,12 @@ export function compareRuns(a: EvalRun, b: EvalRun): CompareRow[] {
       inference(
         `paired ${paired.primaryMetric} p (sign test, Bonferroni ×${paired.correction.comparisons})`,
         `${formatPValue(paired.correction.adjustedPValue)} (n=${paired.test.discordant})`,
+      ),
+      inference(
+        `paired sign-test power (α=${paired.power.alpha})`,
+        paired.power.detectable
+          ? `best p ${formatPValue(paired.power.bestAdjustedP)}; needs ${paired.power.minimumWins}/${paired.power.discordant} wins`
+          : `unreachable: best p ${formatPValue(paired.power.bestAdjustedP)}; need ≥${paired.power.minimumDiscordant} discordant pairs`,
       ),
       ...(paired.stepsDelta === null ? [] : [inference(
         'paired steps delta (B-A)',

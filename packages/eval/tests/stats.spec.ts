@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bonferroni, pairedDelta, signTest } from '../src/stats.ts'
+import { bonferroni, pairedDelta, signTest, signTestPower } from '../src/stats.ts'
 
 describe('dsh-eval paired statistics', () => {
   it('reports no evidence when every pair tied', () => {
@@ -11,6 +11,25 @@ describe('dsh-eval paired statistics', () => {
     expect(signTest(5, 0).pValue).toBeCloseTo(0.0625, 12)
     expect(signTest(0, 5).pValue).toBeCloseTo(0.0625, 12)
     expect(signTest(10, 0).pValue).toBeCloseTo(2 / 1024, 12)
+  })
+
+  it('reports the attainable p-value floor and the sample size needed for power', () => {
+    const small = signTestPower(5, 4)
+    expect(small.bestRawP).toBeCloseTo(0.0625, 12)
+    expect(small.bestAdjustedP).toBeCloseTo(0.25, 12)
+    expect(small.detectable).toBe(false)
+    expect(small.minimumWins).toBeNull()
+    expect(small.minimumDiscordant).toBe(8)
+
+    const enough = signTestPower(8, 4)
+    expect(enough.bestAdjustedP).toBeCloseTo(4 / 128, 12)
+    expect(enough.detectable).toBe(true)
+    expect(enough.minimumWins).toBe(8)
+
+    const noPairs = signTestPower(0, 1)
+    expect(noPairs.bestRawP).toBe(1)
+    expect(noPairs.minimumDiscordant).toBe(6)
+    expect(noPairs.minimumWins).toBeNull()
   })
 
   it('doubles the smaller tail and clamps at one', () => {
