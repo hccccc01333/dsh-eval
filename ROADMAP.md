@@ -38,7 +38,9 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
 - ✅ Judge/script agreement metric (done). Observed agreement plus Cohen's kappa
   over trials with both a scripted task result and a judge verdict, rendered in
   the full report and as one line in `--brief`.
-- HTML dashboard for browseable run comparison.
+- ✅ HTML dashboard (done as a single-run view). `dsh eval dashboard` writes a
+  standalone, escaped, theme-aware page with summary cards and all report
+  blocks. Multi-run comparison inside the dashboard is not implemented.
 - Release: configure npm Trusted Publisher for `dsh-eval` at
   <https://www.npmjs.com/package/dsh-eval/access> — GitHub Actions, owner
   `hccccc01333`, repo `dsh-eval`, workflow `release.yml`, no environment.

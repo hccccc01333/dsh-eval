@@ -103,6 +103,13 @@ The markdown report appends a **Reliability** block for each graded dimension (t
 
 `dsh eval report run.json --brief` prints a compact terminal summary instead: trial coverage, per-trial tool/step/token/cost figures, the task rate with pass@k/pass^k, the bootstrap interval, and the judge-failure count. The per-trial table is omitted so a hundred-trial run still fits on one screen.
 
+`dsh eval dashboard run.json --out report.html` writes a standalone HTML view:
+summary cards for coverage, pass@1/pass@k, latency p95 and cost, followed by
+reliability, precision, judge/script agreement and a per-trial table. It has no
+external CSS, fonts or scripts, respects the OS light/dark preference, and
+HTML-escapes benchmark ids, case ids and error strings — an agent-produced
+error message cannot inject markup into the page.
+
 A **Precision** block follows Reliability in the full report. It bootstraps the observed task/tool rates over the graded trials with the run's `seed` (2000 seeded resamples by default), printing a 95% percentile interval beside each rate and a `n=` count. A single trial reports the rate without an interval, since no resample can create uncertainty from one observation. The block also prints latency `p50/p95` from the trial metrics. This makes a three-trial smoke run look like the weak evidence it is instead of a precise-looking percentage.
 
 The **Judge / script agreement** block pairs scripted `taskSuccess` with the

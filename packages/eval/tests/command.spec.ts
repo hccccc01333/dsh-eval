@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -233,6 +233,26 @@ describe('dsh-eval command composition', () => {
     const noLlm = await bootEval(['rejudge', runPath, '--out', outPath])
     expect(noLlm.exits).toEqual([1])
     expect(noLlm.err).toContain('no LLM chat seam')
+  })
+
+  it('renders an HTML dashboard through the CLI', async () => {
+    const dir = tempDir()
+    const runPath = join(dir, 'run.json')
+    const outPath = join(dir, 'nested', 'dashboard.html')
+    await writeRunReport({
+      benchmark: 'dash', model: 'm', createdAt: 1, trials: 1, seed: 0, pricing: null,
+      tempRoot: '/tmp', cases: [], aggregate: null, grading: null,
+    }, runPath)
+    const out: string[] = []
+    const io = { stdout: { write: (chunk: string) => { out.push(chunk); return true } }, stderr: { write: () => {} } }
+    const code = await executeEval({ kind: 'dashboard', runPath, outPath }, io)
+    expect(code).toBe(0)
+    expect(out.join('')).toContain(`Wrote ${outPath}`)
+    expect(readFileSync(outPath, 'utf8')).toContain('<title>dash — m</title>')
+
+    const parsed = await bootEval(['dashboard', runPath, '--out', outPath])
+    expect(parsed.exits).toEqual([0])
+    expect(existsSync(outPath)).toBe(true)
   })
 
   it('parses judge override flags for rejudge', async () => {

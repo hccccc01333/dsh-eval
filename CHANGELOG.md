@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Standalone HTML dashboard.** `dsh eval dashboard run.json --out report.html`
+  renders coverage, pass@1/pass@k, latency and cost cards plus reliability,
+  precision, agreement and per-trial tables into one self-contained page. It
+  follows the OS light/dark preference and escapes all agent-controlled text.
 - **Judge/script agreement.** The full report now pairs scripted task success
   with the judge's no-hallucination verdict and reports observed agreement plus
   Cohen's kappa, so an over-permissive proxy judge cannot hide behind a high

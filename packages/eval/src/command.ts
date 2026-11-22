@@ -38,6 +38,11 @@ export type EvalStartupValues =
     runPathB: string
   }
   | {
+    kind: 'dashboard'
+    runPath: string
+    outPath: string
+  }
+  | {
     kind: 'rejudge'
     runPath: string
     outPath: string
@@ -118,7 +123,7 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     .description('Run agent evaluations over headless dsh profiles and report trace-based metrics.')
     .helpOption('-h, --help', 'show this help')
     .action(() => {
-      program.error('error: eval needs a subcommand: run <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, rejudge <run.json>, or import <format> <log.jsonl>')
+      program.error('error: eval needs a subcommand: run <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, rejudge <run.json>, dashboard <run.json>, or import <format> <log.jsonl>')
     })
   const run = program.command('run').description('run a benchmark and write its JSON report')
   run
@@ -166,6 +171,13 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     .argument('<run-b.json>', 'candidate run report')
     .action((runPathA: string, runPathB: string) => {
       publish({ kind: 'compare', runPathA, runPathB })
+    })
+  const dashboard = program.command('dashboard').description('render a persisted run as a standalone HTML dashboard')
+  dashboard
+    .argument('<run.json>', 'path to a run report')
+    .option('--out <path>', 'output HTML path', 'eval-dashboard.html')
+    .action((runPath: string, options: { out: string }) => {
+      publish({ kind: 'dashboard', runPath, outPath: options.out })
     })
   const rejudge = program.command('rejudge').description('re-judge a stored run from its traces without re-running the agent')
   rejudge

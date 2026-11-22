@@ -95,6 +95,8 @@ Markdown 报告会为每个评分维度（任务成功、工具选择准确率�
 
 `dsh eval report run.json --brief` 改为输出紧凑的终端摘要：试验覆盖率、每个 trial 的工具/步数/token/成本、任务通过率与 pass@k/pass^k、bootstrap 区间、判官失败数。省略逐 trial 表格，百次 run 也能一屏看完。
 
+`dsh eval dashboard run.json --out report.html` 写出独立的 HTML 视图：覆盖率、pass@1/pass@k、延迟 p95 与成本的摘要卡片，以及可靠性、精度、判官/脚本一致性和逐 trial 表格。无外部 CSS、字体或脚本，自动跟随系统亮/暗主题；benchmark id、case id 与错误字符串都做 HTML 转义，agent 产生的错误信息无法向页面注入标记。
+
 完整报告里，可靠性区块之后是**精度**区块：用 run 的 `seed` 对已评分 trial 的 0/1 结果做 bootstrap（默认 2000 次固定种子重采样），给出任务/工具通过率的 95% 百分位区间与样本数 `n=`。只有一个 trial 时只报通过率、不报区间 —— 单个观测无法重采样出不确定性。区块同时给出 trial 延迟的 p50/p95，让三 trial 的冒烟测试看起来就是薄弱证据，而不是一个看似精确的百分比。
 
 **判官 / 脚本一致性**区块把脚本的 `taskSuccess` 与判官的"未检出幻觉"结论配对（仅统计两者都存在的 trial），给出观察一致率与 Cohen's kappa。kappa 扣除了由两边边缘分布带来的偶然一致 —— 否则一个"什么都判通过"的判官，在脚本检查也全部通过时会显得很准。判官输出不可用或没有检查的 trial 会被排除；没有任何配对时该区块不渲染。`--brief` 输出同样包含一行该指标。

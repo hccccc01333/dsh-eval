@@ -16,6 +16,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { loadBenchmark } from './benchmark.ts'
 import { applyEval, type EvalStartupValues } from './command.ts'
 import { compareRuns, renderCompareMarkdown } from './compare.ts'
+import { writeDashboard } from './dashboard.ts'
 import { importTraceFile } from './import.ts'
 import { llmJudgeChat, type JudgeChat } from './judge.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
@@ -102,6 +103,12 @@ export async function executeEval(
       const a = await loadRunReport(values.runPathA)
       const b = await loadRunReport(values.runPathB)
       io.stdout.write(renderCompareMarkdown(compareRuns(a, b)))
+      return 0
+    }
+    if (values.kind === 'dashboard') {
+      const run = await loadRunReport(values.runPath)
+      await writeDashboard(run, values.outPath)
+      io.stdout.write(`Wrote ${values.outPath}\n`)
       return 0
     }
     if (values.kind === 'rejudge') {
