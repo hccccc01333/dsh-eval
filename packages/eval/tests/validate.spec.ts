@@ -96,6 +96,31 @@ describe('dsh-eval benchmark preflight', () => {
     expect(redundant.warnings).toContain('case both combines a check command with answerRegex — the regex is ignored')
   })
 
+  it('warns about duplicate case ids and single-trial reliability', () => {
+    const summary = renderBenchmarkSummary(benchmark({
+      cases: [
+        { id: 'same', prompt: 'p', expected: { check: 'true' } },
+        { id: 'same', prompt: 'q', expected: { check: 'true' } },
+      ],
+    }))
+    expect(summary).toContain('- duplicate case ids (same) break pairing and case-input lookup')
+    expect(summary).toContain('- one trial per case cannot measure flakiness or pass@k')
+    expect(renderBenchmarkSummary(benchmark({ trials: 2 })))
+      .not.toContain('one trial per case cannot measure flakiness')
+  })
+
+  it('warns when a run cannot produce any quality score', () => {
+    const summary = renderBenchmarkSummary(benchmark({
+      cases: [{ id: 'raw', prompt: 'p' }],
+    }))
+    expect(summary).toContain('- no case has scripted expectations and no judge is configured')
+    expect(summary).not.toContain('results depend entirely on the judge')
+    expect(summarizeBenchmark(benchmark({
+      cases: [{ id: 'raw', prompt: 'p' }],
+      judge: { provider: 'p', model: 'j', maxScore: 10 },
+    })).warnings).toContain('no case has scripted expectations — results depend entirely on the judge')
+  })
+
   it('warns that replay runs need rejudging for judge scores', () => {
     const summary = renderBenchmarkSummary(benchmark({ replay: { dir: '/tmp/replay' } }))
     expect(summary).toContain('- replay runs have no live judge; use `dsh eval rejudge`')

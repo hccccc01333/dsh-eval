@@ -45,7 +45,11 @@ export function summarizeBenchmark(benchmark: Benchmark): BenchmarkSummary {
   let goldAnswers = 0
   let shellChecks = 0
   const warnings: string[] = []
+  const caseIds = new Set<string>()
+  const duplicateIds = new Set<string>()
   for (const item of benchmark.cases) {
+    if (caseIds.has(item.id)) duplicateIds.add(item.id)
+    caseIds.add(item.id)
     const expected = item.expected
     if (expected === undefined) continue
     gradedCases += 1
@@ -68,7 +72,17 @@ export function summarizeBenchmark(benchmark: Benchmark): BenchmarkSummary {
     toolConstraints += [expected.tool, expected.tools, expected.toolAnyOf, expected.toolRegex, expected.toolNot]
       .filter(value => value !== undefined).length
   }
-  if (gradedCases === 0) warnings.push('no case has scripted expectations — results depend entirely on the judge')
+  if (duplicateIds.size > 0) {
+    warnings.push(`duplicate case ids (${[...duplicateIds].slice(0, 5).join(', ')}) break pairing and case-input lookup`)
+  }
+  if (benchmark.trials < 2) {
+    warnings.push('one trial per case cannot measure flakiness or pass@k; use at least 2 trials')
+  }
+  if (gradedCases === 0 && benchmark.judge === undefined) {
+    warnings.push('no case has scripted expectations and no judge is configured — the run cannot produce a quality score')
+  } else if (gradedCases === 0) {
+    warnings.push('no case has scripted expectations — results depend entirely on the judge')
+  }
   if (checks === 0 && toolConstraints === 0) {
     warnings.push('no case checks tool use or task success — the run will produce only cost and latency data')
   }

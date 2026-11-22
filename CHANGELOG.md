@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Sharper benchmark preflight.** Duplicate case ids and single-trial
+  reliability limits now warn before tokens are spent, and a run with neither
+  scripted expectations nor a judge is explicitly reported as unable to
+  produce any quality score.
 - **Trace digest for tamper-evident re-judging.** Each completed trial records
   the SHA-256 of its merged trace, and `rejudge` refuses a stored log that no
   longer matches. The field is optional on older reports, so historical runs
