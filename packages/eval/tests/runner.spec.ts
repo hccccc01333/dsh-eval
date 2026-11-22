@@ -248,6 +248,14 @@ describe('dsh-eval benchmark runner', () => {
     expect(run.cases[0]?.error).toContain('timed out')
   })
 
+  it('applies a per-case timeout over the benchmark default', async () => {
+    process.env.FAKE_DASH_MODE = 'sleep'
+    const benchmark = buildBenchmark({ trials: 1, timeoutMs: 5000 })
+    benchmark.cases[0]!.timeoutMs = 300
+    const run = await runBenchmark(benchmark, { tempRoot: tempDir() })
+    expect(run.cases[0]).toMatchObject({ status: 'error', timedOut: true, exitCode: null })
+  })
+
   it('rejects invalid run overrides before creating a temp root', async () => {
     process.env.FAKE_DASH_MODE = 'log'
     await expect(runBenchmark(buildBenchmark(), { trials: 0 }))

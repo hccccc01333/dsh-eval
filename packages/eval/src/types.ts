@@ -28,6 +28,8 @@ export interface BenchmarkCase {
   prompt: string
   /** Absolute path to a workspace tree copied into each trial, when provided. */
   workspace?: string
+  /** Per-case timeout in milliseconds; overrides the benchmark timeout. */
+  timeoutMs?: number
   /** Scripted grading annotations, when the case is graded. */
   expected?: BenchmarkExpectation
 }

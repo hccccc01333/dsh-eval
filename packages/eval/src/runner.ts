@@ -338,6 +338,7 @@ async function runCaseTrial(
   root: string,
   judgeChat: JudgeChat | undefined,
 ): Promise<EvalTrialResult> {
+  const timeoutMs = caseValue.timeoutMs ?? benchmark.timeoutMs
   const trialDir = join(root, `${caseSegment(caseValue.id)}-${trial}`)
   const workspace = join(trialDir, 'workspace')
   const dshHome = join(trialDir, 'dsh-home')
@@ -379,7 +380,7 @@ async function runCaseTrial(
         // unlike an unknown CLI flag which would break them.
         DSH_EVAL_SEED: String(benchmark.seed + trial - 1),
       },
-      benchmark.timeoutMs,
+      timeoutMs,
     )
   } catch (error) {
     return {
@@ -411,7 +412,7 @@ async function runCaseTrial(
     const trace = mergeTraces(loaded.map(entry => entry.trace))
     const pricing = benchmark.pricing?.[benchmark.model]
     const metrics = computeMetrics(trace.events, pricing)
-    const grade = await gradeTrial(caseValue, trace, workspace, benchmark.timeoutMs)
+    const grade = await gradeTrial(caseValue, trace, workspace, timeoutMs)
     const judge = benchmark.judge === undefined || judgeChat === undefined
       ? undefined
       : await tryJudgeTrial(caseValue, trace, benchmark.judge, judgeChat)

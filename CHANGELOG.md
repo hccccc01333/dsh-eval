@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Per-case timeout overrides.** A case can set `timeoutMs` to override the
+  benchmark default for both the agent child and scripted checks; `validate`
+  reports how many cases do so.
 - **Strict pass@1 confidence interval.** The precision block now bootstraps
   every trial — errors and timeouts included — so the strict rate carries an
   honest interval instead of silently dropping failed trials. Both the markdown

@@ -27,6 +27,8 @@ export interface BenchmarkSummary {
   goldAnswers: number
   checks: number
   toolConstraints: number
+  /** Cases with a per-case timeout override. */
+  caseTimeouts: number
   judge: { provider: string; model: string; maxScore: number } | null
   replay: string | null
   pricing: boolean
@@ -44,10 +46,12 @@ export function summarizeBenchmark(benchmark: Benchmark): BenchmarkSummary {
   let gradedCases = 0
   let goldAnswers = 0
   let shellChecks = 0
+  let caseTimeouts = 0
   const warnings: string[] = []
   const caseIds = new Set<string>()
   const duplicateIds = new Set<string>()
   for (const item of benchmark.cases) {
+    if (item.timeoutMs !== undefined) caseTimeouts += 1
     if (caseIds.has(item.id)) duplicateIds.add(item.id)
     caseIds.add(item.id)
     const expected = item.expected
@@ -117,6 +121,7 @@ export function summarizeBenchmark(benchmark: Benchmark): BenchmarkSummary {
     goldAnswers,
     checks,
     toolConstraints,
+    caseTimeouts,
     judge: judge === undefined ? null : {
       provider: judge.provider, model: judge.model, maxScore: judge.maxScore,
     },
@@ -141,7 +146,7 @@ export function renderBenchmarkSummary(benchmark: Benchmark): string {
     `- command: ${summary.command.join(' ')}`,
     `- trials per case: ${summary.trials}`,
     `- concurrency: ${summary.concurrency}`,
-    `- timeout: ${summary.timeoutMs} ms`,
+    `- timeout: ${summary.timeoutMs} ms${summary.caseTimeouts === 0 ? '' : ` (${summary.caseTimeouts} per-case override(s))`}`,
     `- seed: ${summary.seed} (trial n receives DSH_EVAL_SEED = ${summary.seed} + n - 1)`,
     `- cases: ${summary.cases} (${summary.gradedCases} graded, ${summary.goldAnswers} with gold answers)`,
     `- expectations: ${summary.checks} check(s), ${summary.toolConstraints} tool constraint(s)`,

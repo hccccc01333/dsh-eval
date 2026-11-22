@@ -51,6 +51,7 @@ const benchmarkCaseSchema = z.object({
   prompt: z.string().min(1).optional(),
   promptFile: z.string().min(1).optional(),
   workspace: z.string().min(1).optional(),
+  timeoutMs: z.number().int().positive().optional(),
   expected: z.object({
     tool: z.string().min(1).optional(),
     tools: z.array(z.string().min(1)).min(1).readonly().optional(),
@@ -134,6 +135,7 @@ async function resolveCase(
   return {
     id: parsed.id,
     prompt,
+    ...(parsed.timeoutMs !== undefined ? { timeoutMs: parsed.timeoutMs } : {}),
     ...(parsed.workspace !== undefined
       ? { workspace: isAbsolute(parsed.workspace) ? parsed.workspace : resolve(baseDir, parsed.workspace) }
       : {}),

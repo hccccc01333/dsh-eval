@@ -38,7 +38,7 @@
 
 ## 状态
 
-`dsh-eval@0.4.0` · 257 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.4.0` · 259 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 `0.3.1` 起可安装：`0.3.0` 的 tarball 漏掉了入口 import 的运行时模块，导致每次安装都报 `ERR_MODULE_NOT_FOUND`。详见 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -84,6 +84,7 @@ seed: 42
 cases:
   - id: fix-tests-001
     prompt: Fix the failing tests in this workspace.
+    timeoutMs: 120000  # 可选的 case 级超时覆盖
     workspace: ./fixtures/fix-tests
     expected:
       tool: bash

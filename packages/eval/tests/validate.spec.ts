@@ -29,6 +29,7 @@ describe('dsh-eval benchmark preflight', () => {
     expect(summary).toContain('# Benchmark: smoke')
     expect(summary).toContain('- profile: headless')
     expect(summary).toContain('- timeout: 1000 ms')
+    expect(summary).not.toContain('per-case override')
     expect(summary).toContain('- seed: 7 (trial n receives DSH_EVAL_SEED = 7 + n - 1)')
     expect(summary).toContain('- cases: 2 (2 graded, 1 with gold answers)')
     expect(summary).toContain('- expectations: 2 check(s), 1 tool constraint(s)')
@@ -99,10 +100,11 @@ describe('dsh-eval benchmark preflight', () => {
   it('warns about duplicate case ids and single-trial reliability', () => {
     const summary = renderBenchmarkSummary(benchmark({
       cases: [
-        { id: 'same', prompt: 'p', expected: { check: 'true' } },
+        { id: 'same', prompt: 'p', timeoutMs: 2000, expected: { check: 'true' } },
         { id: 'same', prompt: 'q', expected: { check: 'true' } },
       ],
     }))
+    expect(summary).toContain('- timeout: 1000 ms (1 per-case override(s))')
     expect(summary).toContain('- duplicate case ids (same) break pairing and case-input lookup')
     expect(summary).toContain('- one trial per case cannot measure flakiness or pass@k')
     expect(renderBenchmarkSummary(benchmark({ trials: 2 })))

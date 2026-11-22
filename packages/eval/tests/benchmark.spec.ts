@@ -67,6 +67,31 @@ describe('dsh-eval benchmark loading', () => {
     })
   })
 
+  it('loads per-case timeout overrides', async () => {
+    const benchmark = await parseBenchmark([
+      'name: timeouts',
+      'model: m',
+      'timeoutMs: 5000',
+      'cases:',
+      '  - id: slow',
+      '    prompt: p',
+      '    timeoutMs: 1200',
+      '  - id: normal',
+      '    prompt: q',
+    ].join('\n'), tempDir())
+    expect(benchmark.timeoutMs).toBe(5000)
+    expect(benchmark.cases[0]?.timeoutMs).toBe(1200)
+    expect(benchmark.cases[1]?.timeoutMs).toBeUndefined()
+    await expect(parseBenchmark([
+      'name: bad',
+      'model: m',
+      'cases:',
+      '  - id: slow',
+      '    prompt: p',
+      '    timeoutMs: 0',
+    ].join('\n'), tempDir())).rejects.toThrow()
+  })
+
   it('loads richer tool expectations and rejects invalid regexes', async () => {
     const benchmark = await parseBenchmark([
       'name: tools',
