@@ -46,10 +46,14 @@ describe('dsh-eval trial export', () => {
       cases: [{
         caseId: '=HYPERLINK("http://evil")', trial: 1, status: 'error',
         error: '+cmd|calc', exitCode: 1, timedOut: false,
+      }, {
+        caseId: 'second', trial: 2, status: 'error',
+        error: '\n=1+1', exitCode: 1, timedOut: false,
       }],
     }))
     expect(csv).toContain(`"'=HYPERLINK(""http://evil"")"`)
     expect(csv).toContain(`,'+cmd|calc,`)
+    expect(csv).toContain("\"'\n=1+1\"")
   })
 
   it('writes an empty header for a run without trials', () => {

@@ -122,6 +122,7 @@ Each trial runs in a private temp workspace with an isolated `DSH_HOME` and non-
 | `dsh eval report run.json` | Render a run as Markdown |
 | `dsh eval report run.json --brief` | Print a compact terminal summary without the per-trial table |
 | `dsh eval report run.json --json` | Emit the run and all derived blocks as JSON |
+| `dsh eval export run.json [--out trials.csv]` | Flatten trials into a safely escaped CSV |
 | `dsh eval dashboard a.json [b.json ...] --out report.html` | Write a standalone HTML dashboard or multi-run leaderboard |
 | `dsh eval validate benchmark.yaml [--json]` | Preflight a benchmark with evidence warnings |
 | `dsh eval leaderboard a.json b.json ... [--json]` | Rank multiple runs with optional JSON output |

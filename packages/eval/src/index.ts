@@ -12,7 +12,8 @@
  * @module dsh-eval
  */
 
-import { writeFile } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import { loadBenchmark } from './benchmark.ts'
 import { applyEval, type EvalStartupValues } from './command.ts'
@@ -143,6 +144,7 @@ export async function executeEval(
       if (values.outPath === undefined) {
         io.stdout.write(csv)
       } else {
+        await mkdir(dirname(resolve(values.outPath)), { recursive: true })
         await writeFile(values.outPath, csv, 'utf8')
         io.stdout.write(`Wrote ${values.outPath} (${run.cases.length} trials)\n`)
       }

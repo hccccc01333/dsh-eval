@@ -121,6 +121,7 @@ pricing:
 | `dsh eval report run.json` | 把 run 渲染为 Markdown |
 | `dsh eval report run.json --brief` | 省略逐 trial 表格，输出紧凑终端摘要 |
 | `dsh eval report run.json --json` | 输出 run 与全部派生区块的 JSON |
+| `dsh eval export run.json [--out trials.csv]` | 把逐 trial 数据导出为安全转义的 CSV |
 | `dsh eval dashboard a.json [b.json ...] --out report.html` | 写出独立 HTML 仪表盘或多 run 排行榜 |
 | `dsh eval validate benchmark.yaml [--json]` | 预检 benchmark 并给出证据质量警告 |
 | `dsh eval leaderboard a.json b.json ... [--json]` | 给多个 run 排名，可选 JSON 输出 |

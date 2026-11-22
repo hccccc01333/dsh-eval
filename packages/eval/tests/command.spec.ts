@@ -331,7 +331,7 @@ describe('dsh-eval command composition', () => {
     const exportDir = mkdtempSync(join(tmpdir(), 'dsh-eval-export-'))
     try {
       const exportPath = join(exportDir, 'run.json')
-      const csvPath = join(exportDir, 'trials.csv')
+      const csvPath = join(exportDir, 'nested', 'trials.csv')
       await writeRunReport(run, exportPath)
       const exported: EvalStartupValues[] = []
       await evalCommand(value => exported.push(value)).parseAsync([

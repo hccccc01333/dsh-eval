@@ -26,7 +26,7 @@ type CellValue = string | number | boolean | null | undefined
 function cell(value: CellValue): string {
   if (value === null || value === undefined) return ''
   if (typeof value !== 'string') return String(value)
-  const safe = /^[=+\-@\t\r]/u.test(value) ? `'${value}` : value
+  const safe = /^[=+\-@\t\r\n ]/u.test(value) ? `'${value}` : value
   return /[",\r\n]/u.test(safe) ? `"${safe.replace(/"/gu, '""')}"` : safe
 }
 

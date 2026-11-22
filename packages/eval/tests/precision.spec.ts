@@ -74,9 +74,7 @@ describe('dsh-eval single-run precision', () => {
       caseId: 'c', trial: 1, status: 'error', error: 'boom', exitCode: 1, timedOut: false,
     }]))
     expect(unmeasured).toEqual({
-      task: null, toolSelection: null,
-      strictPassAt1: { trials: 1, rate: 0, lower: null, upper: null },
-      latencyP50: null, latencyP95: null,
+      task: null, toolSelection: null, strictPassAt1: null, latencyP50: null, latencyP95: null,
     })
   })
 

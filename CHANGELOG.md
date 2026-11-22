@@ -258,6 +258,11 @@
 
 ### Fixed
 
+- **CSV and export command hardening.** Leading newlines/spaces are neutralized
+  as spreadsheet formula markers, `--out` creates parent directories, and the
+  usage hint lists every subcommand.
+- **Strict pass@1 precision aligns with reliability.** A run with no graded
+  task trial now reports no interval instead of a misleading 0%.
 - **Rejudge trace paths are resolved before the tempRoot check.** A hand-edited
   report can no longer use `root/../outside.jsonl` to make the judge read and
   ship an arbitrary local `.jsonl` file.

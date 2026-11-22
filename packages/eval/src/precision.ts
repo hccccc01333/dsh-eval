@@ -75,8 +75,10 @@ export function computePrecision(run: EvalRun, options: BootstrapOptions = {}): 
   return {
     task: rateInterval(completed, result => result.grade?.taskSuccess, bootstrap),
     toolSelection: rateInterval(completed, result => result.grade?.toolSelectionAccuracy, bootstrap),
-    strictPassAt1: rateInterval(run.cases, result =>
-      result.status === 'completed' && result.grade?.taskSuccess === true, bootstrap),
+    strictPassAt1: completed.some(result => typeof result.grade?.taskSuccess === 'boolean')
+      ? rateInterval(run.cases, result =>
+        result.status === 'completed' && result.grade?.taskSuccess === true, bootstrap)
+      : null,
     latencyP50: latencies.length === 0 ? null : percentile(latencies, 0.5),
     latencyP95: latencies.length === 0 ? null : percentile(latencies, 0.95),
   }
