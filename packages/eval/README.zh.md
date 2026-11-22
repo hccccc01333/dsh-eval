@@ -95,7 +95,7 @@ Markdown 报告会为每个评分维度（任务成功、工具选择准确率�
 
 `dsh eval report run.json --brief` 改为输出紧凑的终端摘要：试验覆盖率、每个 trial 的工具/步数/token/成本、任务通过率与 pass@k/pass^k、bootstrap 区间、判官失败数。省略逐 trial 表格，百次 run 也能一屏看完。
 
-`dsh eval dashboard run.json --out report.html` 写出独立的 HTML 视图：覆盖率、pass@1/pass@k、延迟 p95 与成本的摘要卡片，以及可靠性、精度、判官/脚本一致性和逐 trial 表格。无外部 CSS、字体或脚本，自动跟随系统亮/暗主题；benchmark id、case id 与错误字符串都做 HTML 转义，agent 产生的错误信息无法向页面注入标记。
+`dsh eval dashboard a.json [b.json] --out report.html` 写出独立的 HTML 视图：覆盖率、pass@1/pass@k、延迟 p95 与成本的摘要卡片，以及可靠性、精度、判官/脚本一致性和逐 trial 表格。无外部 CSS、字体或脚本，自动跟随系统亮/暗主题；benchmark id、case id 与错误字符串都做 HTML 转义，agent 产生的错误信息无法向页面注入标记。提供第二个 run 时会追加对比表，数据与 `dsh eval compare` 完全一致，包括带符号的 `B − A` 差值和 Bonferroni 校正后的配对推断行。
 
 完整报告里，可靠性区块之后是**精度**区块：用 run 的 `seed` 对已评分 trial 的 0/1 结果做 bootstrap（默认 2000 次固定种子重采样），给出任务/工具通过率的 95% 百分位区间与样本数 `n=`。只有一个 trial 时只报通过率、不报区间 —— 单个观测无法重采样出不确定性。区块同时给出 trial 延迟的 p50/p95，让三 trial 的冒烟测试看起来就是薄弱证据，而不是一个看似精确的百分比。
 

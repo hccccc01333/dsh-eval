@@ -39,7 +39,7 @@ export type EvalStartupValues =
   }
   | {
     kind: 'dashboard'
-    runPath: string
+    runPaths: readonly string[]
     outPath: string
   }
   | {
@@ -174,10 +174,15 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     })
   const dashboard = program.command('dashboard').description('render a persisted run as a standalone HTML dashboard')
   dashboard
-    .argument('<run.json>', 'path to a run report')
+    .argument('<run-a.json>', 'path to a run report')
+    .argument('[run-b.json]', 'optional second run to compare in the same page')
     .option('--out <path>', 'output HTML path', 'eval-dashboard.html')
-    .action((runPath: string, options: { out: string }) => {
-      publish({ kind: 'dashboard', runPath, outPath: options.out })
+    .action((runPathA: string, runPathB: string | undefined, options: { out: string }) => {
+      publish({
+        kind: 'dashboard',
+        runPaths: runPathB === undefined ? [runPathA] : [runPathA, runPathB],
+        outPath: options.out,
+      })
     })
   const rejudge = program.command('rejudge').description('re-judge a stored run from its traces without re-running the agent')
   rejudge

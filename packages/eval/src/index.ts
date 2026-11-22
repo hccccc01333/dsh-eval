@@ -106,8 +106,8 @@ export async function executeEval(
       return 0
     }
     if (values.kind === 'dashboard') {
-      const run = await loadRunReport(values.runPath)
-      await writeDashboard(run, values.outPath)
+      const runs = await Promise.all(values.runPaths.map(async path => loadRunReport(path)))
+      await writeDashboard(runs, values.outPath)
       io.stdout.write(`Wrote ${values.outPath}\n`)
       return 0
     }

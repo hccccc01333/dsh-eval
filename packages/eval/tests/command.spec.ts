@@ -245,7 +245,7 @@ describe('dsh-eval command composition', () => {
     }, runPath)
     const out: string[] = []
     const io = { stdout: { write: (chunk: string) => { out.push(chunk); return true } }, stderr: { write: () => {} } }
-    const code = await executeEval({ kind: 'dashboard', runPath, outPath }, io)
+    const code = await executeEval({ kind: 'dashboard', runPaths: [runPath], outPath }, io)
     expect(code).toBe(0)
     expect(out.join('')).toContain(`Wrote ${outPath}`)
     expect(readFileSync(outPath, 'utf8')).toContain('<title>dash — m</title>')
@@ -253,6 +253,10 @@ describe('dsh-eval command composition', () => {
     const parsed = await bootEval(['dashboard', runPath, '--out', outPath])
     expect(parsed.exits).toEqual([0])
     expect(existsSync(outPath)).toBe(true)
+
+    const compared = await bootEval(['dashboard', runPath, runPath, '--out', outPath])
+    expect(compared.exits).toEqual([0])
+    expect(readFileSync(outPath, 'utf8')).toContain('<h2>Run comparison</h2>')
   })
 
   it('parses judge override flags for rejudge', async () => {

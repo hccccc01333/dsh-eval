@@ -49,7 +49,7 @@ function buildRun(overrides: Partial<EvalRun> = {}): EvalRun {
 
 describe('dsh-eval HTML dashboard', () => {
   it('renders a standalone document with the main statistics', () => {
-    const html = renderDashboard(buildRun({
+    const html = renderDashboard([buildRun({
       judge: { provider: 'p', model: 'judge-m', maxScore: 10 },
       cases: [
         {
@@ -66,7 +66,7 @@ describe('dsh-eval HTML dashboard', () => {
         },
         { caseId: 'c', trial: 3, status: 'error', error: 'boom', exitCode: 1, timedOut: false },
       ],
-    }))
+    })])
     expect(html).toMatch(/^<!doctype html>/u)
     expect(html).toContain('<title>suite — model</title>')
     expect(html).toContain('judge judge-m')
@@ -91,13 +91,13 @@ describe('dsh-eval HTML dashboard', () => {
   })
 
   it('escapes benchmark, case and error strings', () => {
-    const html = renderDashboard(buildRun({
+    const html = renderDashboard([buildRun({
       benchmark: '<img src=x onerror=alert(1)>',
       cases: [{
         caseId: '</code><b>x</b>', trial: 1, status: 'error', error: '&<>"\'',
         exitCode: 1, timedOut: false,
       }],
-    }))
+    })])
     expect(html).not.toContain('<img')
     expect(html).not.toContain('<b>x</b>')
     expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;')
@@ -107,7 +107,7 @@ describe('dsh-eval HTML dashboard', () => {
 
   it('omits optional blocks for sparse runs', () => {
     const { judge: _judge, ...sparse } = buildRun()
-    const html = renderDashboard({ ...sparse, cases: [], aggregate: null, grading: null })
+    const html = renderDashboard([{ ...sparse, cases: [], aggregate: null, grading: null }])
     expect(html).toContain('no judge')
     expect(html).toContain('no metrics')
     expect(html).toContain('–')
@@ -122,7 +122,7 @@ describe('dsh-eval HTML dashboard', () => {
       caseId: 'c', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
       grade: { taskSuccess: null, toolSelectionAccuracy: true },
     }] })
-    const html = renderDashboard(run)
+    const html = renderDashboard([run])
     expect(html).toContain('<td>tool selection</td>')
     expect(html).not.toContain('<td>task success</td><td>')
     // A single trial has no bootstrap interval, only the rate and n.
@@ -130,9 +130,21 @@ describe('dsh-eval HTML dashboard', () => {
     expect(html).not.toContain('[')
   })
 
+  it('renders a side-by-side comparison when two runs are supplied', () => {
+    const html = renderDashboard([
+      buildRun({ benchmark: 'baseline', model: 'v1' }),
+      buildRun({ benchmark: 'candidate', model: 'v2' }),
+    ])
+    expect(html).toContain('<title>baseline — v1 vs candidate — v2</title>')
+    expect(html).toContain('<h2>Run comparison</h2>')
+    expect(html).toContain('<th>B − A</th>')
+    expect(html).toContain('baseline')
+    expect(html).toContain('candidate')
+  })
+
   it('writes a standalone file through nested directories', async () => {
     const path = join(tempDir(), 'nested', 'dashboard.html')
-    await writeDashboard(buildRun(), path)
+    await writeDashboard([buildRun()], path)
     expect(readFileSync(path, 'utf8')).toContain('<!doctype html>')
   })
 })

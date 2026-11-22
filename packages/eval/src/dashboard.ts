@@ -12,6 +12,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { computeAgreement } from './agreement.ts'
+import { compareRuns } from './compare.ts'
 import type { RateInterval } from './precision.ts'
 import { computePrecision } from './precision.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
@@ -19,13 +20,13 @@ import type { EvalRun } from './types.ts'
 
 /**
  * Write the dashboard as a standalone HTML file, creating parent directories.
- * @param run - the run record to render.
+ * @param runs - one run, or two runs to include a comparison table.
  * @param path - output path.
  */
-export async function writeDashboard(run: EvalRun, path: string): Promise<void> {
+export async function writeDashboard(runs: readonly EvalRun[], path: string): Promise<void> {
   const absolute = resolve(path)
   await mkdir(dirname(absolute), { recursive: true })
-  await writeFile(absolute, renderDashboard(run), 'utf8')
+  await writeFile(absolute, renderDashboard(runs), 'utf8')
 }
 
 /** Escape text for interpolation into HTML. */
@@ -69,12 +70,20 @@ function table(headers: readonly string[], rows: readonly string[]): string {
   ].join('')
 }
 
+/** Render the two-run comparison table from the same rows the markdown report uses. */
+function renderComparison(a: EvalRun, b: EvalRun): string {
+  const rows = compareRuns(a, b).map(row => [row.metric, row.a, row.b, row.delta]
+    .map(value => `<td>${esc(value)}</td>`).join(''))
+  return `<h2>Run comparison</h2>${table(['Metric', 'A', 'B', 'B − A'], rows)}`
+}
+
 /**
- * Render a standalone HTML dashboard for a run.
- * @param run - a validated run record.
+ * Render a standalone HTML dashboard for one or two runs.
+ * @param runs - one run, or two runs to include the comparison table.
  * @returns a complete HTML document.
  */
-export function renderDashboard(run: EvalRun): string {
+export function renderDashboard(runs: readonly EvalRun[]): string {
+  const run = runs[0]!
   const coverage = computeCoverage(run)
   const task = computeReliability(run, 'task')
   const tool = computeReliability(run, 'tool-selection')
@@ -152,7 +161,7 @@ export function renderDashboard(run: EvalRun): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(run.benchmark)} — ${esc(run.model)}</title>
+<title>${esc(runs.map(item => `${item.benchmark} — ${item.model}`).join(' vs '))}</title>
 <style>
 :root{color-scheme:light dark;--bg:#f6f7f9;--fg:#1d2430;--muted:#667085;--line:#e3e7ed;--card:#fff;--accent:#2563eb;--bad:#b42318;--good:#067647}
 @media(prefers-color-scheme:dark){:root{--bg:#11151c;--fg:#e6eaf0;--muted:#98a2b3;--line:#2b3442;--card:#1a202a;--accent:#7aa2ff;--bad:#f97066;--good:#6ce9a6}}
@@ -172,6 +181,7 @@ footer{margin-top:32px;color:var(--muted);font-size:12px}
 <body><main>
 <h1>${esc(run.benchmark)}</h1>
 <p class="sub">${esc(run.model)} · ${new Date(run.createdAt).toISOString()} · ${judge === undefined ? 'no judge' : `judge ${esc(judge.model)}`}</p>
+${runs.length === 2 ? renderComparison(runs[0]!, runs[1]!) : ''}
 <section class="cards">${cards}</section>
 <h2>Reliability</h2>
 ${table(['Dimension', 'pass@1', 'strict', 'pass@k', 'pass^k', 'Flaky', 'Unscored'], reliabilityRows)}
