@@ -10,6 +10,7 @@ const FAKE_SCRIPT = fileURLToPath(new URL('./fixtures/fake-dsh.mjs', import.meta
 const FIXTURE_LOG = fileURLToPath(new URL('./fixtures/session.jsonl', import.meta.url))
 const CHECK_OK = fileURLToPath(new URL('./fixtures/check-ok.mjs', import.meta.url))
 const CHECK_FAIL = fileURLToPath(new URL('./fixtures/check-fail.mjs', import.meta.url))
+const LINGERING_CHECK = fileURLToPath(new URL('./fixtures/check-lingering.mjs', import.meta.url))
 
 // Coverage instrumentation slows the real child spawns enough to exceed the
 // default five-second per-test timeout.
@@ -333,6 +334,22 @@ describe('dsh-eval benchmark runner', () => {
     }), { tempRoot: tempDir() })
     expect(Date.now() - started).toBeLessThan(8000)
     expect(run.cases[0]?.grade?.taskSuccess).toBe(false)
+  })
+
+  it('does not hang when a check leaves a grandchild holding stdio open', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const started = Date.now()
+    const run = await runBenchmark(buildBenchmark({
+      trials: 1,
+      timeoutMs: 1000,
+      cases: [{
+        id: 'lingering', prompt: 'p',
+        expected: { checkArgv: [process.execPath, LINGERING_CHECK] },
+      }],
+    }), { tempRoot: tempDir() })
+    expect(Date.now() - started).toBeLessThan(5000)
+    expect(run.cases[0]?.grade?.taskSuccess).toBe(true)
   })
 
   it('reads a failing or missing check as task failure', async () => {

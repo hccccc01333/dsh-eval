@@ -28,7 +28,7 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
   shell, `checkShell` is an explicit opt-in for pipes/redirection, and legacy
   `check` now uses a quote-aware splitter shared with `--dsh`. Check processes
   are detached and terminated as a group on timeout. A lingering grandchild
-  holding stdio open after its parent exits remains an edge case.
+  holding stdio open after its parent exits is now bounded: the runner resolves from `exit` after a short drain grace period instead of waiting for `close` forever.
 - ✅ **Richer tool expectations** (done). `tool` stays a substring match;
   `tools` (all), `toolAnyOf`, `toolRegex` (validated at load) and `toolNot`
   combine conjunctively into the same boolean `EvalGrade.toolSelectionAccuracy`.

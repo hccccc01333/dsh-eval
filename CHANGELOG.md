@@ -152,6 +152,12 @@
 - **Documentation matches the tree.** Both READMEs report 137 tests, and a
   session-log discovery test is renamed for the behavior it actually asserts.
 
+### Fixed
+
+- **A detached grandchild can no longer hang a check forever.** The runner now
+  resolves from the child's `exit` event after a short stdio drain grace period
+  even when `close` never arrives because an inherited pipe stays open.
+
 ## 0.4.0 — 2026-10-26
 
 ### Added

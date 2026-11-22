@@ -272,10 +272,24 @@ function runCommand(
       }, 1000)
       escalation.unref()
     }, timeoutMs)
+    let drainGuard: NodeJS.Timeout | undefined
     const clearTimers = (): void => {
       clearTimeout(timer)
       if (escalation !== undefined) clearTimeout(escalation)
+      if (drainGuard !== undefined) clearTimeout(drainGuard)
     }
+    child.on('exit', (code) => {
+      // A detached grandchild can inherit the pipes and keep `close` pending
+      // long after the direct child exited. Resolve from `exit` after a short
+      // drain grace period so a check cannot hang the whole trial.
+      /* v8 ignore next 6 -- Windows closes inherited pipes eagerly; only POSIX grandchildren can keep them open. */
+      drainGuard = setTimeout(() => {
+        if (settled) return
+        settled = true
+        resolveOutcome({ exitCode: code, timedOut, stdout, stderr })
+      }, 200)
+      drainGuard.unref()
+    })
     child.on('error', (error) => {
       clearTimers()
       /* v8 ignore next 3 -- spawn emits one error before close; the guard covers only an impossible duplicate error event. */
