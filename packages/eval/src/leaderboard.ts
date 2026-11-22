@@ -160,7 +160,7 @@ function gap(value: number | null, rank: number): string {
 }
 
 /** Format the paired verdict against the leader. */
-function significance(value: LeaderboardSignificance | null): string {
+export function formatLeaderboardSignificance(value: LeaderboardSignificance | null): string {
   if (value === null) return 'leader'
   if (value.verdict === 'unpaired') return 'unpaired'
   return `${value.verdict} (p=${value.adjustedP.toFixed(3)})`
@@ -183,7 +183,7 @@ export function renderLeaderboard(rows: readonly LeaderboardEntry[]): string {
   ]
   for (const row of rows) {
     const label = row.label.replace(/[\r\n|]/gu, ' ')
-    lines.push(`| ${row.rank} | ${label} | ${row.completed}/${row.total} | ${rate(row.taskSuccess)} | ${rate(row.strictPassAt1)} | ${rate(row.toolSelection)} | ${rate(row.judgeScore)} | ${row.costUsd === null ? '–' : `$${row.costUsd.toFixed(6)}`} | ${row.latencyMs === null ? '–' : `${row.latencyMs.toFixed(1)} ms`} | ${gap(row.gapFromBest, row.rank)} | ${significance(row.significance)} |`)
+    lines.push(`| ${row.rank} | ${label} | ${row.completed}/${row.total} | ${rate(row.taskSuccess)} | ${rate(row.strictPassAt1)} | ${rate(row.toolSelection)} | ${rate(row.judgeScore)} | ${row.costUsd === null ? '–' : `$${row.costUsd.toFixed(6)}`} | ${row.latencyMs === null ? '–' : `${row.latencyMs.toFixed(1)} ms`} | ${gap(row.gapFromBest, row.rank)} | ${formatLeaderboardSignificance(row.significance)} |`)
   }
   return `${lines.join('\n')}\n`
 }

@@ -184,7 +184,8 @@ describe('dsh-eval HTML dashboard', () => {
     expect(html).toContain('<h1>Leaderboard</h1>')
     expect(html).toContain('<th>Strict pass@1</th>')
     expect(html).toContain('<td>first — model</td>')
-    expect(html).toContain('dsh eval compare')
+    expect(html).toContain('<th>vs leader</th>')
+    expect(html).toContain('Bonferroni-corrected paired sign-test verdict')
     expect(html).not.toContain('<h2>Trials</h2>')
   })
 

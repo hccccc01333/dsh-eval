@@ -28,7 +28,7 @@
 - keyless 回放：有 key 时录一次，CI 里从录制日志复现
 - 跨 harness 导入：`dsh eval import codex|claude-code <log> --out run.json`
 - `dsh eval report run.json` —— 带每个 trial 评分、合并比率、可靠性与精度区块的 Markdown 报告；`--brief` 输出紧凑终端摘要，`--json` 输出全部派生区块的结构化数据
-- `dsh eval dashboard a.json [b.json ...] --out report.html` —— 独立 HTML 仪表盘：单个 run、双 run 对比，或三个及以上 run 的排行榜，自动适配深色模式，无外部依赖
+- `dsh eval dashboard a.json [b.json ...] --out report.html` —— 独立 HTML 仪表盘：单个 run、双 run 对比，或三个及以上 run 的排行榜（含对领先者的配对判定），自动适配深色模式，无外部依赖
 - `dsh eval validate benchmark.yaml [--json]` —— 运行前预检 benchmark，在花 token 前提示证据薄弱环节
 - `dsh eval leaderboard a.json b.json c.json` —— 按任务成功率给任意数量的 run 排名，显示与领先者的差距，并给出对领先者的 Bonferroni 校正配对判定；`--json` 便于自动化消费
 - `dsh eval gate candidate.json --baseline base.json --max-drop 0.05 [--require-significance] [--json]` —— CI 质量与资源预算门禁；显著性模式只在统计确认回退时失败

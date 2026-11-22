@@ -4,6 +4,8 @@
 
 ### Added
 
+- **Dashboard leaderboards match CLI leaderboards.** The HTML leaderboard now
+  renders the same corrected paired verdict column as `dsh eval leaderboard`.
 - **Leaderboard shows paired evidence against the leader.** Each non-leading
   row reports a Bonferroni-corrected sign-test verdict, so a small point-estimate
   gap is no longer mistaken for a real ranking change.

@@ -29,7 +29,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - Keyless replay: record once with a key, replay in CI from recorded logs
 - Cross-harness import: `dsh eval import codex|claude-code <log> --out run.json`
 - `dsh eval report run.json` — Markdown report with per-trial scores, pooled rates, reliability and precision blocks; `--brief` prints a compact terminal summary, `--json` emits all derived blocks as structured data
-- `dsh eval dashboard a.json [b.json ...] --out report.html` — standalone dark-mode-aware HTML dashboard: one run, two-run comparison, or a leaderboard for three or more, no external assets
+- `dsh eval dashboard a.json [b.json ...] --out report.html` — standalone dark-mode-aware HTML dashboard: one run, two-run comparison, or a leaderboard for three or more (including the paired verdict against the leader), no external assets
 - `dsh eval validate benchmark.yaml [--json]` — preflight a benchmark and warn about weak evidence before spending tokens
 - `dsh eval leaderboard a.json b.json c.json` — rank any number of runs by task success with gap-to-leader and a Bonferroni-corrected paired verdict against the leader; `--json` for automation
 - `dsh eval gate candidate.json --baseline base.json --max-drop 0.05 [--require-significance] [--json]` — CI quality and resource-budget gate; significance mode only fails on statistically confirmed regressions
