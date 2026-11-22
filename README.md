@@ -174,6 +174,9 @@ cd packages/eval && npx npm@11 stage publish
 # then approve the staged package at npmjs.com -> Staged Packages
 ```
 
+See [RELEASE.md](RELEASE.md) for the full release checklist, including the
+one-time Trusted Publisher setup and the manual OIDC identity check.
+
 ## License
 
 MIT

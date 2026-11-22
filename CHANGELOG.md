@@ -4,6 +4,8 @@
 
 ### Added
 
+- **Documented release procedure.** `RELEASE.md` lists the exact Trusted
+  Publisher fields, the manual OIDC identity check and the tag flow.
 - **Benchmark input provenance.** The SHA-256 fingerprint covers the YAML plus
   resolved prompt files, workspace trees and replay logs; it is stored on the
   run and shown in reports, preflight summaries and dashboards.

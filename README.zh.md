@@ -173,6 +173,9 @@ cd packages/eval && npx npm@11 stage publish
 # 然后在 npmjs.com -> Staged Packages 里批准
 ```
 
+完整发布清单(包括一次性的 Trusted Publisher 配置与手动 OIDC 身份检查)
+见 [RELEASE.md](RELEASE.md)。
+
 ## 许可
 
 MIT
