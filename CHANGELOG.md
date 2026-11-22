@@ -4,6 +4,12 @@
 
 ### Added
 
+- **Reliable scripted checks.** `expected.checkArgv` passes exact argv without
+  shell interpretation, `expected.checkShell` opts into pipes/redirection for
+  trusted benchmark files, and legacy `check` strings now honor quotes and
+  escapes via a splitter shared with `--dsh`. Check processes are detached and
+  killed as a process group at the trial timeout so a hung verifier cannot
+  stall a run. The schema rejects multiple simultaneous check modes.
 - **`dsh eval rejudge`.** Re-judge a stored run from its harvested traces and
   persisted case inputs without re-running the agent. `--judge-model` (plus
   optional provider, rubric, and max-score flags) supplies or replaces the judge

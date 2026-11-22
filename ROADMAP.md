@@ -24,13 +24,11 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
 
 ## P1 — scripted grading
 
-- **Check invocation modes.** `expected.check` is whitespace-split and spawned
-  without a shell, so quotes, pipes, arguments with spaces, `.cmd` files, and
-  Windows paths with spaces all fail indistinguishably from a failed agent.
-  Add `checkArgv` (exact argv) and `checkShell` (opt-in `shell: true`) while
-  keeping the current default. `runCommand` should kill a shell's process
-  group on timeout and guard against a lingering grandchild holding stdio open
-  forever. The same naive splitter affects `--dsh` in `command.ts`.
+- ✅ **Check invocation modes** (done). `checkArgv` passes exact argv without a
+  shell, `checkShell` is an explicit opt-in for pipes/redirection, and legacy
+  `check` now uses a quote-aware splitter shared with `--dsh`. Check processes
+  are detached and terminated as a group on timeout. A lingering grandchild
+  holding stdio open after its parent exits remains an edge case.
 - **Richer tool expectations.** Keep `tool` as a substring match for
   compatibility; add `tools` (all), `toolAnyOf`, `toolRegex` (validated at load)
   and `toolNot`. All remain booleans in `EvalGrade`.

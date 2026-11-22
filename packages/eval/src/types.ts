@@ -36,8 +36,12 @@ export interface BenchmarkCase {
 export interface BenchmarkExpectation {
   /** Substring matched against every recorded tool call name. */
   tool?: string
-  /** Command run in the trial workspace after the agent exits; exit 0 means task success. */
+  /** Legacy command string split on whitespace (and quotes) into argv; exit 0 means task success. */
   check?: string
+  /** Preferred structured argv for a check command; no shell interpretation. */
+  checkArgv?: readonly string[]
+  /** Opt-in shell command for checks needing pipes/redirection; benchmark files must be trusted. */
+  checkShell?: string
   /** Known-correct final answer handed to the LLM judge, when the task has one. */
   answer?: string
 }

@@ -67,6 +67,24 @@ describe('dsh-eval benchmark loading', () => {
     })
   })
 
+  it('preserves structured and shell check modes', async () => {
+    const benchmark = await parseBenchmark([
+      'name: checks',
+      'model: m',
+      'cases:',
+      '  - id: argv',
+      '    prompt: p',
+      '    expected:',
+      '      checkArgv: [node, check.mjs, "a b"]',
+      '  - id: shell',
+      '    prompt: q',
+      '    expected:',
+      '      checkShell: "npm test > result.txt"',
+    ].join('\n'), tempDir())
+    expect(benchmark.cases[0]?.expected).toEqual({ checkArgv: ['node', 'check.mjs', 'a b'] })
+    expect(benchmark.cases[1]?.expected).toEqual({ checkShell: 'npm test > result.txt' })
+  })
+
   it('keeps absolute workspace paths and inline prompts as-is', async () => {
     const dir = tempDir()
     const absolute = join(dir, 'abs')
@@ -213,7 +231,8 @@ describe('dsh-eval benchmark loading', () => {
     { name: 'both prompt sources', text: 'name: n\nmodel: m\ncases:\n  - id: a\n    prompt: p\n    promptFile: x.md\n', message: 'exactly one of prompt or promptFile' },
     { name: 'unknown key', text: 'name: n\nmodel: m\nbogus: 1\ncases:\n  - id: a\n    prompt: p\n', message: '' },
     { name: 'no cases', text: 'name: n\nmodel: m\ncases: []\n', message: '' },
-    { name: 'empty expected', text: 'name: n\nmodel: m\ncases:\n  - id: a\n    prompt: p\n    expected: {}\n', message: 'expected needs at least one of tool, check or answer' },
+    { name: 'empty expected', text: 'name: n\nmodel: m\ncases:\n  - id: a\n    prompt: p\n    expected: {}\n', message: 'expected needs at least one of tool, check, checkArgv, checkShell or answer' },
+     { name: 'multiple check modes', text: 'name: n\nmodel: m\ncases:\n  - id: a\n    prompt: p\n    expected:\n      check: echo hi\n      checkShell: echo hi\n', message: 'at most one of check, checkArgv or checkShell' },
     { name: 'zero concurrency', text: 'name: n\nmodel: m\nconcurrency: 0\ncases:\n  - id: a\n    prompt: p\n', message: '' },
     { name: 'fractional concurrency', text: 'name: n\nmodel: m\nconcurrency: 1.5\ncases:\n  - id: a\n    prompt: p\n', message: '' },
     { name: 'duplicate ids', text: 'name: n\nmodel: m\ncases:\n  - id: a\n    prompt: p\n  - id: a\n    prompt: q\n', message: 'collides with an earlier case' },

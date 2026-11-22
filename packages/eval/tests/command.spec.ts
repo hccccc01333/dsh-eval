@@ -299,6 +299,14 @@ describe('dsh-eval command composition', () => {
     expect(observed.err).toContain('--concurrency must be a positive integer')
   })
 
+  it('rejects an unterminated quote in --dsh', async () => {
+    const dir = tempDir()
+    const benchmarkPath = benchmarkYaml(dir)
+    const observed = await bootEval(['run', benchmarkPath, '--dsh', '"unclosed'])
+    expect(observed.exits).toEqual([1])
+    expect(observed.err).toContain('unterminated quote')
+  })
+
   it('exits 1 when a run has no completed trials', async () => {
     const dir = tempDir()
     const benchmarkPath = benchmarkYaml(dir)

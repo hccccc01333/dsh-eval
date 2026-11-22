@@ -39,11 +39,21 @@ const benchmarkCaseSchema = z.object({
   expected: z.object({
     tool: z.string().min(1).optional(),
     check: z.string().min(1).optional(),
+    checkArgv: z.array(z.string().min(1)).min(1).readonly().optional(),
+    checkShell: z.string().min(1).optional(),
     answer: z.string().min(1).optional(),
   }).strict().refine(
     expectation => expectation.tool !== undefined || expectation.check !== undefined
+      || expectation.checkArgv !== undefined || expectation.checkShell !== undefined
       || expectation.answer !== undefined,
-    { message: 'expected needs at least one of tool, check or answer' },
+    { message: 'expected needs at least one of tool, check, checkArgv, checkShell or answer' },
+  ).refine(
+    (expectation) => {
+      const commands = [expectation.check, expectation.checkArgv, expectation.checkShell]
+        .filter(value => value !== undefined)
+      return commands.length <= 1
+    },
+    { message: 'expected accepts at most one of check, checkArgv or checkShell' },
   ).optional(),
 }).strict().refine(
   caseValue => (caseValue.prompt === undefined) !== (caseValue.promptFile === undefined),
@@ -108,6 +118,8 @@ async function resolveCase(
         expected: {
           ...(parsed.expected.tool !== undefined ? { tool: parsed.expected.tool } : {}),
           ...(parsed.expected.check !== undefined ? { check: parsed.expected.check } : {}),
+          ...(parsed.expected.checkArgv !== undefined ? { checkArgv: parsed.expected.checkArgv } : {}),
+          ...(parsed.expected.checkShell !== undefined ? { checkShell: parsed.expected.checkShell } : {}),
           ...(parsed.expected.answer !== undefined ? { answer: parsed.expected.answer } : {}),
         },
       }

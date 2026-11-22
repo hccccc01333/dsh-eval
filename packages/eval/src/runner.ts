@@ -17,6 +17,7 @@ import { spawn } from 'node:child_process'
 import { cp, mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { splitArgv } from './argv.ts'
 import type { Benchmark, EvalRun, EvalTrialResult } from './types.ts'
 import type { EvalGrade, EvalRunGrading } from './types.ts'
 import { tryJudgeTrial, type JudgeChat } from './judge.ts'
@@ -97,11 +98,6 @@ function evalOverlay(replay: { file: string; childFiles: readonly string[] } | u
   return `${lines.join('\n')}\n`
 }
 
-/** Split a single command string into argv on whitespace. */
-function splitWords(value: string): string[] {
-  return value.trim().split(/\s+/u).filter(part => part !== '')
-}
-
 /**
  * Grade one trial against its expectations: the expected tool is matched
  * against recorded tool-call names, and the check command runs in the trial
@@ -126,9 +122,18 @@ async function gradeTrial(
     ? null
     : trace.events.some(event => event.type === 'tool/call' && event.data.name.includes(expectedTool))
   let taskSuccess: boolean | null = null
-  if (expected.check !== undefined) {
+  const shell = expected.checkShell !== undefined
+  const checkArgv = expected.checkArgv !== undefined
+    ? [...expected.checkArgv]
+    : shell ? [expected.checkShell!] : undefined
+  if (checkArgv !== undefined || expected.check !== undefined) {
     try {
-      const outcome = await runCommand(splitWords(expected.check), [], workspace, { ...process.env }, timeoutMs)
+      const command = checkArgv ?? splitArgv(expected.check!)
+      const outcome = await runCommand(command, [], workspace, { ...process.env }, timeoutMs, {
+        shell,
+        // A shell check can spawn grandchildren; kill the whole group on timeouts.
+        detached: true,
+      })
       taskSuccess = !outcome.timedOut && outcome.exitCode === 0
     } catch {
       taskSuccess = false
@@ -178,6 +183,7 @@ export function aggregateGrading(results: readonly EvalTrialResult[]): EvalRunGr
  * @param cwd - the child's working directory.
  * @param env - the child's environment.
  * @param timeoutMs - kill the child after this many milliseconds.
+ * @param options - opt-in shell interpretation and detached process-group kill.
  * @returns the orthogonal outcome facts.
  */
 function runCommand(
@@ -186,17 +192,20 @@ function runCommand(
   cwd: string,
   env: NodeJS.ProcessEnv,
   timeoutMs: number,
+  options: { shell?: boolean; detached?: boolean } = {},
 ): Promise<SpawnOutcome> {
   const executable = command[0]
   if (executable === undefined) {
     return Promise.reject(new Error('eval: dsh command must not be empty'))
   }
   return new Promise((resolveOutcome, reject) => {
-    const child = spawn(executable, [...command.slice(1), ...args], {
+    const child = spawn(executable, options.shell === true ? [] : [...command.slice(1), ...args], {
       cwd,
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
+      shell: options.shell === true,
+      detached: options.detached === true,
     })
     let stdout = ''
     let stderr = ''
@@ -217,11 +226,18 @@ function runCommand(
       // but is still draining its pipes must not be reported as timed out.
       /* v8 ignore next 2 -- exit-before-close is a narrow event-loop window no fixture can force deterministically. */
       if (child.exitCode !== null || child.signalCode !== null) return
+      const terminate = (signal: NodeJS.Signals): void => {
+        /* v8 ignore next 5 -- POSIX process-group kill; on Windows child.kill below kills the detached group. */
+        if (options.detached === true && process.platform !== 'win32' && child.pid !== undefined) {
+          try { process.kill(-child.pid, signal) } catch { /* the group is already gone */ }
+        }
+        child.kill(signal)
+      }
       timedOut = true
-      child.kill()
+      terminate('SIGTERM')
       /* v8 ignore next 5 -- escalation needs a child that ignores SIGTERM; the timeout fixture exits on the first signal. */
       escalation = setTimeout(() => {
-        if (!settled && child.exitCode === null && child.signalCode === null) child.kill('SIGKILL')
+        if (!settled && child.exitCode === null && child.signalCode === null) terminate('SIGKILL')
       }, 1000)
       escalation.unref()
     }, timeoutMs)

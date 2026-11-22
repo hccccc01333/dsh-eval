@@ -8,6 +8,7 @@
  */
 
 import { resolve } from 'node:path'
+import { splitArgv } from './argv.ts'
 import { Command } from 'commander'
 import type { Context } from '@deepseek-ai/cordis'
 import { parseCmdline } from '@deepseek-ai/dsh-cmdline'
@@ -80,10 +81,10 @@ interface ImportCommandOptions {
   caseId: string
 }
 
-/** Split a single `--dsh` value into argv on whitespace. */
+/** Split a single `--dsh` value into argv, honoring quotes and escapes. */
 function splitCommand(value: string | undefined): readonly string[] | undefined {
   if (value === undefined) return undefined
-  const command = value.trim().split(/\s+/u).filter(part => part !== '')
+  const command = splitArgv(value)
   return command.length === 0 ? undefined : command
 }
 
@@ -128,7 +129,14 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     .option('--dsh <cmd>', 'override the dsh launcher command, space-separated')
     .option('--profile <name>', 'override the spawned dsh profile')
     .action((benchmarkPath: string, options: RunCommandOptions) => {
-      const dshCommand = splitCommand(options.dsh)
+      let dshCommand: readonly string[] | undefined
+      try {
+        dshCommand = splitCommand(options.dsh)
+      } catch (error) {
+        /* v8 ignore next -- splitArgv only throws Error instances. */
+        const detail = error instanceof Error ? error.message : String(error)
+        program.error(`error: --dsh: ${detail}`)
+      }
       // An explicitly supplied but empty launcher is a typo, not "use the
       // default": silently falling back hides the mistake behind a run whose
       // only symptom is an empty stderr and failed trials.

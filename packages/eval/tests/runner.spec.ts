@@ -277,6 +277,38 @@ describe('dsh-eval benchmark runner', () => {
     expect(failing.grading?.taskSuccessRate).toBe(0)
   })
 
+  it('runs checkArgv verbatim and supports opt-in shell checks', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const argv = await runBenchmark(buildBenchmark({
+      trials: 1,
+      cases: [{ id: 'argv', prompt: 'p', expected: { checkArgv: [process.execPath, CHECK_OK, 'a b'] } }],
+    }), { tempRoot: tempDir() })
+    expect(argv.cases[0]?.grade?.taskSuccess).toBe(true)
+
+    const shell = await runBenchmark(buildBenchmark({
+      trials: 1,
+      cases: [{ id: 'shell', prompt: 'p', expected: { checkShell: `"${process.execPath}" "${CHECK_OK}"` } }],
+    }), { tempRoot: tempDir() })
+    expect(shell.cases[0]?.grade?.taskSuccess).toBe(true)
+  })
+
+  it('kills a hanging detached check at the trial timeout', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const started = Date.now()
+    const run = await runBenchmark(buildBenchmark({
+      trials: 1,
+      timeoutMs: 1000,
+      cases: [{
+        id: 'hanging', prompt: 'p',
+        expected: { checkArgv: [process.execPath, '-e', 'setTimeout(() => {}, 30000)'] },
+      }],
+    }), { tempRoot: tempDir() })
+    expect(Date.now() - started).toBeLessThan(8000)
+    expect(run.cases[0]?.grade?.taskSuccess).toBe(false)
+  })
+
   it('reads a failing or missing check as task failure', async () => {
     process.env.FAKE_DASH_MODE = 'log'
     process.env.FAKE_DASH_LOG = FIXTURE_LOG

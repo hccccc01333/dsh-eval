@@ -55,7 +55,7 @@ pricing:
 | `cases[].id` | 必填 | 稳定的 case id。 |
 | `cases[].prompt` / `cases[].promptFile` | 二选一 | 任务文本，内联或相对 benchmark 文件解析。 |
 | `cases[].workspace` | 缺省 | 复制进每个 trial 的工作区树，相对或绝对路径。 |
-| `cases[].expected` | 缺省 | 脚本化评分：`tool` 是对记录到的工具调用名做子串匹配；`check` 是 agent 退出后在 trial 工作区运行的命令（退出码 0 = 任务成功）；`answer` 是交给 judge 的金标答案，用于按事实一致性打分。填了就必须至少给一个。 |
+| `cases[].expected` | 缺省 | 脚本化评分：`tool` 是对记录到的工具调用名做子串匹配；`checkArgv`（推荐）、`check`（旧字符串形式，支持引号）或 `checkShell`（显式启用，支持管道/重定向）是 agent 退出后在 trial 工作区运行的命令（退出码 0 = 任务成功）；`answer` 是交给 judge 的金标答案。填了就必须至少给一个，且最多一种 check 模式。check 进程以独立进程组运行，超时整组终止。 |
 | `pricing` | 缺省 | 以模型 id 为键的每百万 token 美元价；未配置的模型报 `costUsd: null`。 |
 
 ### Judge
@@ -83,7 +83,7 @@ judge 用 case 与合并后的 trace 构造一个严格 JSON 的 prompt。回复
 
 ## 指标
 
-指标折叠直接从 session 日志计算自动指标：`turns`、`steps`、`toolCalls`、`toolResults`、`toolSuccess` 与 `toolSuccessRate`、`invalidToolCalls`（携带内部失败身份的 result）、`retries`（`llm/retry`）、互不重叠的 token 桶与合计、计费上下文 token、`llmMs`/`toolMs`/`ttftMs`/`latencyMs`，以及配置了定价后的 `costUsd`。脚本化评分增加每个 trial 的 `taskSuccess`（check 命令退出码 0）与 `toolSelectionAccuracy`（命中预期工具），并合并为 run 级比率。
+指标折叠直接从 session 日志计算自动指标：`turns`、`steps`、`toolCalls`、`toolResults`、`toolSuccess` 与 `toolSuccessRate`、`invalidToolCalls`（携带内部失败身份的 result）、`retries`（`llm/retry`）、互不重叠的 token 桶与合计、计费上下文 token、`llmMs`/`toolMs`/`ttftMs`/`latencyMs`，以及配置了定价后的 `costUsd`。脚本化评分增加每个 trial 的 `taskSuccess`（check 命令退出码 0）与 `toolSelectionAccuracy`（命中预期工具），并合并为 run 级比率。`checkArgv` 完全不经过 shell；`checkShell` 仅用于可信 benchmark 文件中需要管道或重定向的场景。卡住的 check 会在 trial 超时时连同整个进程组一起终止，不会拖住整个 run。
 
 trial `DSH_HOME` 下的子 session 日志在折叠前合并进 trial trace，因此委派给子 agent 的工作也计入 steps、token、工具调用、重试与延迟。judge 裁决增加每个 trial 的 `finalAnswerScore` 与 `hallucination`，并合并为 run 级平均分与幻觉率。
 
