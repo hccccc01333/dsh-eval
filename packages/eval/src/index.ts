@@ -127,7 +127,11 @@ export async function executeEval(
         loadRunReport(values.candidatePath),
         loadRunReport(values.baselinePath),
       ])
-      const result = evaluateGate(baseline, candidate, values.maxDrop, values.allowIncomplete)
+      const budgets = {
+        ...(values.maxCostIncrease === undefined ? {} : { maxCostIncrease: values.maxCostIncrease }),
+        ...(values.maxLatencyIncrease === undefined ? {} : { maxLatencyIncrease: values.maxLatencyIncrease }),
+      }
+      const result = evaluateGate(baseline, candidate, values.maxDrop, values.allowIncomplete, budgets)
       io.stdout.write(renderGate(result))
       return result.passed ? 0 : 1
     }

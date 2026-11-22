@@ -50,6 +50,8 @@ export type EvalStartupValues =
     candidatePath: string
     baselinePath: string
     maxDrop: number
+    maxCostIncrease?: number
+    maxLatencyIncrease?: number
     allowIncomplete: boolean
   }
   | {
@@ -215,10 +217,14 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
     .argument('<candidate.json>', 'path to the candidate run report')
     .option('--baseline <path>', 'path to the trusted baseline run report')
     .option('--max-drop <ratio>', 'largest tolerated quality regression, 0..1', unitRatio(program, '--max-drop'), 0)
+    .option('--max-cost-increase <ratio>', 'largest tolerated cost/trial increase over baseline, 0..1', unitRatio(program, '--max-cost-increase'))
+    .option('--max-latency-increase <ratio>', 'largest tolerated latency/trial increase over baseline, 0..1', unitRatio(program, '--max-latency-increase'))
     .option('--allow-incomplete', 'do not fail on extra unscored trials')
     .action((candidatePath: string, options: {
       baseline?: string
       maxDrop: number
+      maxCostIncrease?: number
+      maxLatencyIncrease?: number
       allowIncomplete?: boolean
     }) => {
       if (options.baseline === undefined) program.error('error: gate needs --baseline <path>')
@@ -227,6 +233,8 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
         candidatePath,
         baselinePath: options.baseline!,
         maxDrop: options.maxDrop,
+        ...(options.maxCostIncrease === undefined ? {} : { maxCostIncrease: options.maxCostIncrease }),
+        ...(options.maxLatencyIncrease === undefined ? {} : { maxLatencyIncrease: options.maxLatencyIncrease }),
         allowIncomplete: options.allowIncomplete === true,
       })
     })

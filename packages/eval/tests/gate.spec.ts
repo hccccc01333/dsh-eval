@@ -21,6 +21,14 @@ function buildRun(overrides: Partial<EvalRun> = {}): EvalRun {
   }
 }
 
+const METRICS = {
+  turns: 1, steps: 1, toolCalls: 1, toolResults: 1, toolSuccess: 1, toolSuccessRate: 1,
+  invalidToolCalls: 0, retries: 0,
+  tokens: { inputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
+  totalTokens: 1, contextTokens: 1, llmMs: 1, toolMs: 1, ttftMs: 1,
+  latencyMs: 100, costUsd: 0.000002,
+}
+
 describe('dsh-eval CI gate', () => {
   it('passes an identical candidate and renders a readable table', () => {
     const result = evaluateGate(buildRun(), buildRun(), 0)
@@ -31,6 +39,78 @@ describe('dsh-eval CI gate', () => {
     expect(markdown).toContain('| task success | 100.0% | 100.0% | +0.0pp | PASS |')
     expect(markdown).toContain('| completed trials | 1 | 1 | +0 | PASS |')
     expect(markdown).toContain('- max tolerated drop: 0.0 percentage points')
+  })
+
+  it('checks relative cost and latency budgets when enabled', () => {
+    const baseline = buildRun({ aggregate: METRICS })
+    const candidate = buildRun({
+      aggregate: { ...METRICS, costUsd: 0.0000022, latencyMs: 110 },
+    })
+    const result = evaluateGate(baseline, candidate, 0, false, {
+      maxCostIncrease: 0.1, maxLatencyIncrease: 0.1,
+    })
+    expect(result.passed).toBe(true)
+    expect(result.checks).toHaveLength(8)
+    expect(result.maxCostIncrease).toBe(0.1)
+    expect(result.maxLatencyIncrease).toBe(0.1)
+    const markdown = renderGate(result)
+    expect(markdown).toContain('- max tolerated cost increase: 10.0%')
+    expect(markdown).toContain('- max tolerated latency increase: 10.0%')
+    expect(markdown).toContain('| cost/trial | $0.000002 | $0.000002 | +10.0% | PASS |')
+    expect(markdown).toContain('| latency/trial | 100.0 ms | 110.0 ms | +10.0% | PASS |')
+  })
+
+  it('fails when a resource budget is exceeded', () => {
+    const result = evaluateGate(
+      buildRun({ aggregate: METRICS }),
+      buildRun({ aggregate: { ...METRICS, costUsd: 0.000004 } }),
+      0, false, { maxCostIncrease: 0.1 },
+    )
+    expect(result.passed).toBe(false)
+    expect(result.checks.at(-1)).toMatchObject({ metric: 'cost/trial', passed: false })
+    expect(renderGate(result)).toContain('+100.0% | FAIL |')
+  })
+
+  it('skips a budget when the baseline is unpriced and fails when the candidate is', () => {
+    const skipped = evaluateGate(buildRun(), buildRun({ aggregate: METRICS }), 0, false, {
+      maxCostIncrease: 0.1,
+    })
+    expect(skipped.passed).toBe(true)
+    expect(skipped.checks.at(-1)).toMatchObject({ note: 'baseline unpriced — check skipped', passed: true })
+    const failed = evaluateGate(buildRun({ aggregate: METRICS }), buildRun(), 0, false, {
+      maxCostIncrease: 0.1,
+    })
+    expect(failed.passed).toBe(false)
+    expect(failed.checks.at(-1)).toMatchObject({ note: 'candidate unpriced', passed: false })
+  })
+
+  it('skips a latency budget when the baseline has no metrics', () => {
+    const result = evaluateGate(buildRun(), buildRun({ aggregate: METRICS }), 0, false, {
+      maxLatencyIncrease: 0.1,
+    })
+    expect(result.checks.at(-1)).toMatchObject({
+      metric: 'latency/trial', note: 'baseline unpriced — check skipped', passed: true,
+    })
+  })
+
+  it('renders absolute deltas when a zero baseline has no relative value', () => {
+    const result = evaluateGate(
+      buildRun({ aggregate: { ...METRICS, latencyMs: 0 } }),
+      buildRun({ aggregate: { ...METRICS, latencyMs: 0 } }),
+      0, false, { maxLatencyIncrease: 0.1 },
+    )
+    expect(result.passed).toBe(true)
+    expect(renderGate(result)).toContain('| 0.0 ms | 0.0 ms | +0.00 | PASS |')
+  })
+
+  it('keeps budget checks disabled for null or omitted values', () => {
+    const result = evaluateGate(buildRun(), buildRun(), 0, false, {
+      maxCostIncrease: null, maxLatencyIncrease: null,
+    })
+    expect(result.checks).toHaveLength(6)
+    expect(result.maxCostIncrease).toBeUndefined()
+    expect(result.maxLatencyIncrease).toBeUndefined()
+    expect(renderGate(result)).not.toContain('max tolerated cost increase')
   })
 
   it('fails when a rate drops beyond the tolerance', () => {

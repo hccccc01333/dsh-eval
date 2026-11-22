@@ -269,6 +269,21 @@ describe('dsh-eval command composition', () => {
       .toEqual([0])
     expect((await bootEval(['gate', candidatePath, '--baseline', baselinePath, '--allow-incomplete'])).exits)
       .toEqual([0])
+
+    const published: EvalStartupValues[] = []
+    const parser = evalCommand(value => published.push(value))
+    await parser.parseAsync([
+      'node', 'eval', 'gate', candidatePath, '--baseline', baselinePath,
+      '--max-cost-increase', '0.1', '--max-latency-increase', '0.2',
+    ])
+    expect(published.at(-1)).toMatchObject({ maxCostIncrease: 0.1, maxLatencyIncrease: 0.2 })
+    expect((await bootEval([
+      'gate', candidatePath, '--baseline', baselinePath, '--max-cost-increase', '2',
+    ])).err).toContain('between 0 and 1')
+    expect((await bootEval([
+      'gate', candidatePath, '--baseline', baselinePath,
+      '--max-cost-increase', '0.1', '--max-latency-increase', '0.2',
+    ])).exits).toEqual([0])
   })
 
   it('renders an HTML dashboard through the CLI', async () => {

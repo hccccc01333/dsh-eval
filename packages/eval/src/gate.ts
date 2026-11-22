@@ -19,8 +19,8 @@ export interface GateCheck {
   candidate: number | null
   delta: number | null
   passed: boolean
-  /** Count checks print integers; the default is a 0..1 rate. */
-  unit?: 'count'
+  /** Count checks print integers; rates print percentages; budgets print money/time. */
+  unit?: 'count' | 'usd' | 'ms'
   note?: string
 }
 
@@ -40,6 +40,16 @@ export interface GateResult {
   maxDrop: number
   /** Optional for callers that only need the aggregate verdict. */
   regressions?: readonly CaseRegression[]
+  /** Enabled relative cost budget, if any. */
+  maxCostIncrease?: number
+  /** Enabled relative latency budget, if any. */
+  maxLatencyIncrease?: number
+}
+
+/** Optional resource budgets for a gate run. */
+export interface GateBudgets {
+  maxCostIncrease?: number | null
+  maxLatencyIncrease?: number | null
 }
 
 /** Normalized judge score for a run, or null when ungraded. */
@@ -109,12 +119,33 @@ function compareRate(
   return { metric, baseline, candidate, delta, passed: delta >= -maxDrop }
 }
 
+/** Compare two resource figures against a relative increase budget. */
+function compareBudget(
+  metric: string,
+  baseline: number | null,
+  candidate: number | null,
+  maxIncrease: number,
+  unit: 'usd' | 'ms',
+): GateCheck {
+  if (baseline === null) {
+    return { metric, baseline, candidate, delta: null, passed: true, unit, note: 'baseline unpriced — check skipped' }
+  }
+  if (candidate === null) {
+    return { metric, baseline, candidate, delta: null, passed: false, unit, note: 'candidate unpriced' }
+  }
+  const delta = candidate - baseline
+  // Floating-point noise at 1e-9 of the baseline must not fail an exact budget.
+  const limit = baseline * maxIncrease + Math.abs(baseline) * 1e-9
+  return { metric, baseline, candidate, delta, passed: delta <= limit, unit }
+}
+
 /**
  * Evaluate a candidate run against a baseline.
  * @param baseline - the trusted reference run.
  * @param candidate - the run under test.
  * @param maxDrop - largest tolerated regression on the 0..1 scale.
  * @param allowIncomplete - skip the trial-coverage checks when true.
+ * @param budgets - optional relative cost and latency increase limits.
  * @returns the per-metric checks and the overall decision.
  */
 export function evaluateGate(
@@ -122,6 +153,7 @@ export function evaluateGate(
   candidate: EvalRun,
   maxDrop: number,
   allowIncomplete = false,
+  budgets: GateBudgets = {},
 ): GateResult {
   const baseCoverage = computeCoverage(baseline)
   const candCoverage = computeCoverage(candidate)
@@ -150,10 +182,22 @@ export function evaluateGate(
       candTask?.strictPassAt1 ?? null, maxDrop),
     compareRate('judge score', scoreRate(baseline), scoreRate(candidate), maxDrop),
   )
+  if (budgets.maxCostIncrease !== undefined && budgets.maxCostIncrease !== null) {
+    checks.push(compareBudget('cost/trial', baseline.aggregate?.costUsd ?? null,
+      candidate.aggregate?.costUsd ?? null, budgets.maxCostIncrease, 'usd'))
+  }
+  if (budgets.maxLatencyIncrease !== undefined && budgets.maxLatencyIncrease !== null) {
+    checks.push(compareBudget('latency/trial', baseline.aggregate?.latencyMs ?? null,
+      candidate.aggregate?.latencyMs ?? null, budgets.maxLatencyIncrease, 'ms'))
+  }
   return {
     checks,
     passed: checks.every(check => check.passed),
     maxDrop,
+    ...(budgets.maxCostIncrease === undefined || budgets.maxCostIncrease === null
+      ? {} : { maxCostIncrease: budgets.maxCostIncrease }),
+    ...(budgets.maxLatencyIncrease === undefined || budgets.maxLatencyIncrease === null
+      ? {} : { maxLatencyIncrease: budgets.maxLatencyIncrease }),
     regressions: findRegressions(baseline, candidate, maxDrop),
   }
 }
@@ -162,6 +206,8 @@ export function evaluateGate(
 function format(value: number | null, check: GateCheck): string {
   if (value === null) return '–'
   if (check.unit === 'count') return String(value)
+  if (check.unit === 'usd') return `$${value.toFixed(6)}`
+  if (check.unit === 'ms') return `${value.toFixed(1)} ms`
   return `${(value * 100).toFixed(1)}%`
 }
 
@@ -169,9 +215,13 @@ function format(value: number | null, check: GateCheck): string {
 function formatDelta(value: number | null, check: GateCheck): string {
   if (value === null) return '–'
   const sign = value >= 0 ? '+' : ''
-  return check.unit === 'count'
-    ? `${sign}${value}`
-    : `${sign}${(value * 100).toFixed(1)}pp`
+  if (check.unit === 'count') return `${sign}${value}`
+  if (check.unit === 'usd' || check.unit === 'ms') {
+    const relative = check.baseline === null || check.baseline === 0
+      ? null : (value / check.baseline) * 100
+    return relative === null ? `${sign}${value.toFixed(2)}` : `${sign}${relative.toFixed(1)}%`
+  }
+  return `${sign}${(value * 100).toFixed(1)}pp`
 }
 
 /**
@@ -192,6 +242,8 @@ export function renderGate(result: GateResult): string {
     `# Gate: ${result.passed ? 'PASS' : 'FAIL'}`,
     '',
     `- max tolerated drop: ${(result.maxDrop * 100).toFixed(1)} percentage points`,
+    ...(result.maxCostIncrease === undefined ? [] : [`- max tolerated cost increase: ${(result.maxCostIncrease * 100).toFixed(1)}%`]),
+    ...(result.maxLatencyIncrease === undefined ? [] : [`- max tolerated latency increase: ${(result.maxLatencyIncrease * 100).toFixed(1)}%`]),
     '',
     '| check | baseline | candidate | Δ | result |',
     '|---|---|---|---|---|',

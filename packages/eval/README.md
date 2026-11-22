@@ -179,6 +179,13 @@ by its run's `maxScore`), so one tolerance applies to every quality metric. The
 command prints a markdown PASS/FAIL table and exits 1 on any regression beyond
 the tolerance, making it suitable as a required CI step.
 
+Optional `--max-cost-increase 0.1` and `--max-latency-increase 0.2` add
+relative resource budgets, so a candidate that keeps quality but costs 2x more
+still fails. Budget rows print absolute values with a relative delta; a missing
+baseline metric skips that budget, while a missing candidate metric fails
+closed. A tiny relative tolerance absorbs floating-point noise at 1e-9 of the
+baseline without masking a real overrun.
+
 When paired trials exist, the verdict also lists up to five case x trials that
 flipped from pass to fail (or lost judge score), with case ids sanitized for
 markdown, so a failing gate points at what to investigate instead of only a

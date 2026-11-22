@@ -51,8 +51,10 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
   turning a single kappa into an actionable rubric-improvement list.
 - ✅ **CI quality gate** (`dsh eval gate`). Compares a candidate against a
   baseline on coverage, task/tool rates, strict pass@1 and normalized judge
-  score with one `--max-drop` tolerance; exits nonzero on regressions. Missing
-  candidate metrics fail closed; `--allow-incomplete` relaxes coverage checks.
+  score with one `--max-drop` tolerance; exits nonzero on regressions. Optional
+  `--max-cost-increase` / `--max-latency-increase` add relative resource budgets
+  so a more expensive candidate also fails. Missing candidate metrics fail
+  closed; `--allow-incomplete` relaxes coverage checks.
 
 ## P2 — polish
 

@@ -4,6 +4,11 @@
 
 ### Added
 
+- **Resource budgets in the CI gate.** `dsh eval gate` now accepts
+  `--max-cost-increase` and `--max-latency-increase` as relative limits, so a
+  candidate that preserves quality but costs more still fails the build. The
+  markdown table shows absolute values with relative deltas; unpriced baselines
+  skip the budget and unpriced candidates fail closed.
 - **HTML leaderboard page.** `dsh eval dashboard a.json b.json c.json` now
   accepts three or more runs and writes a standalone leaderboard page with the
   same ranking, rates and gap-to-leader column as `dsh eval leaderboard`. The
