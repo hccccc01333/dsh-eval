@@ -80,7 +80,7 @@ export interface Benchmark {
   concurrency: number
   /** Per-trial timeout in milliseconds. */
   timeoutMs: number
-  /** Reserved deterministic seed for future paired comparisons. */
+  /** Deterministic seed; trial n receives `DSH_EVAL_SEED = seed + n - 1`. */
   seed: number
   /** The benchmark's cases, in order. */
   cases: readonly BenchmarkCase[]
@@ -216,6 +216,16 @@ export interface EvalRunGrading {
   judgeFailures?: number
 }
 
+/** Minimal case input needed to re-judge a stored trial without the benchmark file. */
+export interface EvalCaseInput {
+  /** Case id matching the trial results. */
+  caseId: string
+  /** Task text handed to the agent and the judge. */
+  prompt: string
+  /** Gold answer handed to the judge, when the case had one. */
+  answer?: string
+}
+
 /** A persisted eval run. */
 export interface EvalRun {
   /** Benchmark name. */
@@ -226,7 +236,7 @@ export interface EvalRun {
   createdAt: number
   /** Trials per case actually executed. */
   trials: number
-  /** Benchmark seed. */
+  /** Benchmark seed; also the base for per-trial `DSH_EVAL_SEED` values. */
   seed: number
   /** Resolved pricing for the benchmark model, or null without one. */
   pricing: BenchmarkPricing | null
@@ -236,6 +246,8 @@ export interface EvalRun {
   tempRoot: string
   /** Per-trial outcomes in execution order. */
   cases: readonly EvalTrialResult[]
+  /** Case prompts and gold answers, so a stored run can be re-judged. */
+  caseInputs?: readonly EvalCaseInput[]
   /** Mean/pooled metrics over completed trials, or null when none completed. */
   aggregate: EvalCaseMetrics | null
   /** Pooled scripted-grading rates over completed trials, or null when ungraded. */

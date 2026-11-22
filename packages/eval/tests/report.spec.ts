@@ -37,7 +37,10 @@ describe('dsh-eval report persistence and rendering', () => {
   it('writes and loads a run report, creating parent directories', async () => {
     const dir = tempDir()
     const path = join(dir, 'nested', 'run.json')
-    const run = buildRun({ benchmark: 'roundtrip' })
+    const run = buildRun({
+      benchmark: 'roundtrip',
+      caseInputs: [{ caseId: 'c', prompt: 'p', answer: '42' }],
+    })
     await writeRunReport(run, path)
     expect(readFileSync(path, 'utf8')).toMatch(/"benchmark": "roundtrip"/u)
     expect(await loadRunReport(path)).toEqual(run)

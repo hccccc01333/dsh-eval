@@ -5,19 +5,18 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
 
 ## P0 — reproducibility
 
-- **Make `seed` reach each trial.** `Benchmark.seed` is currently only stored in
-  the run record and used as the bootstrap PRNG seed. It never reaches a child
-  process (`packages/eval/src/runner.ts`, spawn env). Pass it as
-  `DSH_EVAL_SEED=<seed + trial - 1>` in the trial env — a one-line, backward
-  compatible change — and document that harnesses/plugins may read it. An
-  argv flag is riskier because unknown flags break harnesses.
-- **Persist case inputs.** `EvalRun` stores trial results but not the case
-  `prompt` or `expected.answer`. Add an optional `caseInputs` field to the run
-  and report schema so a report alone is sufficient for re-judging.
+- ✅ **Make `seed` reach each trial** (done). Trial n now receives
+  `DSH_EVAL_SEED = seed + n - 1` in its environment (`runner.ts` spawn env);
+  the same base seed drives report bootstraps. Harnesses must read the variable
+  for deterministic sampling.
+- ✅ **Persist case inputs** (done). `EvalRun.caseInputs` and the report schema
+  store each case's `prompt` and optional `answer`, so a report alone carries
+  the data `buildJudgePrompt` needs.
 
 ## P1 — offline re-judging
 
-- **`dsh eval rejudge run.json [--out ...]`.** Reuse `loadRunReport`,
+- **`dsh eval rejudge run.json [--out ...]`.** Now unblocked by `caseInputs`.
+  Reuse `loadRunReport`,
   `loadTrace`/`mergeTraces` over `tracePaths`, `tryJudgeTrial`, and the stored
   `run.judge` config; re-aggregate grading and write a new report. This also
   enables a keyless two-phase workflow: replay a run without a judge, then

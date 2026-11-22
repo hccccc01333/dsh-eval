@@ -52,6 +52,39 @@ function buildBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {
 }
 
 describe('dsh-eval benchmark runner', () => {
+  it('passes a distinct derived seed to every trial', async () => {
+    const dir = tempDir()
+    const script = join(dir, 'seed-dsh.mjs')
+    writeFileSync(script, [
+      "import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs'",
+      "import { join } from 'node:path'",
+      "writeFileSync(join(process.cwd(), 'seed.txt'), process.env.DSH_EVAL_SEED ?? 'missing')",
+      "const dir = join(process.env.DSH_HOME, 'sessions', 'project', 'session-1')",
+      'mkdirSync(dir, { recursive: true })',
+      "copyFileSync(process.env.FAKE_DASH_LOG, join(dir, 'session.jsonl'))",
+      '',
+    ].join('\n'))
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const run = await runBenchmark(buildBenchmark({
+      seed: 41, trials: 3, command: [process.execPath, script],
+    }), { tempRoot: tempDir() })
+    expect(run.cases.map((_, index) => readFileSync(
+      join(run.tempRoot, `hello-${index + 1}`, 'workspace', 'seed.txt'), 'utf8',
+    ))).toEqual(['41', '42', '43'])
+  })
+
+  it('persists case inputs so a stored run can be re-judged', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const run = await runBenchmark(buildBenchmark({
+      trials: 1,
+      cases: [{ id: 'golden', prompt: 'What is the answer?', expected: { answer: '42' } }],
+    }), { tempRoot: tempDir() })
+    expect(run.caseInputs).toEqual([{
+      caseId: 'golden', prompt: 'What is the answer?', answer: '42',
+    }])
+  })
+
   it('runs every trial, harvests traces, and folds metrics', async () => {
     process.env.FAKE_DASH_MODE = 'log'
     process.env.FAKE_DASH_LOG = FIXTURE_LOG

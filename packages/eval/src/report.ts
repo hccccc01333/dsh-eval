@@ -107,6 +107,11 @@ const runReportSchema = z.object({
   judge: judgeConfigSchema.optional(),
   tempRoot: z.string(),
   cases: z.array(trialSchema),
+  caseInputs: z.array(z.object({
+    caseId: z.string(),
+    prompt: z.string(),
+    answer: z.string().optional(),
+  })).optional(),
   aggregate: metricsSchema.nullable(),
   grading: gradingSchema.nullable(),
 })

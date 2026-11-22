@@ -4,6 +4,12 @@
 
 ### Added
 
+- **Reproducible trial seeds and re-judgeable reports.** Trial n now receives
+  `DSH_EVAL_SEED = seed + n - 1` in its child environment, so harnesses that
+  read it can sample deterministically; the base seed still drives report
+  bootstraps. Runs also persist `caseInputs` (case id, prompt, optional gold
+  answer) in the JSON report, which is the data the judge prompt needs for a
+  future offline re-judge command. Both additions are backward compatible.
 - **Compact `--brief` report mode.** `dsh eval report run.json --brief` prints
   trial coverage, per-trial tool/step/token/cost figures, the task rate with
   pass@k/pass^k, the seeded interval, and the judge-failure count without the

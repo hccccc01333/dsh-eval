@@ -51,7 +51,7 @@ pricing:
 | `trials` | `1` | 每个 case 的 trial 数。 |
 | `concurrency` | `1` | 同时在跑的 case × trial 数；`1` 表示严格串行。 |
 | `timeoutMs` | `600000` | 每个 trial 的超时；到期杀掉直接子进程。 |
-| `seed` | `0` | 为将来的确定性配对比较预留。 |
+| `seed` | `0` | 基础种子：第 n 个 trial 的环境变量为 `DSH_EVAL_SEED=seed+n-1`，该值同时用于报告 bootstrap。harness 需读取该变量才能实现确定性采样。 |
 | `cases[].id` | 必填 | 稳定的 case id。 |
 | `cases[].prompt` / `cases[].promptFile` | 二选一 | 任务文本，内联或相对 benchmark 文件解析。 |
 | `cases[].workspace` | 缺省 | 复制进每个 trial 的工作区树，相对或绝对路径。 |
@@ -99,7 +99,7 @@ Markdown 报告会为每个评分维度（任务成功、工具选择准确率�
 
 ## 对比
 
-`dsh eval compare run-v1.json run-v2.json` 把两个 run 渲染成 Markdown 表：benchmark/模型标识、完成的 trial 数、steps、工具/任务/工具选择成功率、两个评分维度的 pass@k 与 pass^k、无效调用、重试、token、成本与延迟，并给出带符号的 `B - A` 差值。当两个 run 完成的 case × trial 键完全一致时，表尾追加配对统计：trial 数、按第一个可用指标（任务成功、工具选择准确率、最终答案得分）的胜/负/平，以及 steps、token、judge 得分的 `B - A` 均值差。两个 run 的 `seed` 是配对的可追溯出处，不保证模型输出一致。
+`dsh eval compare run-v1.json run-v2.json` 把两个 run 渲染成 Markdown 表：benchmark/模型标识、完成的 trial 数、steps、工具/任务/工具选择成功率、两个评分维度的 pass@k 与 pass^k、无效调用、重试、token、成本与延迟，并给出带符号的 `B - A` 差值。当两个 run 完成的 case × trial 键完全一致时，表尾追加配对统计：trial 数、按第一个可用指标（任务成功、工具选择准确率、最终答案得分）的胜/负/平，以及 steps、token、judge 得分的 `B - A` 均值差。每个 run 的 `seed` 既是配对的可追溯出处，也注入到每个 trial 的 `DSH_EVAL_SEED`；是否确定性仍取决于 harness 是否读取该变量。
 
 配对样本量小、差值不服从正态，所以配对区块除了点估计还给出推断：对主指标的不一致对做**精确双侧符号检验**（同分的对按要求剔除），并在每个均值差旁给出**固定种子 bootstrap 区间**。不对差值分布的形状做任何假设，PRNG 种子固定，因此同一对报告重跑 `compare` 输出逐字节一致。符号检验的 p 值与输出的每个区间构成一个推断族，用 **Bonferroni** 在族错误率 `alpha = 0.05` 下一并校正：p 值所在行标注其乘上的族大小，每个区间放宽到 `1 - 0.05/k` 置信度（例如 p 值与三个区间同时存在时为 98.8%）。符号检验仍需要不一致对才能给出结论：全部同分的 run 报 `p = 1`。
 
@@ -139,7 +139,7 @@ replay:
 ## 已知限制与延后项
 
 - **judge 输出尽力而为但不再静默** —— 失败或无法解析的裁决带 `judgeError` 并计入 `grading.judgeFailures`；judge 调用消耗的模型额度不计入 trial 的计量成本。
-- **配对对比按现状配对** —— trial 按 case id 与 trial 序号配对；`seed` 是记录下来的出处，并不确定性保证模型输出一致，按实验组（arm）的排行榜尚未渲染。
+- **配对对比按现状配对** —— trial 按 case id 与 trial 序号配对；`seed` 传入每个 trial 的 `DSH_EVAL_SEED` 并作为出处记录，但确定性取决于 harness 是否遵守该变量；按实验组（arm）的排行榜尚未渲染。
 - **Bonferroni 偏保守** —— 它在不假设各推断独立的前提下控制族错误率，代价是区间更宽；符号检验仍需要不一致对才能给出结论，全部同分的 run 报 `p = 1`。
 - **回放按首次调用顺序绑定** —— 回放插件按首次调用顺序把录制脚本对应到实时 session，因此并发子 agent 的回放是非确定性的。
 - **导入的 trace 没有 token 用量** —— Codex 与 Claude Code 日志不记录 provider 用量，导入的 run 报零 token 且无成本。

@@ -293,7 +293,14 @@ async function runCaseTrial(
       benchmark.command,
       ['--profile', benchmark.profile, '--patch', overlayPath, caseValue.prompt],
       workspace,
-      { ...process.env, DSH_HOME: dshHome },
+      {
+        ...process.env,
+        DSH_HOME: dshHome,
+        // Trial n gets a deterministic, distinct seed derived from the run's
+        // base seed. An env var is ignored by harnesses that do not read it,
+        // unlike an unknown CLI flag which would break them.
+        DSH_EVAL_SEED: String(benchmark.seed + trial - 1),
+      },
       benchmark.timeoutMs,
     )
   } catch (error) {
@@ -429,6 +436,11 @@ export async function runBenchmark(benchmark: Benchmark, options: RunOptions = {
     ...(benchmark.judge !== undefined ? { judge: benchmark.judge } : {}),
     tempRoot: root,
     cases: results,
+    caseInputs: benchmark.cases.map(caseValue => ({
+      caseId: caseValue.id,
+      prompt: caseValue.prompt,
+      ...(caseValue.expected?.answer !== undefined ? { answer: caseValue.expected.answer } : {}),
+    })),
     aggregate: aggregateMetrics(completed.map(result => result.metrics)),
     grading: gradingOf(completed),
   }

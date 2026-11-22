@@ -51,7 +51,7 @@ pricing:
 | `trials` | `1` | Trials per case. |
 | `concurrency` | `1` | Case x trial executions allowed in flight at once; `1` keeps the run strictly serial. |
 | `timeoutMs` | `600000` | Per-trial timeout; the direct child is killed on expiry. |
-| `seed` | `0` | Reserved for future deterministic paired comparisons. |
+| `seed` | `0` | Base seed: trial n receives `DSH_EVAL_SEED=seed+n-1` in its environment, and the value also seeds report bootstraps. A harness must read that variable for deterministic sampling. |
 | `cases[].id` | required | Stable case id. |
 | `cases[].prompt` / `cases[].promptFile` | exactly one | Task text, inline or relative to the benchmark file. |
 | `cases[].workspace` | absent | Workspace tree copied into each trial, relative or absolute. |
@@ -107,7 +107,7 @@ A **Precision** block follows Reliability in the full report. It bootstraps the 
 
 ## Comparison
 
-`dsh eval compare run-v1.json run-v2.json` renders both runs as a markdown table: benchmark/model identity, completed trials, steps, tool/task/tool-selection rates, pass@k and pass^k for both grading dimensions, invalid calls, retries, tokens, cost, and latency, with signed `B - A` deltas. When both runs complete the same case x trial keys, the table appends paired statistics: trial count, win/lose/tie on the first available metric (task success, tool selection accuracy, or final-answer score), and mean `B - A` deltas for steps, tokens, and judge score. The runs' `seed` is recorded provenance for the pairing, not a guarantee of identical model output.
+`dsh eval compare run-v1.json run-v2.json` renders both runs as a markdown table: benchmark/model identity, completed trials, steps, tool/task/tool-selection rates, pass@k and pass^k for both grading dimensions, invalid calls, retries, tokens, cost, and latency, with signed `B - A` deltas. When both runs complete the same case x trial keys, the table appends paired statistics: trial count, win/lose/tie on the first available metric (task success, tool selection accuracy, or final-answer score), and mean `B - A` deltas for steps, tokens, and judge score. Each run's `seed` is both recorded provenance and injected into every trial as `DSH_EVAL_SEED`; determinism still depends on the harness reading that variable.
 
 Because a paired eval sample is small and its deltas are not normal, the paired block also carries inference rather than point estimates alone: an exact two-sided **sign test** over the discordant pairs (ties drop out, as the test requires) for the primary metric, and a seeded **bootstrap interval** beside each mean delta. Nothing is assumed about the shape of the delta distribution, and the PRNG seed is fixed, so re-running `compare` on the same reports prints a byte-identical table. The sign-test p-value and every printed interval form one inference family, corrected together by **Bonferroni** at family-wise `alpha = 0.05`: the p row is labelled with the family size it was multiplied by, and each interval is widened to `1 - 0.05/k` confidence (for example, 98.8% when the p-value and three intervals are all present). A sign test still needs discordant pairs to say anything — when every pair ties it reports `p = 1`.
 
@@ -155,7 +155,7 @@ None; this package neither assembles nor sends a provider request, so no request
 ## Known Limitations and Deferred Work
 
 - **Judge output is best-effort but no longer silent** — a failed or unparsable verdict carries `judgeError` and is counted in `grading.judgeFailures`; judge calls consume model quota outside the trial's measured cost.
-- **Paired comparison pairs as-is** — trials pair by case id and trial index; `seed` is recorded provenance, not a deterministic guarantee of identical model output, and per-arm leaderboards are not rendered.
+- **Paired comparison pairs as-is** — trials pair by case id and trial index; `seed` is passed to each trial as `DSH_EVAL_SEED` and recorded as provenance, but determinism depends on the harness honoring it; per-arm leaderboards are not rendered.
 - **Bonferroni is conservative** — it controls the family-wise error rate across the printed sign test and intervals without assuming independence, at the cost of wider intervals; a sign test also needs discordant pairs to say anything, so a run where every pair ties reports `p = 1`.
 - **Replay binds by first-call order** — the replay plugin keys recorded scripts to live sessions by first-call order, so concurrent subagents replay non-deterministically.
 - **Imported traces lack token usage** — Codex and Claude Code logs do not record provider usage, so imported runs report zero tokens and no cost.
