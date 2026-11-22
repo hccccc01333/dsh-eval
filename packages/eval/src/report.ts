@@ -7,6 +7,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { z } from 'zod'
+import { computeAgreement, type AgreementSummary } from './agreement.ts'
 import { computePrecision, type RateInterval, type RunPrecision } from './precision.ts'
 import { computeCoverage, computeReliability, type ReliabilitySummary } from './reliability.ts'
 import type { EvalRun } from './types.ts'
@@ -194,6 +195,21 @@ function renderPrecision(summary: RunPrecision): string[] {
   ]
 }
 
+/** Render the judge/script agreement block; callers pass only a populated summary. */
+function renderAgreement(summary: AgreementSummary): string[] {
+  const judgeRate = summary.judgePassed / summary.pairs
+  const scriptRate = summary.scriptPassed / summary.pairs
+  return [
+    '## Judge / script agreement',
+    '',
+    `- pairs: ${summary.pairs} trial(s) with both a scripted task result and a judge verdict`,
+    `- observed agreement: ${(summary.rate * 100).toFixed(1)}% (${summary.agreements}/${summary.pairs})`,
+    `- Cohen's kappa: ${summary.kappa.toFixed(2)}`,
+    `- pass rates: judge no-hallucination ${(judgeRate * 100).toFixed(1)}% · script task success ${(scriptRate * 100).toFixed(1)}%`,
+    '',
+  ]
+}
+
 /**
  * Render a compact terminal summary of a run. Unlike the markdown report this
  * omits the per-trial table, so a hundred-trial run still fits on one screen.
@@ -205,6 +221,7 @@ export function renderBriefReport(run: EvalRun): string {
   const aggregate = run.aggregate
   const reliability = computeReliability(run, 'task')
   const interval = computePrecision(run).task
+  const agreement = computeAgreement(run)
   const lines = [
     `# ${run.benchmark} — ${run.model}`,
     `- trials: ${coverage.completed}/${coverage.total} completed${coverage.unscored === 0
@@ -222,6 +239,9 @@ export function renderBriefReport(run: EvalRun): string {
   }
   if (interval !== null && interval.lower !== null && interval.upper !== null) {
     lines.push(`- task precision: ${(interval.rate * 100).toFixed(1)}% [95% CI ${(interval.lower * 100).toFixed(1)}%, ${(interval.upper * 100).toFixed(1)}%]`)
+  }
+  if (agreement !== null) {
+    lines.push(`- judge/script agreement: ${(agreement.rate * 100).toFixed(1)}% (n=${agreement.pairs}) · kappa ${agreement.kappa.toFixed(2)}`)
   }
   if (run.grading?.judgeFailures) lines.push(`- judge failures: ${run.grading.judgeFailures}`)
   return `${lines.join('\n')}\n`
@@ -296,6 +316,7 @@ export function renderMarkdownReport(run: EvalRun): string {
   const toolReliability = computeReliability(run, 'tool-selection')
   const coverage = computeCoverage(run)
   const precision = computePrecision(run)
+  const agreement = computeAgreement(run)
   const hasPrecision = precision.task !== null || precision.toolSelection !== null
     || precision.latencyP50 !== null
   const coverageLine = coverage.unscored === 0
@@ -319,5 +340,6 @@ export function renderMarkdownReport(run: EvalRun): string {
     ...(taskReliability === null ? [] : renderReliability(taskReliability)),
     ...(toolReliability === null ? [] : renderReliability(toolReliability)),
     ...(hasPrecision ? renderPrecision(precision) : []),
+    ...(agreement === null ? [] : renderAgreement(agreement)),
   ].join('\n')
 }

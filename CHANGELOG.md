@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Judge/script agreement.** The full report now pairs scripted task success
+  with the judge's no-hallucination verdict and reports observed agreement plus
+  Cohen's kappa, so an over-permissive proxy judge cannot hide behind a high
+  raw agreement rate. `--brief` includes the same statistic on one line.
 - **Richer tool expectations.** `tools` (all), `toolAnyOf` (at least one),
   `toolRegex` (compiled and validated at benchmark load) and `toolNot` (none)
   join the legacy `tool` substring match. All constraints combine into one

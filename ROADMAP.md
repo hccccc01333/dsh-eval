@@ -35,7 +35,9 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
 
 ## P2 — polish
 
-- Judge/Script agreement metric (where a check and a judge both grade a trial).
+- ✅ Judge/script agreement metric (done). Observed agreement plus Cohen's kappa
+  over trials with both a scripted task result and a judge verdict, rendered in
+  the full report and as one line in `--brief`.
 - HTML dashboard for browseable run comparison.
 - Release: configure npm Trusted Publisher for `dsh-eval` at
   <https://www.npmjs.com/package/dsh-eval/access> — GitHub Actions, owner

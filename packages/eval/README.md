@@ -105,6 +105,14 @@ The markdown report appends a **Reliability** block for each graded dimension (t
 
 A **Precision** block follows Reliability in the full report. It bootstraps the observed task/tool rates over the graded trials with the run's `seed` (2000 seeded resamples by default), printing a 95% percentile interval beside each rate and a `n=` count. A single trial reports the rate without an interval, since no resample can create uncertainty from one observation. The block also prints latency `p50/p95` from the trial metrics. This makes a three-trial smoke run look like the weak evidence it is instead of a precise-looking percentage.
 
+The **Judge / script agreement** block pairs scripted `taskSuccess` with the
+judge's "no hallucination" verdict on trials carrying both. It prints observed
+agreement and Cohen's kappa, which subtracts the agreement expected from the two
+marginals — an LLM judge that passes everything can otherwise look impressive
+when the scripted checks pass everything too. Trials with an unusable verdict or
+no check are excluded, and the block is omitted when no trial has both signals.
+The same one-line statistic appears in `--brief` output.
+
 ## Comparison
 
 `dsh eval compare run-v1.json run-v2.json` renders both runs as a markdown table: benchmark/model identity, completed trials, steps, tool/task/tool-selection rates, pass@k and pass^k for both grading dimensions, invalid calls, retries, tokens, cost, and latency, with signed `B - A` deltas. When both runs complete the same case x trial keys, the table appends paired statistics: trial count, win/lose/tie on the first available metric (task success, tool selection accuracy, or final-answer score), and mean `B - A` deltas for steps, tokens, and judge score. Each run's `seed` is both recorded provenance and injected into every trial as `DSH_EVAL_SEED`; determinism still depends on the harness reading that variable.

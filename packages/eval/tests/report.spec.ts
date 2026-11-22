@@ -220,6 +220,31 @@ describe('dsh-eval report persistence and rendering', () => {
     expect(markdown).toContain('8.0/10 | 0.0% |')
   })
 
+  it('renders judge/script agreement when both signals exist', () => {
+    const run = buildRun({
+      cases: [
+        {
+          caseId: 'agree', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          grade: { taskSuccess: true, toolSelectionAccuracy: null },
+          judge: { finalAnswerScore: 8, hallucination: false },
+        },
+        {
+          caseId: 'disagree', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          grade: { taskSuccess: false, toolSelectionAccuracy: null },
+          judge: { finalAnswerScore: 2, hallucination: false },
+        },
+      ],
+    })
+    const markdown = renderMarkdownReport(run)
+    expect(markdown).toContain('## Judge / script agreement')
+    expect(markdown).toContain('- pairs: 2 trial(s)')
+    expect(markdown).toContain('- observed agreement: 50.0% (1/2)')
+    expect(markdown).toContain("- Cohen's kappa: 0.00")
+    expect(markdown).toContain('judge no-hallucination 100.0% · script task success 50.0%')
+    expect(renderBriefReport(run)).toContain('- judge/script agreement: 50.0% (n=2) · kappa 0.00')
+    expect(renderMarkdownReport(buildRun())).not.toContain('Judge / script agreement')
+  })
+
   it('renders judge dashes when verdicts are missing', () => {
     const run = buildRun({
       judge: { provider: 'deepseek', model: 'judge-m', maxScore: 10 },
