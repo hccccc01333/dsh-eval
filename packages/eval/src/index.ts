@@ -99,6 +99,17 @@ function summary(run: Awaited<ReturnType<typeof runBenchmark>>): string {
   return `tool success ${rate}${task}${score}${passes}${unscored}, ${aggregate.steps.toFixed(1)} steps/trial`
 }
 
+/** Print derived text, or write it to a file and confirm the path. */
+async function emitText(io: EvalIo, text: string, outPath?: string): Promise<void> {
+  if (outPath === undefined) {
+    io.stdout.write(text)
+    return
+  }
+  await mkdir(dirname(resolve(outPath)), { recursive: true })
+  await writeFile(outPath, text, 'utf8')
+  io.stdout.write(`Wrote ${outPath}\n`)
+}
+
 /**
  * Execute one eval invocation to completion.
  * @param values - the resolved command-line invocation.
@@ -124,44 +135,33 @@ export async function executeEval(
       const report = values.json === true
         ? renderReportJson(run)
         : values.brief ? renderBriefReport(run) : renderMarkdownReport(run)
-      if (values.outPath === undefined) {
-        io.stdout.write(report)
-      } else {
-        await mkdir(dirname(resolve(values.outPath)), { recursive: true })
-        await writeFile(values.outPath, report, 'utf8')
-        io.stdout.write(`Wrote ${values.outPath}\n`)
-      }
+      await emitText(io, report, values.outPath)
       return 0
     }
     if (values.kind === 'compare') {
       const a = await loadRunReport(values.runPathA)
       const b = await loadRunReport(values.runPathB)
       if (values.json === true) {
-        io.stdout.write(renderCompareJson(a, b))
+        await emitText(io, renderCompareJson(a, b), values.outPath)
         return 0
       }
-      io.stdout.write(renderCompareMarkdown(compareRuns(a, b)))
       const cases = pairedCases(a, b)
-      if (cases !== null) io.stdout.write(renderPairedCases(cases))
+      const text = renderCompareMarkdown(compareRuns(a, b))
+        + (cases === null ? '' : renderPairedCases(cases))
+      await emitText(io, text, values.outPath)
       return 0
     }
     if (values.kind === 'export') {
       const run = await loadRunReport(values.runPath)
       const csv = renderTrialsCsv(run)
-      if (values.outPath === undefined) {
-        io.stdout.write(csv)
-      } else {
-        await mkdir(dirname(resolve(values.outPath)), { recursive: true })
-        await writeFile(values.outPath, csv, 'utf8')
-        io.stdout.write(`Wrote ${values.outPath} (${run.cases.length} trials)\n`)
-      }
+      await emitText(io, csv, values.outPath)
       return 0
     }
     if (values.kind === 'validate') {
       const benchmark = await loadBenchmark(values.benchmarkPath)
-      io.stdout.write(values.json === true
+      await emitText(io, values.json === true
         ? renderBenchmarkJson(benchmark)
-        : renderBenchmarkSummary(benchmark))
+        : renderBenchmarkSummary(benchmark), values.outPath)
       return 0
     }
     if (values.kind === 'leaderboard') {
@@ -170,7 +170,8 @@ export async function executeEval(
         label: `${run.benchmark} — ${run.model}`,
         run,
       })))
-      io.stdout.write(values.json === true ? renderLeaderboardJson(entries) : renderLeaderboard(entries))
+      await emitText(io, values.json === true ? renderLeaderboardJson(entries) : renderLeaderboard(entries),
+        values.outPath)
       return 0
     }
     if (values.kind === 'gate') {
@@ -184,7 +185,7 @@ export async function executeEval(
       }
       const result = evaluateGate(baseline, candidate, values.maxDrop, values.allowIncomplete, budgets,
         values.requireSignificance === true ? { requireSignificance: true } : {})
-      io.stdout.write(values.json === true ? renderGateJson(result) : renderGate(result))
+      await emitText(io, values.json === true ? renderGateJson(result) : renderGate(result), values.outPath)
       return result.passed ? 0 : 1
     }
     if (values.kind === 'dashboard') {

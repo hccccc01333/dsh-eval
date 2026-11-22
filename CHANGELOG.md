@@ -4,8 +4,9 @@
 
 ### Added
 
-- **`report --out`.** Any report variant (markdown, brief or JSON) can be
-  written to a file, creating parent directories like the other output commands.
+- **`--out` on every renderer.** `report`, `compare`, `validate`, `leaderboard`
+  and `gate` now join `export` and `dashboard` in writing to a file (creating
+  parent directories) instead of stdout, with exit codes unchanged.
 - **Per-case timeout overrides.** A case can set `timeoutMs` to override the
   benchmark default for both the agent child and scripted checks; `validate`
   reports how many cases do so.

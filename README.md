@@ -126,12 +126,16 @@ Each trial runs in a private temp workspace with an isolated `DSH_HOME` and non-
 | `dsh eval report run.json [--out report.md]` | Write any report variant to a file instead of stdout |
 | `dsh eval export run.json [--out trials.csv]` | Flatten trials into a safely escaped CSV |
 | `dsh eval dashboard a.json [b.json ...] --out report.html` | Write a standalone HTML dashboard or multi-run leaderboard |
-| `dsh eval validate benchmark.yaml [--json]` | Preflight a benchmark with evidence warnings |
-| `dsh eval leaderboard a.json b.json ... [--json]` | Rank multiple runs with optional JSON output |
-| `dsh eval gate candidate.json --baseline base.json [--json]` | Fail CI on regressions; `--json` emits a machine-readable verdict |
-| `dsh eval compare base.json candidate.json [--json]` | Compare two runs with deltas and paired inference |
+| `dsh eval validate benchmark.yaml [--json] [--out file]` | Preflight a benchmark with evidence warnings |
+| `dsh eval leaderboard a.json b.json ... [--json] [--out file]` | Rank multiple runs with optional JSON output |
+| `dsh eval gate candidate.json --baseline base.json [--json] [--out file]` | Fail CI on regressions; `--json` emits a machine-readable verdict |
+| `dsh eval compare base.json candidate.json [--json] [--out file]` | Compare two runs with deltas and paired inference |
 | `dsh eval rejudge run.json --out rejudged.json` | Re-judge stored traces offline and write a new report |
 | `dsh eval import codex\|claude-code log.jsonl --out run.json` | Import an external session log as a one-trial run |
+
+Every read-only renderer (`report`, `compare`, `validate`, `leaderboard`, `gate`,
+`export`) accepts `--out <file>` and creates parent directories; without it the
+output goes to stdout.
 
 ## Roadmap
 

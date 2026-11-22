@@ -706,6 +706,34 @@ describe('dsh-eval execution entry', () => {
     expect(existsSync(outPath)).toBe(true)
   })
 
+  it('accepts --out on every read-only renderer', async () => {
+    const dir = tempDir()
+    const benchmarkPath = benchmarkYaml(dir)
+    const runPath = join(dir, 'run.json')
+    const plainRun: EvalRun = {
+      benchmark: 'b', model: 'm', createdAt: 1, trials: 1, seed: 0, pricing: null,
+      tempRoot: '/tmp', cases: [], aggregate: null, grading: null,
+    }
+    await writeRunReport(plainRun, runPath)
+    const outPath = join(dir, 'derived.txt')
+    const published: EvalStartupValues[] = []
+    const parser = evalCommand(value => published.push(value))
+    const invocations: string[][] = [
+      ['node', 'eval', 'compare', runPath, runPath, '--out', outPath],
+      ['node', 'eval', 'validate', benchmarkPath, '--out', outPath],
+      ['node', 'eval', 'leaderboard', runPath, runPath, '--out', outPath],
+      ['node', 'eval', 'gate', runPath, '--baseline', runPath, '--out', outPath],
+    ]
+    for (const invocation of invocations) await parser.parseAsync(invocation)
+    expect(published.map(value => value.kind)).toEqual(['compare', 'validate', 'leaderboard', 'gate'])
+    for (const value of published) expect(value).toMatchObject({ outPath })
+    const out: string[] = []
+    const io = { stdout: { write: (chunk: string) => { out.push(chunk); return true } }, stderr: { write: () => {} } }
+    for (const value of published) expect(await executeEval(value, io)).toBe(0)
+    expect(out.filter(line => line.startsWith('Wrote '))).toHaveLength(4)
+    expect(readFileSync(outPath, 'utf8')).toContain('# Gate: PASS')
+  })
+
   it('exits 1 when only some trials fail, so CI cannot misread a green run', async () => {
     const dir = tempDir()
     const script = join(dir, 'partial-dsh.mjs')

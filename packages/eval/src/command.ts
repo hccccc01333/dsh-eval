@@ -42,6 +42,7 @@ export type EvalStartupValues =
     runPathA: string
     runPathB: string
     json?: boolean
+    outPath?: string
   }
   | {
     kind: 'export'
@@ -53,11 +54,13 @@ export type EvalStartupValues =
     kind: 'validate'
     benchmarkPath: string
     json?: boolean
+    outPath?: string
   }
   | {
     kind: 'leaderboard'
     runPaths: readonly string[]
     json?: boolean
+    outPath?: string
   }
   | {
     kind: 'gate'
@@ -69,6 +72,7 @@ export type EvalStartupValues =
     allowIncomplete: boolean
     requireSignificance?: boolean
     json?: boolean
+    outPath?: string
   }
   | {
     kind: 'dashboard'
@@ -120,6 +124,11 @@ interface RejudgeCommandOptions {
 interface ImportCommandOptions {
   out: string
   caseId: string
+}
+
+/** Turn an optional `--out` flag into a strictly optional startup value. */
+function optionalOut(options: { out?: string }): { outPath?: string } {
+  return options.out === undefined ? {} : { outPath: options.out }
 }
 
 /** Split a single `--dsh` value into argv, honoring quotes and escapes. */
@@ -238,8 +247,9 @@ Examples:
     .argument('<run-a.json>', 'baseline run report')
     .argument('<run-b.json>', 'candidate run report')
     .option('--json', 'emit a machine-readable JSON comparison')
-    .action((runPathA: string, runPathB: string, options: { json?: boolean }) => {
-      publish({ kind: 'compare', runPathA, runPathB, json: options.json === true })
+    .option('--out <path>', 'write the comparison to a file instead of stdout')
+    .action((runPathA: string, runPathB: string, options: { json?: boolean; out?: string }) => {
+      publish({ kind: 'compare', runPathA, runPathB, json: options.json === true, ...optionalOut(options) })
     })
   const exporter = program.command('export').description('export a run report as trial-level CSV')
   exporter
@@ -252,15 +262,17 @@ Examples:
   validate
     .argument('<benchmark.yaml>', 'path to a benchmark document')
     .option('--json', 'emit a machine-readable preflight summary')
-    .action((benchmarkPath: string, options: { json?: boolean }) => {
-      publish({ kind: 'validate', benchmarkPath, json: options.json === true })
+    .option('--out <path>', 'write the preflight summary to a file instead of stdout')
+    .action((benchmarkPath: string, options: { json?: boolean; out?: string }) => {
+      publish({ kind: 'validate', benchmarkPath, json: options.json === true, ...optionalOut(options) })
     })
   const leaderboard = program.command('leaderboard').description('rank persisted runs by pooled task success')
   leaderboard
     .argument('<run.json...>', 'paths to run reports')
     .option('--json', 'emit a machine-readable JSON leaderboard')
-    .action((runPaths: string[], options: { json?: boolean }) => {
-      publish({ kind: 'leaderboard', runPaths, json: options.json === true })
+    .option('--out <path>', 'write the leaderboard to a file instead of stdout')
+    .action((runPaths: string[], options: { json?: boolean; out?: string }) => {
+      publish({ kind: 'leaderboard', runPaths, json: options.json === true, ...optionalOut(options) })
     })
   const gate = program.command('gate').description('fail a CI build when a candidate run regresses against a baseline')
   gate
@@ -272,6 +284,7 @@ Examples:
     .option('--allow-incomplete', 'do not fail on extra unscored trials')
     .option('--require-significance', 'only fail quality drops confirmed by a paired sign test')
     .option('--json', 'emit a machine-readable JSON verdict instead of markdown')
+    .option('--out <path>', 'write the verdict to a file instead of stdout')
     .action((candidatePath: string, options: {
       baseline?: string
       maxDrop: number
@@ -280,6 +293,7 @@ Examples:
       allowIncomplete?: boolean
       requireSignificance?: boolean
       json?: boolean
+      out?: string
     }) => {
       if (options.baseline === undefined) program.error('error: gate needs --baseline <path>')
       publish({
@@ -292,6 +306,7 @@ Examples:
         allowIncomplete: options.allowIncomplete === true,
         requireSignificance: options.requireSignificance === true,
         json: options.json === true,
+        ...optionalOut(options),
       })
     })
   const dashboard = program.command('dashboard').description('render persisted runs as a standalone HTML dashboard or leaderboard')

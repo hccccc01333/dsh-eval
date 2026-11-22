@@ -125,12 +125,15 @@ pricing:
 | `dsh eval report run.json [--out report.md]` | 把任意报告变体写入文件，而非输出到终端 |
 | `dsh eval export run.json [--out trials.csv]` | 把逐 trial 数据导出为安全转义的 CSV |
 | `dsh eval dashboard a.json [b.json ...] --out report.html` | 写出独立 HTML 仪表盘或多 run 排行榜 |
-| `dsh eval validate benchmark.yaml [--json]` | 预检 benchmark 并给出证据质量警告 |
-| `dsh eval leaderboard a.json b.json ... [--json]` | 给多个 run 排名，可选 JSON 输出 |
-| `dsh eval gate candidate.json --baseline base.json [--json]` | 回退或超限时让 CI 失败；`--json` 输出机器可读判定 |
-| `dsh eval compare base.json candidate.json [--json]` | 对比两个 run，给出差值与配对推断 |
+| `dsh eval validate benchmark.yaml [--json] [--out file]` | 预检 benchmark 并给出证据质量警告 |
+| `dsh eval leaderboard a.json b.json ... [--json] [--out file]` | 给多个 run 排名，可选 JSON 输出 |
+| `dsh eval gate candidate.json --baseline base.json [--json] [--out file]` | 回退或超限时让 CI 失败；`--json` 输出机器可读判定 |
+| `dsh eval compare base.json candidate.json [--json] [--out file]` | 对比两个 run，给出差值与配对推断 |
 | `dsh eval rejudge run.json --out rejudged.json` | 离线重评分已保存的 trace，写入新报告 |
 | `dsh eval import codex\|claude-code log.jsonl --out run.json` | 把外部 session 日志导入为单 trial run |
+
+所有只读渲染命令(`report`、`compare`、`validate`、`leaderboard`、`gate`、
+`export`)都支持 `--out <file>`,会自动创建父目录;省略时输出到终端。
 
 `dsh eval run` 还支持 `--trials`、`--concurrency`、`--dsh`、`--profile` 覆盖 benchmark 文档，`dsh eval import` 支持 `--case-id`。
 
