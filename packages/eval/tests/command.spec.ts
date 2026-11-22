@@ -399,11 +399,19 @@ describe('dsh-eval command composition', () => {
     const dir = tempDir()
     const runA: EvalRun = {
       benchmark: 'base', model: 'm', createdAt: 1, trials: 1, seed: 0,
-      pricing: null, tempRoot: '/tmp', cases: [], aggregate: null, grading: null,
+      pricing: null, tempRoot: '/tmp', aggregate: null, grading: null,
+      cases: [{
+        caseId: 'c', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        grade: { taskSuccess: true, toolSelectionAccuracy: true },
+      }],
     }
     const runB: EvalRun = {
       benchmark: 'candidate', model: 'm', createdAt: 2, trials: 1, seed: 0,
-      pricing: null, tempRoot: '/tmp', cases: [], aggregate: null, grading: null,
+      pricing: null, tempRoot: '/tmp', aggregate: null, grading: null,
+      cases: [{
+        caseId: 'c', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        grade: { taskSuccess: false, toolSelectionAccuracy: true },
+      }],
     }
     const pathA = join(dir, 'a.json')
     const pathB = join(dir, 'b.json')
@@ -413,6 +421,16 @@ describe('dsh-eval command composition', () => {
     expect(observed.exits).toEqual([0])
     expect(observed.out).toContain('# Compare')
     expect(observed.out).toContain('| benchmark | base | candidate | – |')
+    expect(observed.out).toContain('## Paired case outcomes')
+    expect(observed.out).toContain('| c | 1 | pass | fail | A better |')
+
+    const emptyA = join(dir, 'empty-a.json')
+    const emptyB = join(dir, 'empty-b.json')
+    await writeRunReport({ ...runA, cases: [] }, emptyA)
+    await writeRunReport({ ...runB, cases: [] }, emptyB)
+    const unpaired = await bootEval(['compare', emptyA, emptyB])
+    expect(unpaired.exits).toEqual([0])
+    expect(unpaired.out).not.toContain('Paired case outcomes')
   })
 
   it('fails loudly for a missing compare input', async () => {

@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Case-level paired outcomes.** `compare` lists the concrete case x trials
+  behind its sign test (candidate wins first, capped at 20 rows), and the
+  two-run dashboard shows the same discordant cases under "Changed cases".
 - **Judge calibration diagnostics.** Report mean normalized judge scores for
   scripted passes and failures, their separation, an AUC-style ranking accuracy
   and up to five disagreement cases with ids. Rendered in full reports, the

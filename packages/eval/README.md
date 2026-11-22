@@ -128,6 +128,12 @@ The same one-line statistic appears in `--brief` output.
 
 Because a paired eval sample is small and its deltas are not normal, the paired block also carries inference rather than point estimates alone: an exact two-sided **sign test** over the discordant pairs (ties drop out, as the test requires) for the primary metric, and a seeded **bootstrap interval** beside each mean delta. Nothing is assumed about the shape of the delta distribution, and the PRNG seed is fixed, so re-running `compare` on the same reports prints a byte-identical table. The sign-test p-value and every printed interval form one inference family, corrected together by **Bonferroni** at family-wise `alpha = 0.05`: the p row is labelled with the family size it was multiplied by, and each interval is widened to `1 - 0.05/k` confidence (for example, 98.8% when the p-value and three intervals are all present). A sign test still needs discordant pairs to say anything — when every pair ties it reports `p = 1`.
 
+`dsh eval compare` also appends **Paired case outcomes**: every completed
+case x trial classified on the same primary metric as the sign test, with
+candidate wins listed before losses, capped at 20 rows. This makes a
+significant p-value traceable to the specific cases responsible. The two-run
+HTML dashboard shows the same discordant cases under **Changed cases**.
+
 ## Judge calibration
 
 Agreement and kappa answer "do the judge and the scripted check decide the

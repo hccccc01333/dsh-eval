@@ -13,7 +13,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { computeAgreement } from './agreement.ts'
 import { computeCalibration } from './calibration.ts'
-import { compareRuns } from './compare.ts'
+import { compareRuns, formatCaseValue, pairedCases } from './compare.ts'
 import type { RateInterval } from './precision.ts'
 import { computePrecision } from './precision.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
@@ -75,7 +75,15 @@ function table(headers: readonly string[], rows: readonly string[]): string {
 function renderComparison(a: EvalRun, b: EvalRun): string {
   const rows = compareRuns(a, b).map(row => [row.metric, row.a, row.b, row.delta]
     .map(value => `<td>${esc(value)}</td>`).join(''))
-  return `<h2>Run comparison</h2>${table(['Metric', 'A', 'B', 'B − A'], rows)}`
+  const cases = pairedCases(a, b) ?? []
+  const discordant = cases.filter(item => item.outcome !== 'tie').slice(0, 10)
+  const caseRows = discordant.map(item => [item.caseId, String(item.trial),
+    formatCaseValue(item.a), formatCaseValue(item.b), item.outcome]
+    .map(value => `<td>${esc(value)}</td>`).join(''))
+  const caseBlock = discordant.length === 0 ? '' : `<h2>Changed cases</h2>${table(
+    ['Case', 'Trial', 'A', 'B', 'Result'], caseRows,
+  )}`
+  return `<h2>Run comparison</h2>${table(['Metric', 'A', 'B', 'B − A'], rows)}${caseBlock}`
 }
 
 /**

@@ -135,15 +135,8 @@ function pairSign(aValue: boolean | number | null, bValue: boolean | number | nu
   return bValue > aValue ? 1 : (bValue < aValue ? -1 : 0)
 }
 
-/**
- * Pair both runs' trials by case id and trial index and compute win/lose/tie
- * plus mean deltas. Trials are paired as-is; the runs' `seed` is recorded
- * provenance for the pairing, not a guarantee of identical model output.
- * @param a - the baseline run.
- * @param b - the candidate run.
- * @returns paired statistics, or null when no trial is completed in both runs.
- */
-export function pairedCompare(a: EvalRun, b: EvalRun): PairedStats | null {
+/** Pair completed trials from both runs by case id and trial index. */
+function pairedTrials(a: EvalRun, b: EvalRun): { a: EvalTrialResult; b: EvalTrialResult }[] {
   const byKey = new Map<string, EvalTrialResult>()
   for (const result of b.cases) {
     if (result.status === 'completed') byKey.set(`${result.caseId}\u0000${result.trial}`, result)
@@ -154,6 +147,19 @@ export function pairedCompare(a: EvalRun, b: EvalRun): PairedStats | null {
     const match = byKey.get(`${result.caseId}\u0000${result.trial}`)
     if (match !== undefined) pairs.push({ a: result, b: match })
   }
+  return pairs
+}
+
+/**
+ * Pair both runs' trials by case id and trial index and compute win/lose/tie
+ * plus mean deltas. Trials are paired as-is; the runs' `seed` is recorded
+ * provenance for the pairing, not a guarantee of identical model output.
+ * @param a - the baseline run.
+ * @param b - the candidate run.
+ * @returns paired statistics, or null when no trial is completed in both runs.
+ */
+export function pairedCompare(a: EvalRun, b: EvalRun): PairedStats | null {
+  const pairs = pairedTrials(a, b)
   if (pairs.length === 0) return null
   const primaryMetric = pickMetric(pairs)
   let wins = 0
@@ -195,6 +201,76 @@ export function pairedCompare(a: EvalRun, b: EvalRun): PairedStats | null {
     tokensDelta: pairedDelta(tokenDeltas, { confidence: correction.intervalConfidence }),
     scoreDelta: pairedDelta(scoreDeltas, { confidence: correction.intervalConfidence }),
   }
+}
+
+/** One paired case x trial classified on the same primary metric as the sign test. */
+export interface PairedCase {
+  caseId: string
+  trial: number
+  a: boolean | number | null
+  b: boolean | number | null
+  outcome: 'B better' | 'A better' | 'tie'
+}
+
+/**
+ * Classify every paired case x trial, using the same metric selection as
+ * {@link pairedCompare} so the case list explains its win/lose/tie counts.
+ * @param a - the baseline run.
+ * @param b - the candidate run.
+ * @returns one row per completed pair, or null when there are no pairs.
+ */
+export function pairedCases(a: EvalRun, b: EvalRun): PairedCase[] | null {
+  const pairs = pairedTrials(a, b)
+  if (pairs.length === 0) return null
+  const metric = pickMetric(pairs)
+  return pairs.map(pair => {
+    const aValue = metricOutcome(pair.a, metric)
+    const bValue = metricOutcome(pair.b, metric)
+    const sign = pairSign(aValue, bValue)
+    return {
+      caseId: pair.a.caseId,
+      trial: pair.a.trial,
+      a: aValue,
+      b: bValue,
+      outcome: sign > 0 ? 'B better' : sign < 0 ? 'A better' : 'tie',
+    }
+  })
+}
+
+/** Format a paired case value for reports and dashboards. */
+export function formatCaseValue(value: boolean | number | null): string {
+  if (value === null) return '–'
+  if (typeof value === 'boolean') return value ? 'pass' : 'fail'
+  return String(value)
+}
+
+/**
+ * Render the most actionable paired case outcomes: candidate wins first, then
+ * candidate losses, capped at 20 rows so a large benchmark still fits a screen.
+ * @param cases - rows from {@link pairedCases}.
+ * @returns a markdown block ending in a newline.
+ */
+export function renderPairedCases(cases: readonly PairedCase[]): string {
+  const wins = cases.filter(item => item.outcome === 'B better')
+  const losses = cases.filter(item => item.outcome === 'A better')
+  const ties = cases.length - wins.length - losses.length
+  const shown = [...wins, ...losses].slice(0, 20)
+  const lines = [
+    '## Paired case outcomes',
+    '',
+    `- ${wins.length} candidate wins · ${losses.length} candidate losses · ${ties} ties`,
+  ]
+  if (shown.length < wins.length + losses.length) {
+    lines.push(`- showing ${shown.length} of ${wins.length + losses.length} discordant pairs`)
+  }
+  if (shown.length > 0) {
+    lines.push('', '| case | trial | A | B | result |', '|---|---|---|---|---|')
+    for (const item of shown) {
+      const caseId = item.caseId.replace(/[\r\n|]/gu, ' ')
+      lines.push(`| ${caseId} | ${item.trial} | ${formatCaseValue(item.a)} | ${formatCaseValue(item.b)} | ${item.outcome} |`)
+    }
+  }
+  return `${lines.join('\n')}\n`
 }
 
 /** Pull one nullable numeric value from a run for comparison. */

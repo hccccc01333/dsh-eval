@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compareRuns, pairedCompare, renderCompareMarkdown } from '../src/compare.ts'
+import { compareRuns, pairedCases, pairedCompare, renderCompareMarkdown, renderPairedCases } from '../src/compare.ts'
 import type { EvalRun, EvalTrialResult } from '../src/types.ts'
 
 function buildRun(overrides: Partial<EvalRun> = {}): EvalRun {
@@ -132,6 +132,46 @@ describe('dsh-eval comparison', () => {
       adjustedPValue: Math.min(1, paired!.test.pValue * 4),
       intervalConfidence: 0.9875,
     })
+  })
+
+  it('classifies and renders the paired cases behind the sign test', () => {
+    const a = buildRun({
+      cases: [trial('c', 1, false, 2, 10, 5), trial('c', 2, true, 2, 10, 5), trial('c', 3, true, 2, 10, 5)],
+    })
+    const b = buildRun({
+      cases: [trial('c', 1, true, 2, 10, 5), trial('c', 2, false, 2, 10, 5), trial('c', 3, true, 2, 10, 5)],
+    })
+    const cases = pairedCases(a, b)!
+    expect(cases.map(item => [item.caseId, item.outcome])).toEqual([
+      ['c', 'B better'], ['c', 'A better'], ['c', 'tie'],
+    ])
+    const markdown = renderPairedCases(cases)
+    expect(markdown).toContain('1 candidate wins · 1 candidate losses · 1 ties')
+    expect(markdown).toContain('| c | 1 | fail | pass | B better |')
+    expect(pairedCases(buildRun(), b)).toBeNull()
+    expect(renderPairedCases([])).toContain('0 candidate wins · 0 candidate losses · 0 ties')
+
+    const manyA = buildRun({ cases: Array.from({ length: 21 }, (_, i) => trial(`m${i}`, 1, false, 2, 10, 5)) })
+    const manyB = buildRun({ cases: Array.from({ length: 21 }, (_, i) => trial(`m${i}`, 1, true, 2, 10, 5)) })
+    expect(renderPairedCases(pairedCases(manyA, manyB)!)).toContain('showing 20 of 21 discordant pairs')
+  })
+
+  it('falls back to judge scores for case outcomes and sanitizes case ids', () => {
+    const a = buildRun({
+      cases: [{
+        caseId: 'n|bad\nnext', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        judge: { finalAnswerScore: 2, hallucination: false },
+      }],
+    })
+    const b = buildRun({
+      cases: [{
+        caseId: 'n|bad\nnext', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        judge: { finalAnswerScore: 5, hallucination: false },
+      }],
+    })
+    expect(renderPairedCases(pairedCases(a, b)!)).toContain('| n bad next | 1 | 2 | 5 | B better |')
+    expect(renderPairedCases([{ caseId: 'n', trial: 1, a: null, b: null, outcome: 'B better' }]))
+      .toContain('| n | 1 | – | – | B better |')
   })
 
   it('includes paired rows when both runs share completed trials', () => {

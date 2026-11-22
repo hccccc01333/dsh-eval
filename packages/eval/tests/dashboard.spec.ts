@@ -173,6 +173,23 @@ describe('dsh-eval HTML dashboard', () => {
     expect(html).toContain('<th>B − A</th>')
     expect(html).toContain('baseline')
     expect(html).toContain('candidate')
+    expect(html).not.toContain('Changed cases</h2>')
+  })
+
+  it('lists changed cases in the two-run comparison', () => {
+    const passed = buildRun({ benchmark: 'base' })
+    const failed = buildRun({
+      benchmark: 'candidate',
+      cases: [{
+        caseId: 'c', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        grade: { taskSuccess: false, toolSelectionAccuracy: true },
+        judge: { finalAnswerScore: 2, hallucination: false },
+      }],
+    })
+    const html = renderDashboard([passed, failed])
+    expect(html).toContain('Changed cases</h2>')
+    expect(html).toContain('<td>A better</td>')
+    expect(html).toContain('<td>c</td>')
   })
 
   it('writes a standalone file through nested directories', async () => {
