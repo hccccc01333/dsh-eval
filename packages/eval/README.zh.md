@@ -115,7 +115,7 @@ Markdown 报告会为每个评分维度（任务成功、工具选择准确率�
 
 `dsh eval gate candidate.json --baseline base.json --max-drop 0.05` 把 run 对比变成构建判定。它先检查完成 trial 数与未评分 trial 数，再检查任务成功率、工具选择准确率、strict pass@1 与判官得分。所有质量指标都归一化到 0..1（判官得分除以对应 run 的 `maxScore`），因此一个容差适用于所有指标。命令输出 PASS/FAIL 表格，任何指标回退超过容差即以 1 退出，可直接作为 CI 必需步骤。
 
-基线缺失的指标记为 "baseline ungraded" 并通过；候选 run 缺失的指标则判失败，不会被悄悄跳过。若 benchmark 有意改变 trial 数量，可传 `--allow-incomplete` 跳过覆盖度检查。
+存在配对 trial 时，判定还会列出最多 5 个从通过翻转为失败（或判官分数下降）的 case x trial，case id 会做 markdown 净化；失败的门禁因此能直接指出该查哪里，而不只是一个百分比。基线缺失的指标记为 "baseline ungraded" 并通过；候选 run 缺失的指标则判失败，不会被悄悄跳过。若 benchmark 有意改变 trial 数量，可传 `--allow-incomplete` 跳过覆盖度检查。
 
 ## 回放（keyless CI）
 

@@ -91,10 +91,82 @@ describe('dsh-eval CI gate', () => {
     expect(relaxed.checks[0]!.metric).toBe('task success')
   })
 
+  it('names the paired cases that got worse', () => {
+    const grading = {
+      taskSuccessRate: 1, toolSelectionAccuracyRate: 1,
+      finalAnswerScore: 8, hallucinationRate: 0,
+    }
+    const baseline = buildRun({
+      grading,
+      cases: [{
+        caseId: 'c|x\nnext', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        grade: { taskSuccess: true, toolSelectionAccuracy: true },
+        judge: { finalAnswerScore: 8, hallucination: false },
+      }],
+    })
+    const candidate = buildRun({
+      grading,
+      cases: [{
+        caseId: 'c|x\nnext', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        grade: { taskSuccess: false, toolSelectionAccuracy: false },
+        judge: { finalAnswerScore: 3, hallucination: false },
+      }, {
+        caseId: 'unpaired', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        grade: { taskSuccess: false, toolSelectionAccuracy: false },
+        judge: { finalAnswerScore: 0, hallucination: false },
+      }],
+    })
+    const result = evaluateGate(baseline, candidate, 0.1, true)
+    expect(result.regressions!.map(item => item.metric)).toEqual([
+      'task success', 'tool selection', 'judge score',
+    ])
+    const markdown = renderGate(result)
+    expect(markdown).toContain('- case regressions: 3 paired trial(s) got worse (showing up to 5)')
+    expect(markdown).toContain('c x next #1: task success 100.0% → 0.0%')
+    expect(markdown).toContain('c x next #1: judge score 80.0% → 30.0%')
+    expect(markdown).not.toContain('unpaired #1')
+    // Score drops inside the tolerance are not regressions; null scores are skipped.
+    const tinyDrop = buildRun({
+      grading,
+      cases: [
+        {
+          caseId: 'c|x\nnext', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          grade: { taskSuccess: true, toolSelectionAccuracy: true },
+          judge: { finalAnswerScore: 7.5, hallucination: false },
+        },
+        {
+          caseId: 'c|x\nnext', trial: 2, status: 'completed', exitCode: 0, timedOut: false,
+          grade: { taskSuccess: true, toolSelectionAccuracy: true },
+          judge: { finalAnswerScore: null, hallucination: null },
+        },
+      ],
+    })
+    const withTrialTwo = buildRun({
+      grading,
+      cases: [...baseline.cases, {
+        caseId: 'c|x\nnext', trial: 2, status: 'completed', exitCode: 0, timedOut: false,
+        grade: { taskSuccess: true, toolSelectionAccuracy: true },
+        judge: { finalAnswerScore: 8, hallucination: false },
+      }],
+    })
+    expect(evaluateGate(withTrialTwo, tinyDrop, 0.1, true).regressions).toEqual([])
+
+    // A run without a judge configuration cannot normalize per-case scores.
+    const { judge: _judge, ...unconfigured } = withTrialTwo
+    const withoutVerdicts = {
+      ...unconfigured,
+      cases: unconfigured.cases.map(({ judge: _verdict, ...rest }) => rest),
+    }
+    expect(evaluateGate(withoutVerdicts, withoutVerdicts, 0.1, true).regressions).toEqual([])
+    const zeroMax = buildRun({ judge: { provider: 'p', model: 'j', maxScore: 0 }, grading })
+    expect(evaluateGate(zeroMax, zeroMax, 0.1, true).regressions).toEqual([])
+  })
+
   it('renders a null delta and negative integer deltas', () => {
     const result: GateResult = {
       passed: false,
       maxDrop: 0.05,
+      regressions: [],
       checks: [
         { metric: 'n/a', baseline: null, candidate: null, delta: null, passed: true },
         { metric: 'fewer', baseline: 3, candidate: 1, delta: -2, passed: true, unit: 'count' },
@@ -103,5 +175,6 @@ describe('dsh-eval CI gate', () => {
     const markdown = renderGate(result)
     expect(markdown).toContain('| n/a | – | – | – | PASS |')
     expect(markdown).toContain('| fewer | 3 | 1 | -2 | PASS |')
+    expect(renderGate({ passed: true, maxDrop: 0, checks: [] })).not.toContain('case regressions')
   })
 })

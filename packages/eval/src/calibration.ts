@@ -6,6 +6,9 @@
  * still useless for ranking. This module also measures how well the judge's
  * numeric score separates scripted passes from failures, and surfaces the
  * concrete cases where the two views disagree so a rubric can be improved.
+ * A normalized score >= 0.5 counts as a judge pass; the hallucination flag is
+ * only a fallback for trials whose score is missing, so the disagreement list
+ * can explain the score-based separation and ranking figures.
  *
  * @module dsh-eval/calibration
  */
@@ -46,7 +49,7 @@ function normalizedScore(score: number | null | undefined, maxScore: number | un
 /**
  * Compute judge calibration for a run.
  * @param run - a persisted run record.
- * @returns the summary, or null when no trial has both a scripted result and a judge score.
+ * @returns the summary, or null when no trial has both a scripted result and a usable judge verdict.
  */
 export function computeCalibration(run: EvalRun): CalibrationSummary | null {
   const maxScore = run.judge?.maxScore
@@ -58,23 +61,26 @@ export function computeCalibration(run: EvalRun): CalibrationSummary | null {
     const script = result.grade?.taskSuccess
     const judge = result.judge
     if (script === undefined || script === null || judge === undefined) continue
-    withBoth += 1
     const score = normalizedScore(judge.finalAnswerScore, maxScore)
+    const hallucination = judge.hallucination ?? null
+    // A verdict with neither signal is ungraded, not evidence of agreement.
+    if (score === null && hallucination === null) continue
+    withBoth += 1
     if (score !== null) {
       if (script) passed.push(score)
       else failed.push(score)
     }
-    const hallucination = judge.hallucination ?? null
-    // An unscored verdict can still disagree via its hallucination flag.
-    const canJudge = hallucination !== null || score !== null
-    const judgePass = hallucination !== null ? !hallucination : score !== null && score >= 0.5
-    if (canJudge && judgePass !== script && disagreements.length < 5) {
+    // The score drives calibration; the hallucination flag is a fallback.
+    const judgePass = score !== null ? score >= 0.5 : !hallucination
+    if (judgePass !== script) {
       disagreements.push({
         caseId: result.caseId, trial: result.trial, scriptPassed: script,
         score: judge.finalAnswerScore ?? null, hallucination,
       })
     }
   }
+  disagreements.sort((a, b) => a.caseId.localeCompare(b.caseId) || a.trial - b.trial)
+  disagreements.length = Math.min(disagreements.length, 5)
   if (withBoth === 0) return null
   const mean = (values: readonly number[]): number | null =>
     values.length === 0 ? null : values.reduce((sum, value) => sum + value, 0) / values.length

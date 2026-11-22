@@ -151,7 +151,10 @@ by its run's `maxScore`), so one tolerance applies to every quality metric. The
 command prints a markdown PASS/FAIL table and exits 1 on any regression beyond
 the tolerance, making it suitable as a required CI step.
 
-Metrics absent from the baseline are treated as "baseline ungraded" and pass;
+When paired trials exist, the verdict also lists up to five case x trials that
+flipped from pass to fail (or lost judge score), with case ids sanitized for
+markdown, so a failing gate points at what to investigate instead of only a
+percentage. Metrics absent from the baseline are treated as "baseline ungraded" and pass;
 metrics absent from the candidate fail rather than being silently skipped. Pass
 `--allow-incomplete` to ignore trial-coverage differences when a benchmark
 intentionally varies its trial count.

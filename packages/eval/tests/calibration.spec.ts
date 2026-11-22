@@ -39,7 +39,7 @@ describe('dsh-eval judge calibration', () => {
     // 2 passes x 1 fail, both pairs rank correctly.
     expect(result!.rankingAccuracy).toBe(1)
     expect(result!.disagreements).toEqual([{
-      caseId: 'bad', trial: 1, scriptPassed: false, score: 2, hallucination: false,
+      caseId: 'wrong-penalized', trial: 1, scriptPassed: true, score: 3, hallucination: false,
     }])
   })
 
@@ -61,7 +61,7 @@ describe('dsh-eval judge calibration', () => {
     ], JUDGE))!
     expect(result.disagreements).toEqual([])
     const flagged = computeCalibration(run([
-      trial('flagged', true, 9, true),
+      trial('flagged', true, null, true),
     ], JUDGE))!
     expect(flagged.disagreements[0]).toMatchObject({ caseId: 'flagged', hallucination: true })
   })
@@ -83,16 +83,29 @@ describe('dsh-eval judge calibration', () => {
     const result = computeCalibration(run([
       trial('infinite', true, Number.POSITIVE_INFINITY),
       trial('missing', true, null, true),
-      trial('both-null', true, null, null),
+      {
+        caseId: 'empty-verdict', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        grade: { taskSuccess: true, toolSelectionAccuracy: null },
+        judge: { finalAnswerScore: null, hallucination: null },
+      },
     ], JUDGE))!
     expect(result.passedMean).toBeNull()
     expect(result.disagreements[0]).toMatchObject({ score: null, hallucination: true })
   })
 
-  it('caps the disagreement list at five entries', () => {
-    const cases = Array.from({ length: 7 }, (_, index) => trial(`case-${index}`, true, 1, true))
+  it('orders equal case ids by trial', () => {
+    const first = trial('same', true, 1, true)
+    const second = { ...first, trial: 2 }
+    const result = computeCalibration(run([second, first], JUDGE))!
+    expect(result.disagreements.map(item => item.trial)).toEqual([1, 2])
+  })
+
+  it('sorts disagreements and caps the list at five entries', () => {
+    const cases = Array.from({ length: 7 }, (_, index) => trial(`case-${6 - index}`, true, 1, true))
     const result = computeCalibration(run(cases, JUDGE))!
     expect(result.disagreements).toHaveLength(5)
-    expect(result.disagreements[0]!.caseId).toBe('case-0')
+    expect(result.disagreements.map(item => item.caseId)).toEqual([
+      'case-0', 'case-1', 'case-2', 'case-3', 'case-4',
+    ])
   })
 })

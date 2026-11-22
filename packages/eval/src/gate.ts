@@ -24,11 +24,22 @@ export interface GateCheck {
   note?: string
 }
 
+/** A single case x trial that got worse between the two runs. */
+export interface CaseRegression {
+  caseId: string
+  trial: number
+  metric: 'task success' | 'tool selection' | 'judge score'
+  before: number
+  after: number
+}
+
 /** Aggregated gate decision. */
 export interface GateResult {
   checks: readonly GateCheck[]
   passed: boolean
   maxDrop: number
+  /** Optional for callers that only need the aggregate verdict. */
+  regressions?: readonly CaseRegression[]
 }
 
 /** Normalized judge score for a run, or null when ungraded. */
@@ -37,6 +48,48 @@ function scoreRate(run: EvalRun): number | null {
   if (score === null || score === undefined) return null
   const maxScore = run.judge?.maxScore
   return maxScore === undefined || maxScore <= 0 ? null : score / maxScore
+}
+
+/** Normalized per-case judge score for one trial. */
+function caseScore(run: EvalRun, result: EvalRun['cases'][number]): number | null {
+  const verdict = result.judge
+  if (verdict === undefined) return null
+  const score = verdict.finalAnswerScore
+  const maxScore = run.judge?.maxScore
+  if (score === null || maxScore === undefined || maxScore <= 0) return null
+  return Math.max(0, Math.min(1, score / maxScore))
+}
+
+/** Find paired case x trials that regressed, for actionable CI output. */
+function findRegressions(
+  baseline: EvalRun,
+  candidate: EvalRun,
+  maxDrop: number,
+): CaseRegression[] {
+  const byKey = new Map<string, EvalRun['cases'][number]>()
+  for (const result of baseline.cases) byKey.set(`${result.caseId}\u0000${result.trial}`, result)
+  const regressions: CaseRegression[] = []
+  for (const result of candidate.cases) {
+    const before = byKey.get(`${result.caseId}\u0000${result.trial}`)
+    if (before === undefined) continue
+    for (const [metric, previous, current] of [
+      ['task success', before.grade?.taskSuccess, result.grade?.taskSuccess],
+      ['tool selection', before.grade?.toolSelectionAccuracy, result.grade?.toolSelectionAccuracy],
+    ] as const) {
+      if (previous === true && current === false) {
+        regressions.push({ caseId: result.caseId, trial: result.trial, metric, before: 1, after: 0 })
+      }
+    }
+    const previousScore = caseScore(baseline, before)
+    const currentScore = caseScore(candidate, result)
+    if (previousScore !== null && currentScore !== null && currentScore < previousScore - maxDrop) {
+      regressions.push({
+        caseId: result.caseId, trial: result.trial, metric: 'judge score',
+        before: previousScore, after: currentScore,
+      })
+    }
+  }
+  return regressions
 }
 
 /** Compare two nullable rates, allowing a drop of at most `maxDrop`. */
@@ -97,7 +150,12 @@ export function evaluateGate(
       candTask?.strictPassAt1 ?? null, maxDrop),
     compareRate('judge score', scoreRate(baseline), scoreRate(candidate), maxDrop),
   )
-  return { checks, passed: checks.every(check => check.passed), maxDrop }
+  return {
+    checks,
+    passed: checks.every(check => check.passed),
+    maxDrop,
+    regressions: findRegressions(baseline, candidate, maxDrop),
+  }
 }
 
 /** Format a gate value as a percentage, a count, or a dash. */
@@ -123,6 +181,13 @@ function formatDelta(value: number | null, check: GateCheck): string {
  */
 export function renderGate(result: GateResult): string {
   const rows = result.checks.map(check => `| ${check.metric} | ${format(check.baseline, check)} | ${format(check.candidate, check)} | ${formatDelta(check.delta, check)} | ${check.passed ? 'PASS' : 'FAIL'}${check.note === undefined ? '' : ` (${check.note})`} |`)
+  const regressions = (result.regressions ?? []).slice(0, 5).map(item => {
+    // Case ids come from benchmark files; keep them from breaking markdown lines.
+    const caseId = item.caseId.replace(/[\r\n|]/gu, ' ')
+    const before = `${(item.before * 100).toFixed(1)}%`
+    const after = `${(item.after * 100).toFixed(1)}%`
+    return `  - ${caseId} #${item.trial}: ${item.metric} ${before} → ${after}`
+  })
   return [
     `# Gate: ${result.passed ? 'PASS' : 'FAIL'}`,
     '',
@@ -132,5 +197,10 @@ export function renderGate(result: GateResult): string {
     '|---|---|---|---|---|',
     ...rows,
     '',
+    ...(regressions.length === 0 ? [] : [
+      `- case regressions: ${result.regressions!.length} paired trial(s) got worse (showing up to 5)`,
+      ...regressions,
+      '',
+    ]),
   ].join('\n')
 }

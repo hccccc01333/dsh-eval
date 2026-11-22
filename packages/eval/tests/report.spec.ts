@@ -247,7 +247,6 @@ describe('dsh-eval report persistence and rendering', () => {
     expect(markdown).toContain('## Judge calibration')
     expect(markdown).toContain('- separation (passed − failed): +60.0pp')
     expect(markdown).toContain('- ranking accuracy: 100.0% (ties count as half)')
-    expect(markdown).toContain('  - disagree trial 1: script fail · judge score 2')
     expect(renderBriefReport(run)).toContain('- judge separation: +60.0pp · ranking 100.0%')
   })
 
@@ -322,6 +321,8 @@ describe('dsh-eval report persistence and rendering', () => {
     const markdown = renderMarkdownReport(reversed)
     expect(markdown).toContain('- separation (passed − failed): -60.0pp')
     expect(markdown).toContain('- ranking accuracy: 0.0% (ties count as half)')
+    expect(markdown).toContain('  - high-fail trial 1: script fail · judge score 8')
+    expect(markdown).toContain('  - low-pass trial 1: script pass · judge score 2')
     expect(markdown).toContain('  - unscored trial 1: script pass · judge score n/a · hallucination')
     expect(renderBriefReport(reversed)).toContain('- judge separation: -60.0pp · ranking 0.0%')
 
@@ -330,7 +331,7 @@ describe('dsh-eval report persistence and rendering', () => {
       cases: [{
         caseId: 'no-score', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
         grade: { taskSuccess: true, toolSelectionAccuracy: null },
-        judge: { finalAnswerScore: null, hallucination: null },
+        judge: { finalAnswerScore: null, hallucination: false },
       }],
     })
     const sparse = renderMarkdownReport(noScores)

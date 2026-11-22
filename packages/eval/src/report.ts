@@ -264,7 +264,7 @@ function renderCalibration(summary: CalibrationSummary): string[] {
   const lines = [
     '## Judge calibration',
     '',
-    `- pairs: ${summary.pairs} trial(s) with both a scripted task result and a judge score`,
+    `- pairs: ${summary.pairs} trial(s) with a scripted task result and a usable judge verdict`,
     `- mean normalized score: passed ${summary.passedMean === null ? 'n/a' : `${(summary.passedMean * 100).toFixed(1)}%`} · failed ${summary.failedMean === null ? 'n/a' : `${(summary.failedMean * 100).toFixed(1)}%`}`,
     `- separation (passed − failed): ${summary.separation === null ? 'n/a' : `${summary.separation >= 0 ? '+' : ''}${(summary.separation * 100).toFixed(1)}pp`}`,
     `- ranking accuracy: ${summary.rankingAccuracy === null ? 'n/a' : `${(summary.rankingAccuracy * 100).toFixed(1)}% (ties count as half)`}`,

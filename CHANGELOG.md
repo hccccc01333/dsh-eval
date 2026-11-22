@@ -7,11 +7,14 @@
 - **Judge calibration diagnostics.** Report mean normalized judge scores for
   scripted passes and failures, their separation, an AUC-style ranking accuracy
   and up to five disagreement cases with ids. Rendered in full reports, the
-  HTML dashboard and a one-line `--brief` summary.
+  HTML dashboard and a one-line `--brief` summary. The score (>= 0.5 of
+  maxScore) drives the verdict; the hallucination flag is only a fallback for
+  missing scores, and verdicts with neither signal are excluded from `pairs`.
 - **CI quality gate.** `dsh eval gate candidate.json --baseline base.json
   --max-drop 0.05` checks coverage, task success, tool selection, strict pass@1
   and normalized judge score, prints a PASS/FAIL table and exits nonzero on
-  regressions. Candidate-side missing metrics fail closed;
+  regressions. Paired case x trials that flipped to failure are named in the
+  output (ids sanitized for markdown). Candidate-side missing metrics fail closed;
   `--allow-incomplete` relaxes the coverage checks.
 - **Standalone HTML dashboard.** `dsh eval dashboard a.json [b.json] --out report.html`
   renders coverage, pass@1/pass@k, latency and cost cards plus reliability,
