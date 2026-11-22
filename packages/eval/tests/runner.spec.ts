@@ -443,6 +443,7 @@ describe('dsh-eval benchmark runner', () => {
     const result = run.cases[0]
     expect(result?.status).toBe('completed')
     expect(result?.tracePaths).toHaveLength(2)
+    expect(result?.traceSha256).toMatch(/^[0-9a-f]{64}$/u)
     expect(result?.metrics?.steps).toBe(2)
     expect(result?.metrics?.toolCalls).toBe(2)
     expect(result?.metrics?.toolResults).toBe(2)

@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Trace digest for tamper-evident re-judging.** Each completed trial records
+  the SHA-256 of its merged trace, and `rejudge` refuses a stored log that no
+  longer matches. The field is optional on older reports, so historical runs
+  remain readable.
 - **Statistical significance mode for the CI gate.** `dsh eval gate
   --require-significance` adds a paired-sign-test row and only fails quality
   drops the test confirms. Unpaired, underpowered or undecidable comparisons

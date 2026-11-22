@@ -49,6 +49,8 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
 - ✅ **Case-level paired outcomes.** `compare` and the two-run dashboard name
   the concrete case x trials behind a significant sign test, using the same
   primary metric and capped output for large benchmarks.
+- ✅ **Tamper-evident traces.** Recorded SHA-256 digests let offline re-judging
+  prove it reads the same evidence the original run harvested.
 - ✅ **Significance-gated CI.** `dsh eval gate --require-significance` only
   fails confirmed regressions and closes the gate when evidence is missing or
   underpowered.

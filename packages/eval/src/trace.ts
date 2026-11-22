@@ -7,6 +7,7 @@
  * @module dsh-eval/trace
  */
 
+import { createHash } from 'node:crypto'
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { decodeStorageRecord, SessionId, type SessionEvent } from '@deepseek-ai/dsh-session'
@@ -140,4 +141,14 @@ export function mergeTraces(traces: readonly EvalTrace[]): EvalTrace {
     .sort((a, b) => a.event.time - b.event.time || a.source - b.source)
     .map(entry => entry.event)
   return { sessionId: primary.sessionId, createdAt: primary.createdAt, events }
+}
+
+/**
+ * Stable SHA-256 digest of a merged trace, used to prove that an offline
+ * re-judge reads the same evidence the original run harvested.
+ * @param trace - the merged trace.
+ * @returns a lowercase hex digest.
+ */
+export function traceDigest(trace: EvalTrace): string {
+  return createHash('sha256').update(JSON.stringify(trace)).digest('hex')
 }

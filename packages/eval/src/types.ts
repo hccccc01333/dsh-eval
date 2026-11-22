@@ -184,6 +184,8 @@ export interface EvalTrialResult {
   tracePath?: string
   /** Absolute paths of every harvested session log, primary first. */
   tracePaths?: readonly string[]
+  /** SHA-256 of the merged trace; lets offline re-judging detect altered logs. */
+  traceSha256?: string
   /** The child process's exit code, or null when it was killed. */
   exitCode: number | null
   /** Whether the trial hit its timeout and killed the child. */

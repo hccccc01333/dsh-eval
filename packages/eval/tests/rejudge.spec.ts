@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
 import { rejudgeRun } from '../src/rejudge.ts'
+import { loadTrace, mergeTraces, traceDigest } from '../src/trace.ts'
 import type { EvalRun, EvalTrialResult } from '../src/types.ts'
 
 const FIXTURE_LOG = fileURLToPath(new URL('./fixtures/session.jsonl', import.meta.url))
@@ -61,6 +62,19 @@ function withCase(run: EvalRun, index: number, result: EvalTrialResult): EvalRun
 }
 
 describe('dsh-eval offline re-judging', () => {
+  it('accepts a matching recorded trace digest and rejects a tampered trace', async () => {
+    const loaded = await Promise.all([earlyLog, lateLog].map(path => loadTrace(path)))
+    loaded.sort((a, b) => a.createdAt - b.createdAt)
+    const digest = traceDigest(mergeTraces(loaded))
+    const chat = async () => '{"finalAnswerScore": 8, "hallucination": false}'
+    const matching = withCase(buildRun(), 0, { ...buildRun().cases[0]!, traceSha256: digest })
+    expect((await rejudgeRun(matching, chat)).cases[0]?.judge?.finalAnswerScore).toBe(8)
+    const tampered = withCase(buildRun(), 0, {
+      ...buildRun().cases[0]!, traceSha256: '0'.repeat(64),
+    })
+    await expect(rejudgeRun(tampered, chat)).rejects.toThrow('differs from the recorded digest')
+  })
+
   it('rebuilds verdicts from traces without touching other run data', async () => {
     const original = buildRun()
     const prompts: string[] = []

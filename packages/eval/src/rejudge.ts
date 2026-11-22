@@ -13,7 +13,7 @@
 import { extname, isAbsolute, resolve, sep } from 'node:path'
 import { tryJudgeTrial, type JudgeChat } from './judge.ts'
 import { aggregateGrading } from './runner.ts'
-import { loadTrace, mergeTraces } from './trace.ts'
+import { loadTrace, mergeTraces, traceDigest } from './trace.ts'
 import type { BenchmarkCase, BenchmarkJudge, EvalRun, EvalTrialResult } from './types.ts'
 
 /**
@@ -64,12 +64,16 @@ export async function rejudgeRun(
     }
     const loaded = await Promise.all(paths.map(async path => ({ path, trace: await loadTrace(path) })))
     loaded.sort((a, b) => a.trace.createdAt - b.trace.createdAt)
+    const merged = mergeTraces(loaded.map(entry => entry.trace))
+    if (result.traceSha256 !== undefined && traceDigest(merged) !== result.traceSha256) {
+      throw new Error(`rejudge: trace for ${result.caseId}#${result.trial} differs from the recorded digest`)
+    }
     const caseValue: BenchmarkCase = {
       id: input.caseId,
       prompt: input.prompt,
       ...(input.answer !== undefined ? { expected: { answer: input.answer } } : {}),
     }
-    const verdict = await tryJudgeTrial(caseValue, mergeTraces(loaded.map(entry => entry.trace)), judge, judgeChat)
+    const verdict = await tryJudgeTrial(caseValue, merged, judge, judgeChat)
     const previous = result.judge
     // A flaky judge must not erase an already usable score. Keep the old one,
     // but leave the failure visible next to it in the report.

@@ -17,11 +17,11 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - `dsh eval run benchmark.yaml` — orchestrate one headless `dsh` subprocess per case × trial
 - Trace harvesting from persisted session logs (everything a model sees is reconstructable from the log)
 - Automatic metrics: task success, tool success, tool-selection accuracy, steps, tokens, latency, cost, retry, invalid tool calls, context usage
-- Scripted grading: `expected.tool` (tool-selection accuracy) and `expected.check` (task success)
+- Scripted grading: tool constraints (`tool`/`tools`/`toolAnyOf`/`toolRegex`/`toolNot`), check commands (`check`/`checkArgv`/`checkShell`), and `answerRegex` final-answer checks without an LLM judge
 - LLM judge: final-answer score and hallucination flags, with optional gold answers and visible judge failures
 - Subagent trace merging: child session logs fold into the trial metrics
 - Paired A/B: same-case win/lose/tie statistics across two runs
-- Paired inference: exact sign test over discordant pairs, seeded bootstrap intervals on every mean delta, Bonferroni-corrected across the printed family
+- Paired inference: exact sign test with power/MDE floor, seeded bootstrap intervals on every mean delta, Bonferroni-corrected across the printed family
 - Reliability: per-case pass@1 / pass@k / pass^k, flaky-case detection, hardest-case ranking, and a strict rate that keeps timed-out/error trials in the denominator
 - Precision: seeded bootstrap intervals for single-run rates plus latency p50/p95, so small runs show their uncertainty
 - Agreement: judge/script concordance and Cohen's kappa, so a proxy judge can be checked against real checks
@@ -34,11 +34,11 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - `dsh eval leaderboard a.json b.json c.json` — rank any number of runs by task success with gap-to-leader; `--json` for automation
 - `dsh eval gate candidate.json --baseline base.json --max-drop 0.05 [--require-significance] [--json]` — CI quality and resource-budget gate; significance mode only fails on statistically confirmed regressions
 - `dsh eval compare v1.json v2.json` — signed `B - A` table plus paired inference; `--json` for structured output
-- `dsh eval rejudge run.json --out rejudged.json` — re-judge stored traces with a new judge model or rubric, without re-running the agent
+- `dsh eval rejudge run.json --out rejudged.json` — re-judge stored traces with a new judge model or rubric, without re-running the agent; a recorded SHA-256 trace digest rejects tampered logs
 
 ## Status
 
-`dsh-eval@0.4.0` · 246 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.4.0` · 247 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 

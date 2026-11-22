@@ -21,6 +21,7 @@ import { splitArgv } from './argv.ts'
 import type { Benchmark, BenchmarkExpectation, EvalRun, EvalTrialResult } from './types.ts'
 import type { EvalGrade, EvalRunGrading } from './types.ts'
 import { finalAnswerOf, tryJudgeTrial, type JudgeChat } from './judge.ts'
+import { traceDigest } from './trace.ts'
 import { caseSegment } from './segments.ts'
 import { aggregateMetrics, computeMetrics } from './metrics.ts'
 import { findSessionLogs, loadTrace, mergeTraces } from './trace.ts'
@@ -420,6 +421,7 @@ async function runCaseTrial(
       status: 'completed',
       tracePath: primaryPath,
       tracePaths: loaded.map(entry => entry.path),
+      traceSha256: traceDigest(trace),
       exitCode: outcome.exitCode,
       timedOut: outcome.timedOut,
       metrics,

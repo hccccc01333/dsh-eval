@@ -76,6 +76,7 @@ const trialSchema = z.object({
   error: z.string().optional(),
   tracePath: z.string().optional(),
   tracePaths: z.array(z.string()).optional(),
+  traceSha256: z.string().regex(/^[0-9a-f]{64}$/u).optional(),
   exitCode: z.number().nullable(),
   timedOut: z.boolean(),
   metrics: metricsSchema.optional(),

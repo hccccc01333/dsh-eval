@@ -16,11 +16,11 @@
 - `dsh eval run benchmark.yaml` —— 每个 case × trial 编排一个 headless `dsh` 子进程
 - 从持久化 session 日志收获 trace（模型看到的每个字节都能从日志重建）
 - 自动指标：任务成功、工具成功、工具选择准确率、steps、token、延迟、成本、重试、无效工具调用、上下文用量
-- 脚本化评分：`expected.tool`（工具选择准确率）与 `expected.check`（任务成功）
+- 脚本化评分：工具约束（`tool`/`tools`/`toolAnyOf`/`toolRegex`/`toolNot`）、检查命令（`check`/`checkArgv`/`checkShell`），以及无需 LLM judge 的 `answerRegex` 最终答案检查
 - LLM judge：最终答案得分与幻觉标记，支持金标答案，判官失败显式可见
 - 子 agent trace 合并：子 session 日志折叠进 trial 指标
 - 配对 A/B：同 case 的胜/负/平统计
-- 配对推断：对不一致对做精确符号检验，每个均值差给出固定种子 bootstrap 区间，并对报告内的整个推断族做 Bonferroni 校正
+- 配对推断：带功效/最小可检出样本量下限的精确符号检验，每个均值差给出固定种子 bootstrap 区间，并对报告内的整个推断族做 Bonferroni 校正
 - 可靠性：从 trial 直接推导每个 case 的 pass@1 / pass@k / pass^k、不稳定 case 列表、最难 case 排名，以及把超时/失败 trial 保留在分母中的严格通过率
 - 精度：单 run 通过率的固定种子 bootstrap 区间，以及延迟 p50/p95，让小样本 run 坦白展示不确定性
 - 一致性：判官与脚本评分的一致率和 Cohen's kappa，可用真实检查校验代理判官是否可信
@@ -33,11 +33,11 @@
 - `dsh eval leaderboard a.json b.json c.json` —— 按任务成功率给任意数量的 run 排名，并显示与领先者的差距；`--json` 便于自动化消费
 - `dsh eval gate candidate.json --baseline base.json --max-drop 0.05 [--require-significance] [--json]` —— CI 质量与资源预算门禁；显著性模式只在统计确认回退时失败
 - `dsh eval compare v1.json v2.json` —— 带符号的 `B - A` 对比表和配对推断；`--json` 输出结构化数据
-- `dsh eval rejudge run.json --out rejudged.json` —— 用新判官模型或 rubric 离线重评分，无需重跑 agent
+- `dsh eval rejudge run.json --out rejudged.json` —— 用新判官模型或 rubric 离线重评分，无需重跑 agent；记录的 SHA-256 trace 摘要可拒绝被篡改的日志
 
 ## 状态
 
-`dsh-eval@0.4.0` · 246 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.4.0` · 247 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 `0.3.1` 起可安装：`0.3.0` 的 tarball 漏掉了入口 import 的运行时模块，导致每次安装都报 `ERR_MODULE_NOT_FOUND`。详见 [CHANGELOG.md](CHANGELOG.md)。
 
