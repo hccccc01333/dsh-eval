@@ -31,7 +31,12 @@ function eventTime(lineIndex: number): number {
   return BASE_MS + lineIndex * STEP_MS
 }
 
-/** Extract display text from a string, a text block, or a block array. */
+/** Split external JSONL, tolerating a UTF-8 BOM before the first line. */
+function splitLines(text: string): string[] {
+  return text.replace(/^\uFEFF/u, '').split(/\r?\n/u)
+}
+
+/** Extract display text from a string, a single text block, or a block array. */
 function textOf(value: unknown): string {
   if (typeof value === 'string') return value
   if (Array.isArray(value)) {
@@ -40,6 +45,10 @@ function textOf(value: unknown): string {
       const text = (block as Record<string, unknown>).text
       return typeof text === 'string' ? [text] : []
     }).join('')
+  }
+  if (typeof value === 'object') {
+    const text = (value as Record<string, unknown> | null)?.text
+    return typeof text === 'string' ? text : ''
   }
   return ''
 }
@@ -85,11 +94,12 @@ export function importCodexLog(text: string, source: string): EvalTrace {
   let step = 0
   let open = false
   let callCounter = 0
+  let resultCounter = 0
   let messageCounter = 0
   const close = (): void => {
     open = closeTurn(events, turn, step, open)
   }
-  for (const line of text.split(/\r?\n/u)) {
+  for (const line of splitLines(text)) {
     if (line.trim() === '') continue
     let record: unknown
     try {
@@ -140,8 +150,10 @@ export function importCodexLog(text: string, source: string): EvalTrace {
       const argumentsText = typeof payload.arguments === 'string' ? payload.arguments : '{}'
       events.push({ type: 'tool/call', data: { turn, step, callId, name, arguments: argumentsText } })
     } else if (payload.type === 'function_call_output') {
-      callCounter += 1
-      const callId = typeof payload.call_id === 'string' ? payload.call_id : `codex-call-${callCounter}`
+      // Fallback ids pair by occurrence order: a call and its output each
+      // increment their own counter, so two missing call_id values both get N.
+      resultCounter += 1
+      const callId = typeof payload.call_id === 'string' ? payload.call_id : `codex-call-${resultCounter}`
       const output = textOf(payload.output ?? payload.content)
       events.push({
         type: 'tool/result',
@@ -149,7 +161,7 @@ export function importCodexLog(text: string, source: string): EvalTrace {
           turn,
           step,
           message: {
-            id: `tool-result-${callCounter}`,
+            id: `tool-result-${resultCounter}`,
             role: 'user',
             content: [{ type: 'tool-result', text: output, isError: payload.is_error === true }],
             source: { kind: 'tool', callId },
@@ -185,7 +197,7 @@ export function importClaudeLog(text: string, source: string): EvalTrace {
   const close = (): void => {
     open = closeTurn(events, turn, step, open)
   }
-  for (const line of text.split(/\r?\n/u)) {
+  for (const line of splitLines(text)) {
     if (line.trim() === '') continue
     let record: unknown
     try {

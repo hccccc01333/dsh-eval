@@ -49,8 +49,14 @@ describe('dsh-eval trace parsing', () => {
     expect(() => parseSessionLog('')).toThrow('empty session log')
   })
 
-  it('rejects a malformed header', () => {
-    expect(() => parseSessionLog('{"type":"nope"}\n')).toThrow()
+  it('rejects a malformed header with a line-1 diagnostic', () => {
+    expect(() => parseSessionLog('{"type":"nope"}\n')).toThrow('invalid header at line 1')
+    expect(() => parseSessionLog('not json\n')).toThrow('invalid header at line 1')
+  })
+
+  it('parses a log whose first line carries a UTF-8 BOM', () => {
+    const trace = parseSessionLog(`\uFEFF${HEADER}\n`)
+    expect(String(trace.sessionId)).toBe('session-t')
   })
 
   it('rejects an unparsable event row', () => {

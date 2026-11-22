@@ -20,6 +20,7 @@ import { join } from 'node:path'
 import type { Benchmark, EvalRun, EvalTrialResult } from './types.ts'
 import type { EvalGrade, EvalRunGrading } from './types.ts'
 import { tryJudgeTrial, type JudgeChat } from './judge.ts'
+import { caseSegment } from './segments.ts'
 import { aggregateMetrics, computeMetrics } from './metrics.ts'
 import { findSessionLogs, loadTrace, mergeTraces } from './trace.ts'
 
@@ -61,12 +62,6 @@ function diagnostic(outcome: SpawnOutcome): string {
 function message(error: unknown): string {
   /* v8 ignore next 3 -- every call site passes a node:fs or spawn Error; a non-Error rejection is impossible through the public API. */
   return error instanceof Error ? error.message : String(error)
-}
-
-/** Reduce a case id to one safe temp-directory segment. */
-function sanitizeSegment(value: string): string {
-  const safe = value.replace(/[^A-Za-z0-9._-]/gu, '-').replace(/^-+|-+$/gu, '')
-  return safe === '' ? 'case' : safe
 }
 
 /**
@@ -213,21 +208,35 @@ function runCommand(
     )
     child.stdout.on('data', (chunk: Buffer) => { stdout = cap(stdout, chunk) })
     child.stderr.on('data', (chunk: Buffer) => { stderr = cap(stderr, chunk) })
+    let escalation: NodeJS.Timeout | undefined
     const timer = setTimeout(() => {
-      /* v8 ignore next 3 -- close clears the timer; only a same-tick close/kill race reaches here. */
+      /* v8 ignore next 2 -- close clears the timer; only a same-tick close/kill race reaches here. */
       if (settled) return
+      // `close` arrives after stdio drains, so a child that has already exited
+      // but is still draining its pipes must not be reported as timed out.
+      /* v8 ignore next 2 -- exit-before-close is a narrow event-loop window no fixture can force deterministically. */
+      if (child.exitCode !== null || child.signalCode !== null) return
       timedOut = true
       child.kill()
+      /* v8 ignore next 5 -- escalation needs a child that ignores SIGTERM; the timeout fixture exits on the first signal. */
+      escalation = setTimeout(() => {
+        if (!settled && child.exitCode === null && child.signalCode === null) child.kill('SIGKILL')
+      }, 1000)
+      escalation.unref()
     }, timeoutMs)
-    child.on('error', (error) => {
+    const clearTimers = (): void => {
       clearTimeout(timer)
+      if (escalation !== undefined) clearTimeout(escalation)
+    }
+    child.on('error', (error) => {
+      clearTimers()
       /* v8 ignore next 3 -- spawn emits one error before close; the guard covers only an impossible duplicate error event. */
       if (settled) return
       settled = true
       reject(error)
     })
     child.on('close', (code) => {
-      clearTimeout(timer)
+      clearTimers()
       if (settled) return
       settled = true
       resolveOutcome({ exitCode: code, timedOut, stdout, stderr })
@@ -250,7 +259,7 @@ async function runCaseTrial(
   root: string,
   judgeChat: JudgeChat | undefined,
 ): Promise<EvalTrialResult> {
-  const trialDir = join(root, `${sanitizeSegment(caseValue.id)}-${trial}`)
+  const trialDir = join(root, `${caseSegment(caseValue.id)}-${trial}`)
   const workspace = join(trialDir, 'workspace')
   const dshHome = join(trialDir, 'dsh-home')
   await mkdir(workspace, { recursive: true })
@@ -258,7 +267,7 @@ async function runCaseTrial(
   if (caseValue.workspace !== undefined) await cp(caseValue.workspace, workspace, { recursive: true })
   const replayFixture = benchmark.replay === undefined
     ? undefined
-    : join(benchmark.replay.dir, `${sanitizeSegment(caseValue.id)}-${trial}`)
+    : join(benchmark.replay.dir, `${caseSegment(caseValue.id)}-${trial}`)
   let replay: { file: string; childFiles: string[] } | undefined
   if (replayFixture !== undefined) {
     const logs = await findSessionLogs(replayFixture)
@@ -366,13 +375,23 @@ export async function runBenchmark(benchmark: Benchmark, options: RunOptions = {
   if (benchmark.judge !== undefined && benchmark.replay !== undefined) {
     throw new Error('eval: judge and replay cannot be combined in one run')
   }
-  const root = await mkdtemp(join(options.tempRoot ?? tmpdir(), 'dsh-eval-'))
   const trials = options.trials ?? benchmark.trials
+  const concurrency = options.concurrency ?? benchmark.concurrency
+  // `runBenchmark` is a documented extension point: runtime overrides need the
+  // same positive-integer guarantee the YAML schema gives a loaded document.
+  if (!Number.isSafeInteger(trials) || trials < 1) {
+    throw new Error('eval: trials must be a positive integer')
+  }
+  if (!Number.isSafeInteger(concurrency) || concurrency < 1) {
+    throw new Error('eval: concurrency must be a positive integer')
+  }
+  // Created only after validation, so a bad override leaves no temp directory.
+  const root = await mkdtemp(join(options.tempRoot ?? tmpdir(), 'dsh-eval-'))
   const effective: Benchmark = {
     ...benchmark,
     ...(options.profile !== undefined ? { profile: options.profile } : {}),
     ...(options.command !== undefined ? { command: options.command } : {}),
-    ...(options.concurrency !== undefined ? { concurrency: options.concurrency } : {}),
+    concurrency,
   }
   const tasks: { caseValue: Benchmark['cases'][number]; trial: number }[] = []
   for (const caseValue of effective.cases) {

@@ -27,9 +27,15 @@ const headerSchema = z.object({
  *   or event seqs are not contiguous.
  */
 export function parseSessionLog(text: string): EvalTrace {
-  const lines = text.split(/\r?\n/u).filter(line => line.trim() !== '')
+  // A leading UTF-8 BOM would otherwise make line 1's header unparseable.
+  const lines = text.replace(/^\uFEFF/u, '').split(/\r?\n/u).filter(line => line.trim() !== '')
   if (lines.length === 0) throw new Error('empty session log')
-  const header = headerSchema.parse(JSON.parse(lines[0] as string))
+  let header: z.infer<typeof headerSchema>
+  try {
+    header = headerSchema.parse(JSON.parse(lines[0] as string))
+  } catch {
+    throw new Error('corrupt session log: invalid header at line 1')
+  }
   const events: SessionEvent[] = []
   for (let index = 1; index < lines.length; index++) {
     const line = lines[index] as string

@@ -53,6 +53,19 @@ describe('dsh-eval report persistence and rendering', () => {
     await expect(loadRunReport(wrong)).rejects.toThrow('is not a dsh-eval run report')
   })
 
+  it('diagnoses the offending field path in a malformed report', async () => {
+    const dir = tempDir()
+    const aggregate = join(dir, 'bad-aggregate.json')
+    writeFileSync(aggregate, JSON.stringify({ ...buildRun(), aggregate: {} }))
+    await expect(loadRunReport(aggregate)).rejects.toThrow('aggregate.steps')
+    const cases = join(dir, 'bad-cases.json')
+    writeFileSync(cases, JSON.stringify({ ...buildRun(), cases: [null] }))
+    await expect(loadRunReport(cases)).rejects.toThrow('cases.0')
+    const root = join(dir, 'bad-root.json')
+    writeFileSync(root, '[]')
+    await expect(loadRunReport(root)).rejects.toThrow('(root)')
+  })
+
   it('renders completed and failed trials plus the aggregate row', () => {
     const run = buildRun({
       benchmark: 'render-me',

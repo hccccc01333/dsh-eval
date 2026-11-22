@@ -6,6 +6,7 @@
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
+import { z } from 'zod'
 import type { EvalRun } from './types.ts'
 
 /**
@@ -19,18 +20,109 @@ export async function writeRunReport(run: EvalRun, path: string): Promise<void> 
   await writeFile(absolute, `${JSON.stringify(run, null, 2)}\n`, 'utf8')
 }
 
+const pricingSchema = z.object({
+  inputUsdPerMTokens: z.number(),
+  cacheReadUsdPerMTokens: z.number(),
+  cacheWriteUsdPerMTokens: z.number(),
+  outputUsdPerMTokens: z.number(),
+})
+
+const tokenUsageSchema = z.object({
+  inputTokens: z.number(),
+  cacheReadTokens: z.number(),
+  cacheWriteTokens: z.number(),
+  outputTokens: z.number(),
+})
+
+const metricsSchema = z.object({
+  turns: z.number(),
+  steps: z.number(),
+  toolCalls: z.number(),
+  toolResults: z.number(),
+  toolSuccess: z.number(),
+  toolSuccessRate: z.number().nullable(),
+  invalidToolCalls: z.number(),
+  retries: z.number(),
+  tokens: tokenUsageSchema,
+  totalTokens: z.number(),
+  contextTokens: z.number(),
+  llmMs: z.number(),
+  toolMs: z.number(),
+  ttftMs: z.number(),
+  latencyMs: z.number(),
+  costUsd: z.number().nullable(),
+})
+
+const gradeSchema = z.object({
+  taskSuccess: z.boolean().nullable(),
+  toolSelectionAccuracy: z.boolean().nullable(),
+})
+
+const judgeVerdictSchema = z.object({
+  finalAnswerScore: z.number().nullable(),
+  hallucination: z.boolean().nullable(),
+  rationale: z.string().optional(),
+})
+
+const trialSchema = z.object({
+  caseId: z.string(),
+  trial: z.number(),
+  status: z.enum(['completed', 'error']),
+  error: z.string().optional(),
+  tracePath: z.string().optional(),
+  tracePaths: z.array(z.string()).optional(),
+  exitCode: z.number().nullable(),
+  timedOut: z.boolean(),
+  metrics: metricsSchema.optional(),
+  grade: gradeSchema.optional(),
+  judge: judgeVerdictSchema.optional(),
+})
+
+const gradingSchema = z.object({
+  taskSuccessRate: z.number().nullable(),
+  toolSelectionAccuracyRate: z.number().nullable(),
+  finalAnswerScore: z.number().nullable(),
+  hallucinationRate: z.number().nullable(),
+})
+
+const judgeConfigSchema = z.object({
+  provider: z.string(),
+  model: z.string(),
+  rubric: z.string().optional(),
+  maxScore: z.number(),
+})
+
+/** Keep in step with `EvalRun`: deep validation turns malformed input into a field-path diagnostic instead of a TypeError in the renderer. */
+const runReportSchema = z.object({
+  benchmark: z.string(),
+  model: z.string(),
+  createdAt: z.number(),
+  trials: z.number(),
+  seed: z.number(),
+  pricing: pricingSchema.nullable(),
+  judge: judgeConfigSchema.optional(),
+  tempRoot: z.string(),
+  cases: z.array(trialSchema),
+  aggregate: metricsSchema.nullable(),
+  grading: gradingSchema.nullable(),
+})
+
 /**
- * Load a persisted run report, rejecting anything without the required surface.
+ * Load a persisted run report, validating its full shape before use.
  * @param path - path to the run JSON.
  * @returns the loaded run record.
+ * @throws with the offending field path when the document is malformed.
  */
 export async function loadRunReport(path: string): Promise<EvalRun> {
   const value: unknown = JSON.parse(await readFile(resolve(path), 'utf8'))
-  if (typeof value !== 'object' || value === null
-    || !Array.isArray((value as { cases?: unknown }).cases)) {
-    throw new Error(`${path} is not a dsh-eval run report`)
+  const parsed = runReportSchema.safeParse(value)
+  if (!parsed.success) {
+    const detail = parsed.error.issues
+      .map(issue => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+      .join('; ')
+    throw new Error(`${path} is not a dsh-eval run report: ${detail}`)
   }
-  return value as EvalRun
+  return parsed.data as EvalRun
 }
 
 /** Render a nullable percentage with a dash placeholder. */

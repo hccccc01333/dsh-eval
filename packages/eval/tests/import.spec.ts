@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { importClaudeLog, importCodexLog, importTraceFile } from '../src/import.ts'
+import { computeMetrics } from '../src/metrics.ts'
 
 const dirs: string[] = []
 
@@ -77,6 +78,9 @@ describe('dsh-eval cross-harness import', () => {
     expect(trace.events.filter(event => event.type === 'user/message')).toHaveLength(2)
     expect(metrics.calls).toBe(1)
     expect(metrics.results).toBe(1)
+    // The final assistant message carries a single content object, not an array.
+    expect(trace.events.some(event => event.type === 'assistant/message'
+      && JSON.stringify(event.data).includes('Fixed'))).toBe(true)
   })
 
   it('imports a Claude Code session log with tool_use/tool_result pairing', () => {
@@ -112,7 +116,29 @@ describe('dsh-eval cross-harness import', () => {
     expect(calls).toHaveLength(1)
     expect(calls[0]?.data.name).toBe('tool')
     expect(results).toHaveLength(1)
-    expect(String(results[0]?.data.message.source.callId)).toBe('codex-call-2')
+    expect(String(results[0]?.data.message.source.callId)).toBe('codex-call-1')
+    // Fallback ids pair by order now, so the call's dispatch time is found.
+    expect(computeMetrics(trace.events, undefined).toolMs).toBeGreaterThan(0)
+  })
+
+  it('drops non-textual message content', () => {
+    const numeric = importCodexLog(
+      '{"type":"response_item","payload":{"type":"message","role":"user","content":42}}',
+      'x.jsonl',
+    )
+    expect(JSON.stringify(numeric.events.find(event => event.type === 'user/message')?.data)).toContain('""')
+    const noText = importCodexLog(
+      '{"type":"response_item","payload":{"type":"message","role":"user","content":{"type":"image"}}}',
+      'x.jsonl',
+    )
+    expect(JSON.stringify(noText.events.find(event => event.type === 'user/message')?.data)).toContain('""')
+  })
+
+  it('ignores a UTF-8 BOM on external session logs', () => {
+    const codex = importCodexLog(`\uFEFF${CODEX_LOG}`, 'session.jsonl')
+    expect(codex.events.filter(event => event.type === 'user/message')).toHaveLength(2)
+    const claude = importClaudeLog(`\uFEFF${CLAUDE_LOG}`, 'claude.jsonl')
+    expect(claude.events.filter(event => event.type === 'user/message')).toHaveLength(2)
   })
 
   it('handles malformed and partial Claude records', () => {

@@ -177,6 +177,16 @@ describe('dsh-eval benchmark runner', () => {
     expect(run.cases[0]?.error).toContain('timed out')
   })
 
+  it('rejects invalid run overrides before creating a temp root', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    await expect(runBenchmark(buildBenchmark(), { trials: 0 }))
+      .rejects.toThrow('trials must be a positive integer')
+    await expect(runBenchmark(buildBenchmark(), { trials: Number.POSITIVE_INFINITY }))
+      .rejects.toThrow('trials must be a positive integer')
+    await expect(runBenchmark(buildBenchmark(), { concurrency: 0 }))
+      .rejects.toThrow('concurrency must be a positive integer')
+  })
+
   it('turns a spawn failure into an error trial', async () => {
     process.env.FAKE_DASH_MODE = 'log'
     const run = await runBenchmark(buildBenchmark({ command: ['dsh-definitely-missing-xyz'], trials: 1 }), { tempRoot: tempDir() })

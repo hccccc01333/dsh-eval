@@ -205,6 +205,9 @@ describe('dsh-eval benchmark loading', () => {
     { name: 'empty expected', text: 'name: n\nmodel: m\ncases:\n  - id: a\n    prompt: p\n    expected: {}\n', message: 'expected needs at least one of tool or check' },
     { name: 'zero concurrency', text: 'name: n\nmodel: m\nconcurrency: 0\ncases:\n  - id: a\n    prompt: p\n', message: '' },
     { name: 'fractional concurrency', text: 'name: n\nmodel: m\nconcurrency: 1.5\ncases:\n  - id: a\n    prompt: p\n', message: '' },
+    { name: 'duplicate ids', text: 'name: n\nmodel: m\ncases:\n  - id: a\n    prompt: p\n  - id: a\n    prompt: q\n', message: 'collides with an earlier case' },
+    { name: 'ids colliding after normalization', text: 'name: n\nmodel: m\ncases:\n  - id: a/b\n    prompt: p\n  - id: a b\n    prompt: q\n', message: 'collides with an earlier case' },
+    { name: 'ids colliding on case-folding filesystems', text: 'name: n\nmodel: m\ncases:\n  - id: Case\n    prompt: p\n  - id: case\n    prompt: q\n', message: 'collides with an earlier case' },
   ])('rejects an invalid document ($name)', async ({ text, message }) => {
     if (message === '') {
       await expect(parseBenchmark(text, tempDir())).rejects.toThrow()

@@ -10,6 +10,7 @@ import { readFile } from 'node:fs/promises'
 import { dirname, isAbsolute, resolve } from 'node:path'
 import { load } from 'js-yaml'
 import { z } from 'zod'
+import { caseSegment } from './segments.ts'
 import type { Benchmark, BenchmarkCase } from './types.ts'
 
 const judgeSchema = z.object({
@@ -60,7 +61,25 @@ const benchmarkSchema = z.object({
   pricing: z.record(z.string().min(1), pricingSchema).optional(),
   judge: judgeSchema.optional(),
   replay: replaySchema.optional(),
-}).strict()
+}).strict().superRefine((parsed, ctx) => {
+  // Every trial's private directory is `<caseSegment(id)>-<trial>`. Distinct
+  // ids that normalize to one segment (or a plain duplicate) would otherwise
+  // share a workspace and DSH_HOME, leaking session logs and metrics across
+  // cases. Compare case-insensitively so Windows' case-folding FS is safe too.
+  const seen = new Set<string>()
+  parsed.cases.forEach((caseValue, index) => {
+    const key = caseSegment(caseValue.id).toLowerCase()
+    if (seen.has(key)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['cases', index, 'id'],
+        message: `case id "${caseValue.id}" collides with an earlier case after directory normalization`,
+      })
+    } else {
+      seen.add(key)
+    }
+  })
+})
 
 /**
  * Resolve one parsed case's prompt and workspace against the benchmark

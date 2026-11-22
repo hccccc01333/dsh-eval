@@ -1,5 +1,36 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- **Case ids that collapse onto the same trial directory are now rejected.** A
+  trial's private directory is `<caseSegment(id)>-<trial>`, so ids like `a/b`
+  and `a b` (or a plain duplicate, or `Case`/`case` on a case-folding
+  filesystem) used to share a workspace and `DSH_HOME`; the second case could
+  then harvest the first one's session log as its own trace. `parseBenchmark`
+  now rejects such ids before any trial starts, using the same normalization
+  function the runner uses for directory names.
+- **A child that exits just before its timeout is no longer misreported as
+  timed out.** The timer checks for an already-observed exit code or signal
+  before marking the trial as timed out. A second-stage SIGKILL now escalates a
+  child that ignores SIGTERM, so a run cannot hang forever.
+- **Invalid `runBenchmark` overrides are rejected before a temp root is made.**
+  `trials` and `concurrency` must be finite positive integers; previously `0`
+  produced a `TypeError` and `Infinity` could loop forever.
+- **`loadRunReport` validates the whole run document.** A truncated or
+  hand-edited report now fails with a field-path diagnostic (for example
+  `aggregate.steps: Required`) instead of a `TypeError` in the renderer.
+- **External logs with a leading UTF-8 BOM import correctly.** The BOM is
+  stripped in both the dsh trace parser and the Codex/Claude importers; before,
+  the importers silently dropped the first line and its user turn.
+- **Malformed session-log headers now report `invalid header at line 1`**
+  instead of leaking a raw JSON or zod error.
+- **Codex logs missing `call_id` now pair calls with their results.** Fallback
+  ids are assigned by occurrence order on each side, so tool latency is folded
+  instead of dropped. A single content object is also recognized as message
+  text, not only a block array.
+
 ## 0.4.0 — 2026-10-26
 
 ### Added
