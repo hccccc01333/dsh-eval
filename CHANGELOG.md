@@ -251,6 +251,16 @@
 
 ### Fixed
 
+- **Rejudge trace paths are resolved before the tempRoot check.** A hand-edited
+  report can no longer use `root/../outside.jsonl` to make the judge read and
+  ship an arbitrary local `.jsonl` file.
+- **Significance mode counts the real correction family.** Duplicate sign
+  tests and ungraded metrics no longer inflate the family and suppress genuine
+  regressions; all-tied pairs are treated as inconclusive and fail closed.
+- **Paired comparisons ignore unmeasured pairs.** Missing metric outcomes are
+  no longer invented as ties in `compare` or in leaderboard verdicts, which
+  also report their attainable floor at the correct family size and name the
+  metric they tested.
 - **A detached grandchild can no longer hang a check forever.** The runner now
   resolves from the child's `exit` event after a short stdio drain grace period
   even when `close` never arrives because an inherited pipe stays open.

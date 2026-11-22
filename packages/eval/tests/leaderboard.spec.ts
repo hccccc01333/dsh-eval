@@ -48,7 +48,7 @@ describe('dsh-eval leaderboard', () => {
     expect(rows[1]!.gapFromBest).toBeCloseTo(0.2)
     const markdown = renderLeaderboard(rows)
     expect(markdown).toContain('| 1 | b — strong | 1/1 | 90.0% | 100.0% | 90.0% | 90.0% | $0.000002 | 120.0 ms | leader | leader |')
-    expect(markdown).toContain('| 2 | b — middle | 1/1 | 70.0% | 100.0% | 70.0% | 70.0% | $0.000002 | 120.0 ms | -20.0pp | underpowered (p=1.000) |')
+    expect(markdown).toContain('| 2 | b — middle | 1/1 | 70.0% | 100.0% | 70.0% | 70.0% | $0.000002 | 120.0 ms | -20.0pp | underpowered (p=1.000, task success) |')
   })
 
   it('shares a rank for ties and breaks ties deterministically', () => {
@@ -72,7 +72,7 @@ describe('dsh-eval leaderboard', () => {
     expect(rows[1]!.gapFromBest).toBeNull()
     expect(rows[2]!.taskSuccess).toBeNull()
     const markdown = renderLeaderboard(rows)
-    expect(markdown).toContain('| 3 | x bad name | 1/1 | – | 100.0% | – | – | – | – | – | underpowered (p=1.000) |')
+    expect(markdown).toContain('| 3 | x bad name | 1/1 | – | 100.0% | – | – | – | – | – | underpowered (p=1.000, task success) |')
   })
 
   it('still ranks judge-only runs whose task success is null', () => {
@@ -122,7 +122,7 @@ describe('dsh-eval leaderboard', () => {
     expect(rows[1]!.significance).toMatchObject({
       verdict: 'significantly-behind', worse: true, detectable: true,
     })
-    expect(renderLeaderboard(rows)).toContain('significantly-behind (p=0.008)')
+    expect(renderLeaderboard(rows)).toContain('significantly-behind (p=0.008, task success)')
 
     const mixed = pairedRun([true, true, true, true, true, false, false, false], 'mixed')
     const reverse = pairedRun([false, false, false, false, false, true, true, true], 'reverse')

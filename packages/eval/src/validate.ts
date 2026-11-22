@@ -83,7 +83,7 @@ export function summarizeBenchmark(benchmark: Benchmark): BenchmarkSummary {
   } else if (gradedCases === 0) {
     warnings.push('no case has scripted expectations — results depend entirely on the judge')
   }
-  if (checks === 0 && toolConstraints === 0) {
+  if (checks === 0 && toolConstraints === 0 && benchmark.judge === undefined) {
     warnings.push('no case checks tool use or task success — the run will produce only cost and latency data')
   }
   if (benchmark.judge !== undefined && goldAnswers === 0) {

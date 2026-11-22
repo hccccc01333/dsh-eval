@@ -145,7 +145,77 @@ describe('dsh-eval CI gate', () => {
     expect(noisy.checks.find(check => check.metric === 'task success'))
       .toMatchObject({ passed: true, note: 'drop not statistically confirmed' })
     expect(noisy.regressions).toEqual([])
-    expect(renderGate(noisy)).toContain('1.0000')
+    expect(renderGate(noisy)).toContain('0.2891')
+  })
+
+  it('treats a significant improvement as conclusive non-regression', () => {
+    const improved = Array.from({ length: 8 }, (_, index) => ({
+      caseId: `i${index + 1}`, trial: 1, status: 'completed' as const,
+      exitCode: 0, timedOut: false,
+      grade: { taskSuccess: true, toolSelectionAccuracy: null },
+    }))
+    const regressed = improved.map(item => ({
+      ...item, grade: { taskSuccess: false, toolSelectionAccuracy: null },
+    }))
+    const grading = (rate: number) => ({
+      taskSuccessRate: rate, toolSelectionAccuracyRate: null,
+      finalAnswerScore: null, hallucinationRate: null,
+    })
+    const result = evaluateGate(
+      buildRun({ cases: regressed, grading: grading(0) }),
+      buildRun({ cases: improved, grading: grading(1) }),
+      0.1, false, {}, { requireSignificance: true },
+    )
+    expect(result.passed).toBe(true)
+    expect(result.checks.find(check => check.metric === 'paired significance'))
+      .toMatchObject({ passed: true, note: 'all quality metrics assessed independently' })
+    expect(result.checks.find(check => check.metric === 'task success')?.passed).toBe(true)
+  })
+
+  it('does not inflate the correction family with duplicate or ungraded metrics', () => {
+    const baseCases = Array.from({ length: 9 }, (_, index) => ({
+      caseId: `n${index + 1}`, trial: 1, status: 'completed' as const,
+      exitCode: 0, timedOut: false,
+      grade: { taskSuccess: true, toolSelectionAccuracy: null },
+    }))
+    const flipped = baseCases.map((item, index) => index < 8
+      ? { ...item, grade: { taskSuccess: false, toolSelectionAccuracy: null } }
+      : { ...item, grade: { taskSuccess: true, toolSelectionAccuracy: null } })
+    const baselineCases = baseCases.map((item, index) => index < 8
+      ? item : { ...item, grade: { taskSuccess: false, toolSelectionAccuracy: null } })
+    const grading = (rate: number) => ({
+      taskSuccessRate: rate, toolSelectionAccuracyRate: null,
+      finalAnswerScore: null, hallucinationRate: null,
+    })
+    const result = evaluateGate(
+      buildRun({ cases: baselineCases, grading: grading(8 / 9) }),
+      buildRun({ cases: flipped, grading: grading(1 / 9) }),
+      0.1, false, {}, { requireSignificance: true },
+    )
+    expect(result.passed).toBe(false)
+    expect(result.checks.find(check => check.metric === 'paired significance'))
+      .toMatchObject({ passed: true, note: 'all quality metrics assessed independently' })
+    expect(result.checks.find(check => check.metric === 'task success')?.passed).toBe(false)
+  })
+
+  it('fails closed when paired trials have no discordant outcomes', () => {
+    const tied = Array.from({ length: 8 }, (_, index) => ({
+      caseId: `t${index + 1}`, trial: 1, status: 'completed' as const,
+      exitCode: 0, timedOut: false,
+      grade: { taskSuccess: true, toolSelectionAccuracy: null },
+    }))
+    const grading = (rate: number) => ({
+      taskSuccessRate: rate, toolSelectionAccuracyRate: null,
+      finalAnswerScore: null, hallucinationRate: null,
+    })
+    const result = evaluateGate(
+      buildRun({ cases: tied, grading: grading(1) }),
+      buildRun({ cases: tied, grading: grading(0.5) }),
+      0.1, false, {}, { requireSignificance: true },
+    )
+    expect(result.passed).toBe(false)
+    expect(result.checks.find(check => check.metric === 'paired significance'))
+      .toMatchObject({ passed: false, note: 'some quality metrics lack conclusive paired evidence' })
   })
 
   it('assesses each quality metric independently under significance mode', () => {

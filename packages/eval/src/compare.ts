@@ -119,13 +119,15 @@ function metricOutcome(result: EvalTrialResult, metric: PairedMetric): boolean |
 /** Pick the first metric with data in every paired trial of a run. */
 function pickMetric(
   pairs: readonly { a: EvalTrialResult; b: EvalTrialResult }[],
-): PairedMetric {
+): PairedMetric | null {
   for (const metric of ['task success', 'tool selection accuracy', 'final answer score'] as const) {
     if (pairs.every(pair => metricOutcome(pair.a, metric) !== null && metricOutcome(pair.b, metric) !== null)) {
       return metric
     }
   }
-  return 'final answer score'
+  // Counting absent outcomes as ties would manufacture a fake "no change"
+  // result. pairedCases and pairedSigns skip them; do the same here.
+  return null
 }
 
 /** Classify one pair: 1 for a B win, -1 for an A win, 0 for a tie. */
@@ -195,6 +197,7 @@ export function pairedCompare(a: EvalRun, b: EvalRun): PairedStats | null {
   const pairs = pairedTrials(a, b)
   if (pairs.length === 0) return null
   const primaryMetric = pickMetric(pairs)
+  if (primaryMetric === null) return null
   let wins = 0
   let losses = 0
   let ties = 0
@@ -257,10 +260,7 @@ export function pairedCases(a: EvalRun, b: EvalRun): PairedCase[] | null {
   const pairs = pairedTrials(a, b)
   if (pairs.length === 0) return null
   const metric = pickMetric(pairs)
-  // The fallback metric may also be unmeasured; those pairs are not ties.
-  if (!pairs.some(pair => metricOutcome(pair.a, metric) !== null && metricOutcome(pair.b, metric) !== null)) {
-    return null
-  }
+  if (metric === null) return null
   return pairs.map(pair => {
     const aValue = metricOutcome(pair.a, metric)
     const bValue = metricOutcome(pair.b, metric)

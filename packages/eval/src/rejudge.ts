@@ -10,7 +10,7 @@
  * @module dsh-eval/rejudge
  */
 
-import { extname, isAbsolute, resolve, sep } from 'node:path'
+import { extname, isAbsolute, relative, resolve } from 'node:path'
 import { tryJudgeTrial, type JudgeChat } from './judge.ts'
 import { aggregateGrading } from './runner.ts'
 import { loadTrace, mergeTraces, traceDigest } from './trace.ts'
@@ -40,9 +40,14 @@ export async function rejudgeRun(
   // A report is data, not code: a hand-edited tracePaths entry must not be able
   // to make the judge read and ship an arbitrary local file to an LLM.
   const root = resolve(run.tempRoot)
-  const insideRoot = (path: string): boolean =>
-    isAbsolute(path) && extname(path) === '.jsonl'
-      && (path === root || path.startsWith(root.endsWith(sep) ? root : `${root}${sep}`))
+  const insideRoot = (path: string): boolean => {
+    // Resolve before comparing: a raw "root/../outside.jsonl" prefix matches
+    // the root but readFile() would happily escape it.
+    const resolved = resolve(path)
+    const rel = relative(root, resolved)
+    return isAbsolute(path) && extname(resolved) === '.jsonl'
+      && rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
+  }
   const cases: EvalTrialResult[] = []
   for (const result of run.cases) {
     if (result.status !== 'completed') {

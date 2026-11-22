@@ -119,6 +119,10 @@ describe('dsh-eval benchmark preflight', () => {
       cases: [{ id: 'raw', prompt: 'p' }],
       judge: { provider: 'p', model: 'j', maxScore: 10 },
     })).warnings).toContain('no case has scripted expectations — results depend entirely on the judge')
+    expect(summarizeBenchmark(benchmark({
+      cases: [{ id: 'raw', prompt: 'p' }],
+      judge: { provider: 'p', model: 'j', maxScore: 10 },
+    })).warnings).not.toContain('the run will produce only cost and latency data')
   })
 
   it('warns that replay runs need rejudging for judge scores', () => {

@@ -204,19 +204,28 @@ export function evaluateGate(
     let undecidable = false
     let bestFloor = 1
     let worstObserved = 0
-    for (const { metric: gateMetric, paired: pairedMetric, a, b } of qualityMetrics) {
-      if (a === null && b === null) continue
+    const assessed = qualityMetrics.filter(item => item.a !== null || item.b !== null)
+    // task success and strict pass@1 share one sign test, and ungraded metrics
+    // are not tested at all; correcting for all four rows would be too lax.
+    const pairedMetrics = [...new Set(assessed.map(item => item.paired))]
+    const family = pairedMetrics.length
+    const verdicts = new Map<PairedMetric, boolean>()
+    for (const pairedMetric of pairedMetrics) {
       const counts = pairedSigns(baseline, candidate, pairedMetric)
       const discordant = counts.wins + counts.losses
-      const power = signTestPower(discordant, qualityMetrics.length)
-      const observed = Math.min(1, signTest(counts.wins, counts.losses).pValue * qualityMetrics.length)
+      const power = signTestPower(discordant, family)
+      const observed = Math.min(1, signTest(counts.wins, counts.losses).pValue * family)
       const worse = counts.losses > counts.wins
-      const confirmed = worse && power.detectable && observed <= power.alpha
-      const clear = !worse || (power.detectable && observed > power.alpha)
-      suppressByMetric.set(gateMetric, clear)
-      if (counts.pairs === 0 || (!confirmed && !clear)) undecidable = true
+      const informative = discordant > 0 && power.detectable
+      const confirmed = informative && worse && observed <= power.alpha
+      const clear = informative && !confirmed && (observed > power.alpha || !worse)
+      verdicts.set(pairedMetric, clear)
+      if (!informative || (!confirmed && !clear)) undecidable = true
       bestFloor = Math.min(bestFloor, power.bestAdjustedP)
       worstObserved = Math.max(worstObserved, observed)
+    }
+    for (const item of assessed) {
+      suppressByMetric.set(item.metric, verdicts.get(item.paired) === true)
     }
     checks.push({
       metric: 'paired significance',

@@ -206,11 +206,11 @@ describe('dsh-eval comparison', () => {
       }],
     })
     expect(pairedCases(bare('a'), bare('b'))).toBeNull()
-    expect(pairedCompare(bare('a'), bare('b'))?.ties).toBe(1)
+    expect(pairedCompare(bare('a'), bare('b'))).toBeNull()
     const json = JSON.parse(renderCompareJson(bare('a'), bare('b'))) as {
       paired: { pairs: number } | null; caseOutcomesMeasured: boolean; cases: unknown
     }
-    expect(json.paired?.pairs).toBe(1)
+    expect(json.paired).toBeNull()
     expect(json.caseOutcomesMeasured).toBe(false)
     expect(json.cases).toBeNull()
   })
@@ -402,8 +402,7 @@ describe('dsh-eval comparison', () => {
       ],
     })
     const paired = pairedCompare(a, b)
-    expect(paired?.pairs).toBe(2)
-    expect(paired?.stepsDelta).toBeNull()
+    expect(paired).toBeNull()
     const rows = compareRuns(a, b)
     expect(rows.find(row => row.metric === 'paired steps delta (B-A)')).toBeUndefined()
   })

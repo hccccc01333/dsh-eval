@@ -13,6 +13,7 @@
 
 import { pairedCompare } from './compare.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
+import { signTestPower } from './stats.ts'
 import type { EvalRun } from './types.ts'
 
 /** Paired evidence that a row really trails the current leader. */
@@ -23,6 +24,8 @@ export interface LeaderboardSignificance {
   detectable: boolean
   /** Whether the paired primary metric moved against the row. */
   worse: boolean
+  /** The paired metric the verdict is based on. */
+  primaryMetric: string | null
   /** Machine-readable interpretation of the comparison. */
   verdict: 'significantly-behind' | 'behind-not-significant' | 'ahead-or-tied'
     | 'underpowered' | 'unpaired'
@@ -118,17 +121,20 @@ export function buildLeaderboard(runs: readonly { label: string; run: EvalRun }[
       const paired = pairedCompare(leaderRun, runByEntry.get(row)!)
       if (paired === null) {
         row.significance = {
-          adjustedP: 1, detectable: false, worse: false, verdict: 'unpaired',
+          adjustedP: 1, detectable: false, worse: false, primaryMetric: null,
+          verdict: 'unpaired',
         }
         continue
       }
       const worse = paired.losses > paired.wins
       const adjustedP = Math.min(1, paired.correction.adjustedPValue * family)
-      const detectable = paired.power.detectable
+      const detectable = signTestPower(paired.losses + paired.wins,
+        paired.correction.comparisons * family, paired.correction.alpha).detectable
       row.significance = {
         adjustedP,
         detectable,
         worse,
+        primaryMetric: paired.primaryMetric,
         verdict: !detectable ? 'underpowered'
           : worse && adjustedP <= paired.correction.alpha ? 'significantly-behind'
             : worse ? 'behind-not-significant' : 'ahead-or-tied',
@@ -163,7 +169,7 @@ function gap(value: number | null, rank: number): string {
 export function formatLeaderboardSignificance(value: LeaderboardSignificance | null): string {
   if (value === null) return 'leader'
   if (value.verdict === 'unpaired') return 'unpaired'
-  return `${value.verdict} (p=${value.adjustedP.toFixed(3)})`
+  return `${value.verdict} (p=${value.adjustedP.toFixed(3)}, ${value.primaryMetric})`
 }
 
 /**

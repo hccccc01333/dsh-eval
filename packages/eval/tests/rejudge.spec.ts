@@ -1,6 +1,6 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
 import { rejudgeRun } from '../src/rejudge.ts'
@@ -152,9 +152,16 @@ describe('dsh-eval offline re-judging', () => {
     await expect(rejudgeRun(noTrace, chat)).rejects.toThrow('has no harvested trace')
   })
 
+  it('accepts a trailing separator in tempRoot', async () => {
+    const run = buildRun({ tempRoot: `${root}${sep}` })
+    const result = await rejudgeRun(run, async () => '{"finalAnswerScore": 5, "hallucination": false}')
+    expect(result.cases[0]?.judge?.finalAnswerScore).toBe(5)
+  })
+
   it('refuses trace paths outside the run root', async () => {
     const chat = async () => '{"finalAnswerScore": 1, "hallucination": false}'
-    for (const paths of [[FIXTURE_LOG], ['relative.jsonl'], [join(root, 'notes.txt')]]) {
+    const traversal = join(root, '..', `${root.split(/[\\/]/u).at(-1)}--escape`, 'secret.jsonl')
+    for (const paths of [[FIXTURE_LOG], ['relative.jsonl'], [join(root, 'notes.txt')], [traversal]]) {
       const run = withCase(buildRun(), 0, { ...buildRun().cases[0]!, tracePaths: paths })
       await expect(rejudgeRun(run, chat)).rejects.toThrow('outside the run')
     }
