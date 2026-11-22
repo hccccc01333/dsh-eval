@@ -34,8 +34,16 @@ export interface BenchmarkCase {
 
 /** Expected-tool and check-command annotations for scripted grading. */
 export interface BenchmarkExpectation {
-  /** Substring matched against every recorded tool call name. */
+  /** Legacy substring matched against every recorded tool call name. */
   tool?: string
+  /** Every listed substring must appear in at least one tool call name. */
+  tools?: readonly string[]
+  /** At least one listed substring must appear in a tool call name. */
+  toolAnyOf?: readonly string[]
+  /** A validated regular expression that must match at least one tool call name. */
+  toolRegex?: string
+  /** None of the listed substrings may appear in any tool call name. */
+  toolNot?: readonly string[]
   /** Legacy command string split on whitespace (and quotes) into argv; exit 0 means task success. */
   check?: string
   /** Preferred structured argv for a check command; no shell interpretation. */

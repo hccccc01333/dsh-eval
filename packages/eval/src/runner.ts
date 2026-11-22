@@ -18,7 +18,7 @@ import { cp, mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { splitArgv } from './argv.ts'
-import type { Benchmark, EvalRun, EvalTrialResult } from './types.ts'
+import type { Benchmark, BenchmarkExpectation, EvalRun, EvalTrialResult } from './types.ts'
 import type { EvalGrade, EvalRunGrading } from './types.ts'
 import { tryJudgeTrial, type JudgeChat } from './judge.ts'
 import { caseSegment } from './segments.ts'
@@ -99,6 +99,39 @@ function evalOverlay(replay: { file: string; childFiles: readonly string[] } | u
 }
 
 /**
+ * Match every configured tool expectation against the recorded call names.
+ * All configured constraints must hold; no tool expectation means "ungraded".
+ * @param expected - the case's scripted expectations.
+ * @param names - tool-call names recorded in the harvested trace.
+ * @returns the boolean match, or null when no tool expectation is configured.
+ */
+function toolSelectionOf(
+  expected: BenchmarkExpectation,
+  names: readonly string[],
+): boolean | null {
+  const configured = expected.tool !== undefined || expected.tools !== undefined
+    || expected.toolAnyOf !== undefined || expected.toolRegex !== undefined
+    || expected.toolNot !== undefined
+  if (!configured) return null
+  const includes = (needle: string): boolean => names.some(name => name.includes(needle))
+  if (expected.tool !== undefined && !includes(expected.tool)) return false
+  if (expected.tools !== undefined && !expected.tools.every(includes)) return false
+  if (expected.toolAnyOf !== undefined && !expected.toolAnyOf.some(includes)) return false
+  if (expected.toolRegex !== undefined) {
+    let regex: RegExp
+    try {
+      regex = new RegExp(expected.toolRegex, 'u')
+    } catch {
+      // The schema validates at load; hand-built benchmarks degrade to failure.
+      return false
+    }
+    if (!names.some(name => regex.test(name))) return false
+  }
+  if (expected.toolNot !== undefined && expected.toolNot.some(includes)) return false
+  return true
+}
+
+/**
  * Grade one trial against its expectations: the expected tool is matched
  * against recorded tool-call names, and the check command runs in the trial
  * workspace with the same timeout as the agent. A spawn failure or timeout
@@ -117,10 +150,8 @@ async function gradeTrial(
 ): Promise<EvalGrade> {
   const expected = caseValue.expected
   if (expected === undefined) return { taskSuccess: null, toolSelectionAccuracy: null }
-  const expectedTool = expected.tool
-  const toolSelectionAccuracy = expectedTool === undefined
-    ? null
-    : trace.events.some(event => event.type === 'tool/call' && event.data.name.includes(expectedTool))
+  const names = trace.events.flatMap(event => event.type === 'tool/call' ? [event.data.name] : [])
+  const toolSelectionAccuracy = toolSelectionOf(expected, names)
   let taskSuccess: boolean | null = null
   const shell = expected.checkShell !== undefined
   const checkArgv = expected.checkArgv !== undefined

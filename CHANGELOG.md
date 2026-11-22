@@ -4,6 +4,11 @@
 
 ### Added
 
+- **Richer tool expectations.** `tools` (all), `toolAnyOf` (at least one),
+  `toolRegex` (compiled and validated at benchmark load) and `toolNot` (none)
+  join the legacy `tool` substring match. All constraints combine into one
+  boolean `toolSelectionAccuracy`, so a benchmark can require a specific tool
+  set without forbidding others by accident.
 - **Reliable scripted checks.** `expected.checkArgv` passes exact argv without
   shell interpretation, `expected.checkShell` opts into pipes/redirection for
   trusted benchmark files, and legacy `check` strings now honor quotes and

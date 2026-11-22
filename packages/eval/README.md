@@ -55,7 +55,7 @@ pricing:
 | `cases[].id` | required | Stable case id. |
 | `cases[].prompt` / `cases[].promptFile` | exactly one | Task text, inline or relative to the benchmark file. |
 | `cases[].workspace` | absent | Workspace tree copied into each trial, relative or absolute. |
-| `cases[].expected` | absent | Scripted grading: `tool` is a substring matched against recorded tool-call names; `checkArgv` (preferred), `check` (legacy string, quotes supported), or `checkShell` (explicit opt-in, pipes/redirection) runs in the trial workspace after the agent exits (exit 0 = task success); `answer` is a gold answer passed to the judge. At least one field is required, and at most one check mode. Check processes are detached and killed as a group at the trial timeout. |
+| `cases[].expected` | absent | Scripted grading: `tool` (legacy substring), `tools` (all listed substrings), `toolAnyOf` (at least one), `toolRegex` (validated at load) and `toolNot` (none) all combine against recorded tool-call names; `checkArgv` (preferred), `check` (legacy string, quotes supported), or `checkShell` (explicit opt-in, pipes/redirection) runs in the trial workspace after the agent exits (exit 0 = task success); `answer` is a gold answer passed to the judge. At least one field is required, and at most one check mode. Check processes are detached and killed as a group at the trial timeout. |
 | `pricing` | absent | Per-million-token USD prices keyed by model id; absent models report `costUsd: null`. |
 
 ### Judge
@@ -87,7 +87,7 @@ starting when the host exposes no LLM chat seam.
 
 ## Metrics
 
-The metric fold computes the automatic metrics directly from the session log: `turns`, `steps`, `toolCalls`, `toolResults`, `toolSuccess` plus `toolSuccessRate`, `invalidToolCalls` (results carrying an internal failure identity), `retries` (`llm/retry`), disjoint token buckets and totals, billed context tokens, `llmMs`/`toolMs`/`ttftMs`/`latencyMs`, and `costUsd` when pricing is configured. Scripted grading adds per-trial `taskSuccess` (check-command exit 0) and `toolSelectionAccuracy` (expected-tool match) and pools them into run-level rates. `checkArgv` avoids shell interpretation entirely; `checkShell` is for trusted benchmark files that need pipes or redirection. A hung check is terminated with its whole process group at the trial timeout, so one bad verifier cannot stall a run.
+The metric fold computes the automatic metrics directly from the session log: `turns`, `steps`, `toolCalls`, `toolResults`, `toolSuccess` plus `toolSuccessRate`, `invalidToolCalls` (results carrying an internal failure identity), `retries` (`llm/retry`), disjoint token buckets and totals, billed context tokens, `llmMs`/`toolMs`/`ttftMs`/`latencyMs`, and `costUsd` when pricing is configured. Scripted grading adds per-trial `taskSuccess` (check-command exit 0) and `toolSelectionAccuracy` (all configured tool constraints hold) and pools them into run-level rates. `checkArgv` avoids shell interpretation entirely; `checkShell` is for trusted benchmark files that need pipes or redirection. A hung check is terminated with its whole process group at the trial timeout, so one bad verifier cannot stall a run.
 
 Child session logs under the trial's DSH_HOME are merged into the trial trace
 before the fold, so delegated subagent work counts toward steps, tokens, tool

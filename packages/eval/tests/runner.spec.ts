@@ -277,6 +277,32 @@ describe('dsh-eval benchmark runner', () => {
     expect(failing.grading?.taskSuccessRate).toBe(0)
   })
 
+  it('matches every configured tool expectation', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const grade = async (expected: Record<string, unknown>): Promise<boolean | null> => {
+      const run = await runBenchmark(buildBenchmark({
+        trials: 1,
+        cases: [{ id: 'tools', prompt: 'p', expected }],
+      }), { tempRoot: tempDir() })
+      return run.cases[0]?.grade?.toolSelectionAccuracy ?? null
+    }
+    // The fixture records a single `bash` tool call.
+    expect(await grade({ tools: ['bash'] })).toBe(true)
+    expect(await grade({ tools: ['bash', 'missing'] })).toBe(false)
+    expect(await grade({ toolAnyOf: ['missing', 'bash'] })).toBe(true)
+    expect(await grade({ toolAnyOf: ['missing', 'other'] })).toBe(false)
+    expect(await grade({ toolRegex: '^ba.h$' })).toBe(true)
+    expect(await grade({ toolRegex: '^read$' })).toBe(false)
+    expect(await grade({ toolNot: ['read'] })).toBe(true)
+    expect(await grade({ toolNot: ['bash'] })).toBe(false)
+    expect(await grade({
+      tool: 'ba', tools: ['bash'], toolAnyOf: ['bash'], toolRegex: 'bash', toolNot: ['read'],
+    })).toBe(true)
+    // A hand-built benchmark can bypass the schema; invalid regex fails closed.
+    expect(await grade({ toolRegex: '[' })).toBe(false)
+  })
+
   it('runs checkArgv verbatim and supports opt-in shell checks', async () => {
     process.env.FAKE_DASH_MODE = 'log'
     process.env.FAKE_DASH_LOG = FIXTURE_LOG

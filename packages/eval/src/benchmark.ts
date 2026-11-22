@@ -31,6 +31,16 @@ const pricingSchema = z.object({
   outputUsdPerMTokens: z.number().nonnegative(),
 }).strict()
 
+/** A non-empty string that the runtime can compile as a Unicode regular expression. */
+const toolRegexSchema = z.string().min(1).refine((value) => {
+  try {
+    new RegExp(value, 'u')
+    return true
+  } catch {
+    return false
+  }
+}, { message: 'toolRegex is not a valid regular expression' })
+
 const benchmarkCaseSchema = z.object({
   id: z.string().min(1),
   prompt: z.string().min(1).optional(),
@@ -38,15 +48,23 @@ const benchmarkCaseSchema = z.object({
   workspace: z.string().min(1).optional(),
   expected: z.object({
     tool: z.string().min(1).optional(),
+    tools: z.array(z.string().min(1)).min(1).readonly().optional(),
+    toolAnyOf: z.array(z.string().min(1)).min(1).readonly().optional(),
+    toolRegex: toolRegexSchema.optional(),
+    toolNot: z.array(z.string().min(1)).min(1).readonly().optional(),
     check: z.string().min(1).optional(),
     checkArgv: z.array(z.string().min(1)).min(1).readonly().optional(),
     checkShell: z.string().min(1).optional(),
     answer: z.string().min(1).optional(),
   }).strict().refine(
-    expectation => expectation.tool !== undefined || expectation.check !== undefined
+    expectation => expectation.tool !== undefined || expectation.tools !== undefined
+      || expectation.toolAnyOf !== undefined || expectation.toolRegex !== undefined
+      || expectation.toolNot !== undefined || expectation.check !== undefined
       || expectation.checkArgv !== undefined || expectation.checkShell !== undefined
       || expectation.answer !== undefined,
-    { message: 'expected needs at least one of tool, check, checkArgv, checkShell or answer' },
+    {
+      message: 'expected needs at least one of tool, tools, toolAnyOf, toolRegex, toolNot, check, checkArgv, checkShell or answer',
+    },
   ).refine(
     (expectation) => {
       const commands = [expectation.check, expectation.checkArgv, expectation.checkShell]
@@ -117,6 +135,10 @@ async function resolveCase(
       ? {
         expected: {
           ...(parsed.expected.tool !== undefined ? { tool: parsed.expected.tool } : {}),
+          ...(parsed.expected.tools !== undefined ? { tools: parsed.expected.tools } : {}),
+          ...(parsed.expected.toolAnyOf !== undefined ? { toolAnyOf: parsed.expected.toolAnyOf } : {}),
+          ...(parsed.expected.toolRegex !== undefined ? { toolRegex: parsed.expected.toolRegex } : {}),
+          ...(parsed.expected.toolNot !== undefined ? { toolNot: parsed.expected.toolNot } : {}),
           ...(parsed.expected.check !== undefined ? { check: parsed.expected.check } : {}),
           ...(parsed.expected.checkArgv !== undefined ? { checkArgv: parsed.expected.checkArgv } : {}),
           ...(parsed.expected.checkShell !== undefined ? { checkShell: parsed.expected.checkShell } : {}),
