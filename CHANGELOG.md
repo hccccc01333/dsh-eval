@@ -4,6 +4,14 @@
 
 ### Added
 
+- **Reliability metrics over repeated trials.** A new `reliability` module folds
+  a run's per-trial grades into `pass@1`, `pass@k` (cases with at least one
+  passing trial), and `pass^k` (cases passing every trial), plus the flaky cases
+  whose trials disagreed and the hardest cases by pass rate. Both grading
+  dimensions are reported. `dsh eval report` appends a Reliability block and
+  `dsh eval compare` adds four comparison rows. Everything is derived from the
+  stored trials at render time, so reports written by earlier versions gain the
+  new view without being rewritten.
 - **Family-wise correction on paired inference.** `dsh eval compare` prints a
   sign-test p-value beside up to three bootstrap delta intervals. Those are now
   treated as one inference family and corrected together with Bonferroni at

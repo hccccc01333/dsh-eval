@@ -89,9 +89,11 @@ trial `DSH_HOME` 下的子 session 日志在折叠前合并进 trial trace，因
 
 `dsh eval run --out run.json` 每次运行写一份 JSON：benchmark 与模型标识、每个 trial 的结果与绝对 trace 路径、聚合指标（计数与耗时为均值，成功率为合并值）、合并后的评分比率。`dsh eval report run.json` 把 run 渲染为 Markdown。trial 工作区与 trace 保留在 run 的 `tempRoot`（私有临时目录）中且不会被删除，run 不再需要时自行清理。
 
+Markdown 报告会为每个评分维度（任务成功、工具选择准确率）追加**可靠性**区块。合并比率无法区分"每个 case 都稳定在 66%"与"两个 case 全过、第三个全挂"；因此区块给出 `pass@1`（trial 级）、`pass@k`（至少一个 trial 成功的 case 比例）、`pass^k`（全部 trial 成功的 case 比例），以及结果不一致的不稳定 case 和按通过率排序的最难 case。这些指标在渲染时从已保存的 trial 现算，因此旧报告无需重跑就能获得新区块。
+
 ## 对比
 
-`dsh eval compare run-v1.json run-v2.json` 把两个 run 渲染成 Markdown 表：benchmark/模型标识、完成的 trial 数、steps、工具/任务/工具选择成功率、无效调用、重试、token、成本与延迟，并给出带符号的 `B - A` 差值。当两个 run 完成的 case × trial 键完全一致时，表尾追加配对统计：trial 数、按第一个可用指标（任务成功、工具选择准确率、最终答案得分）的胜/负/平，以及 steps、token、judge 得分的 `B - A` 均值差。两个 run 的 `seed` 是配对的可追溯出处，不保证模型输出一致。
+`dsh eval compare run-v1.json run-v2.json` 把两个 run 渲染成 Markdown 表：benchmark/模型标识、完成的 trial 数、steps、工具/任务/工具选择成功率、两个评分维度的 pass@k 与 pass^k、无效调用、重试、token、成本与延迟，并给出带符号的 `B - A` 差值。当两个 run 完成的 case × trial 键完全一致时，表尾追加配对统计：trial 数、按第一个可用指标（任务成功、工具选择准确率、最终答案得分）的胜/负/平，以及 steps、token、judge 得分的 `B - A` 均值差。两个 run 的 `seed` 是配对的可追溯出处，不保证模型输出一致。
 
 配对样本量小、差值不服从正态，所以配对区块除了点估计还给出推断：对主指标的不一致对做**精确双侧符号检验**（同分的对按要求剔除），并在每个均值差旁给出**固定种子 bootstrap 区间**。不对差值分布的形状做任何假设，PRNG 种子固定，因此同一对报告重跑 `compare` 输出逐字节一致。符号检验的 p 值与输出的每个区间构成一个推断族，用 **Bonferroni** 在族错误率 `alpha = 0.05` 下一并校正：p 值所在行标注其乘上的族大小，每个区间放宽到 `1 - 0.05/k` 置信度（例如 p 值与三个区间同时存在时为 98.8%）。符号检验仍需要不一致对才能给出结论：全部同分的 run 报 `p = 1`。
 

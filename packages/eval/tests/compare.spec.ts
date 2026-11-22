@@ -283,4 +283,28 @@ describe('dsh-eval comparison', () => {
     const rows = compareRuns(a, b)
     expect(rows.find(row => row.metric === 'paired steps delta (B-A)')).toBeUndefined()
   })
+
+  it('compares pass@k and pass^k derived from the trials', () => {
+    const graded = (caseId: string, trialNo: number, passed: boolean): EvalTrialResult => ({
+      caseId, trial: trialNo, status: 'completed', exitCode: 0, timedOut: false,
+      grade: { taskSuccess: passed, toolSelectionAccuracy: null }, metrics: METRICS,
+    })
+    const a = buildRun({
+      trials: 2,
+      cases: [graded('c', 1, true), graded('c', 2, true), graded('d', 1, true), graded('d', 2, true)],
+    })
+    const b = buildRun({
+      trials: 2,
+      cases: [graded('c', 1, true), graded('c', 2, false), graded('d', 1, false), graded('d', 2, false)],
+    })
+    const rows = compareRuns(a, b)
+    const byMetric = new Map(rows.map(row => [row.metric, row]))
+    expect(byMetric.get('pass@k (task)')).toEqual({
+      metric: 'pass@k (task)', a: '100.0%', b: '50.0%', delta: '-50.0pp',
+    })
+    expect(byMetric.get('pass^k (task)')).toEqual({
+      metric: 'pass^k (task)', a: '100.0%', b: '0.0%', delta: '-100.0pp',
+    })
+    expect(byMetric.get('pass@k (tool-selection)')?.a).toBe('–')
+  })
 })

@@ -22,15 +22,16 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - Subagent trace merging: child session logs fold into the trial metrics
 - Paired A/B: same-case win/lose/tie statistics across two runs
 - Paired inference: exact sign test over discordant pairs, seeded bootstrap intervals on every mean delta, Bonferroni-corrected across the printed family
+- Reliability: per-case pass@1 / pass@k / pass^k, flaky-case detection, and hardest-case ranking derived from the trials
 - Parallel trials: `concurrency` / `--concurrency` runs several case × trial executions at once, results still ordered
 - Keyless replay: record once with a key, replay in CI from recorded logs
 - Cross-harness import: `dsh eval import codex|claude-code <log> --out run.json`
-- `dsh eval report run.json` — Markdown report with per-trial scores and pooled rates
+- `dsh eval report run.json` — Markdown report with per-trial scores, pooled rates, and reliability blocks
 - `dsh eval compare v1.json v2.json` — signed `B - A` comparison table
 
 ## Status
 
-`dsh-eval@0.4.0` · 139 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.4.0` · 144 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 

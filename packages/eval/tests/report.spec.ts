@@ -239,4 +239,27 @@ describe('dsh-eval report persistence and rendering', () => {
     const dashes = ['–', '–', '–', '–', '–', '–', '–', '–', '–', '–', '–', '–'].join(' | ')
     expect(markdown).toContain(`| aggregate | – | no completed trials | ${dashes} |`)
   })
+
+  it('appends reliability blocks for both graded dimensions', () => {
+    const graded = (caseId: string, index: number, task: boolean, tool: boolean) => ({
+      caseId, trial: index, status: 'completed' as const, exitCode: 0, timedOut: false,
+      grade: { taskSuccess: task, toolSelectionAccuracy: tool },
+    })
+    const markdown = renderMarkdownReport(buildRun({
+      trials: 3,
+      cases: [
+        graded('ok', 1, true, true), graded('ok', 2, true, true), graded('ok', 3, true, true),
+        graded('flaky', 1, true, false), graded('flaky', 2, false, false), graded('flaky', 3, false, false),
+      ],
+    }))
+    expect(markdown).toContain('## Reliability: task success')
+    expect(markdown).toContain('- cases: 2 · trials/case: 3')
+    expect(markdown).toContain('- pass@1: 66.7% · pass@3: 100.0% · pass^3: 50.0%')
+    expect(markdown).toContain('- hardest cases: `flaky` 1/3 · `ok` 3/3')
+    expect(markdown).toContain('- flaky cases (1): `flaky` 1/3')
+    expect(markdown).toContain('## Reliability: tool selection accuracy')
+    expect(markdown).toContain('- pass@1: 50.0% · pass@3: 50.0% · pass^3: 50.0%')
+    // A stable tool-selection dimension prints no flaky line.
+    expect(markdown.match(/flaky cases/gu)).toHaveLength(1)
+  })
 })

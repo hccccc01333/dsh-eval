@@ -7,6 +7,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { z } from 'zod'
+import { computeReliability, type ReliabilitySummary } from './reliability.ts'
 import type { EvalRun } from './types.ts'
 
 /**
@@ -145,9 +146,25 @@ function formatScore(value: number | null, maxScore: number): string {
   return value === null ? '–' : `${value.toFixed(1)}/${maxScore}`
 }
 
+/** Render one reliability block; callers pass only a non-null summary. */
+function renderReliability(summary: ReliabilitySummary): string[] {
+  const label = summary.dimension === 'task' ? 'task success' : 'tool selection accuracy'
+  const lines = [
+    `## Reliability: ${label}`,
+    '',
+    `- cases: ${summary.cases} · trials/case: ${summary.k}`,
+    `- pass@1: ${(summary.passAt1 * 100).toFixed(1)}% · pass@${summary.k}: ${(summary.passAtK * 100).toFixed(1)}% · pass^${summary.k}: ${(summary.passAllK * 100).toFixed(1)}%`,
+    `- hardest cases: ${summary.hardest.map(item => `\`${item.caseId}\` ${item.passes}/${item.trials}`).join(' · ')}`,
+  ]
+  if (summary.flaky.length > 0) {
+    lines.push(`- flaky cases (${summary.flaky.length}): ${summary.flaky.map(item => `\`${item.caseId}\` ${item.passes}/${item.trials}`).join(' · ')}`)
+  }
+  return [...lines, '']
+}
+
 /**
  * Render a run report as a markdown table: one row per trial plus the
- * aggregate row.
+ * aggregate row, followed by reliability summaries for every graded dimension.
  * @param run - the run record to render.
  * @returns the markdown text.
  */
@@ -210,6 +227,8 @@ export function renderMarkdownReport(run: EvalRun): string {
       formatRate(run.grading?.toolSelectionAccuracyRate ?? null),
     ]
   const aggregateRow = `| aggregate | – | ${[...aggregateCells, ...aggregateJudgeCells].join(' | ')} |`
+  const taskReliability = computeReliability(run, 'task')
+  const toolReliability = computeReliability(run, 'tool-selection')
   return [
     `# Eval: ${run.benchmark}`,
     '',
@@ -223,5 +242,7 @@ export function renderMarkdownReport(run: EvalRun): string {
     ...rows,
     aggregateRow,
     '',
+    ...(taskReliability === null ? [] : renderReliability(taskReliability)),
+    ...(toolReliability === null ? [] : renderReliability(toolReliability)),
   ].join('\n')
 }

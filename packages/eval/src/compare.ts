@@ -6,6 +6,7 @@
  */
 
 import type { EvalRun, EvalTrialResult } from './types.ts'
+import { computeReliability } from './reliability.ts'
 import {
   bonferroni,
   pairedDelta,
@@ -212,6 +213,14 @@ export function compareRuns(a: EvalRun, b: EvalRun): CompareRow[] {
     numeric(run => run.aggregate?.costUsd ?? null, 'cost/trial (USD)'),
     numeric(run => run.aggregate?.latencyMs ?? null, 'latency/trial (ms)'),
   ]
+  // Reliability is derived from the trials rather than stored, so older run
+  // reports gain these rows on the next `compare` without being rewritten.
+  rows.push(
+    rates(run => computeReliability(run, 'task')?.passAtK ?? null, 'pass@k (task)', 'pp'),
+    rates(run => computeReliability(run, 'task')?.passAllK ?? null, 'pass^k (task)', 'pp'),
+    rates(run => computeReliability(run, 'tool-selection')?.passAtK ?? null, 'pass@k (tool-selection)', 'pp'),
+    rates(run => computeReliability(run, 'tool-selection')?.passAllK ?? null, 'pass^k (tool-selection)', 'pp'),
+  )
   const paired = pairedCompare(a, b)
   if (paired !== null) {
     rows.push(
