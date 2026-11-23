@@ -231,6 +231,19 @@ describe('dsh-eval comparison', () => {
     expect(renderCaseSignificance([])).toContain('0 cases · Bonferroni family = 0')
   })
 
+  it('reports truncation and family-aware power requirements', () => {
+    const make = (pass: boolean): EvalRun => buildRun({
+      cases: Array.from({ length: 25 }, (_, caseIndex) =>
+        Array.from({ length: 12 }, (_, trialIndex) =>
+          trial(`c${String(caseIndex).padStart(2, '0')}`, trialIndex + 1, pass, 2, 10))).flat(),
+    })
+    const rows = pairedCaseSignificance(make(false), make(true))!
+    expect(rows).toHaveLength(25)
+    expect(rows.every(row => row.verdict === 'significantly-better')).toBe(true)
+    expect(rows[0]!.requiredPairs).toBeGreaterThan(0)
+    expect(renderCaseSignificance(rows)).toContain('showing 20 of 25 confirmed changes')
+  })
+
   it('does not call unmeasured pairs ties', () => {
     const bare = (label: string): EvalRun => buildRun({
       model: label,

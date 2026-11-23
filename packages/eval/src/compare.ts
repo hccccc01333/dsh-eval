@@ -102,7 +102,7 @@ function formatPairedDelta(delta: PairedDelta, intervalConfidence: number): stri
 }
 
 /** Render an exact p-value, collapsing anything below the print precision. */
-function formatPValue(pValue: number): string {
+export function formatPValue(pValue: number): string {
   return pValue < 0.001 ? '<0.001' : pValue.toFixed(3)
 }
 
@@ -284,6 +284,8 @@ export interface CaseSignificance {
   ties: number
   adjustedP: number
   detectable: boolean
+  /** Discordant pairs needed to clear this case's family-wise threshold. */
+  requiredPairs: number
   verdict: 'significantly-better' | 'significantly-worse' | 'not-significant' | 'underpowered'
 }
 
@@ -309,7 +311,8 @@ export function pairedCaseSignificance(a: EvalRun, b: EvalRun): CaseSignificance
     .map(([caseId, counts]) => {
       const test = signTest(counts.wins, counts.losses)
       const adjustedP = Math.min(1, test.pValue * family)
-      const detectable = signTestPower(counts.wins + counts.losses, family, alpha).detectable
+      const power = signTestPower(counts.wins + counts.losses, family, alpha)
+      const detectable = power.detectable
       const better = counts.wins > counts.losses
       const worse = counts.losses > counts.wins
       return {
@@ -317,6 +320,7 @@ export function pairedCaseSignificance(a: EvalRun, b: EvalRun): CaseSignificance
         ...counts,
         adjustedP,
         detectable,
+        requiredPairs: power.minimumDiscordant,
         verdict: !detectable ? 'underpowered' as const
           : better && adjustedP <= alpha ? 'significantly-better' as const
             : worse && adjustedP <= alpha ? 'significantly-worse' as const
@@ -330,17 +334,26 @@ export function pairedCaseSignificance(a: EvalRun, b: EvalRun): CaseSignificance
 
 /** Render per-case paired significance as a markdown block. */
 export function renderCaseSignificance(rows: readonly CaseSignificance[]): string {
-  const shown = rows.filter(row => row.verdict !== 'not-significant' && row.verdict !== 'underpowered').slice(0, 20)
+  const confirmed = rows.filter(row =>
+    row.verdict === 'significantly-better' || row.verdict === 'significantly-worse')
+  const shown = confirmed.slice(0, 20)
   const lines = [
     '## Per-case paired significance',
     '',
-    `- ${rows.length} cases · Bonferroni family = ${rows.length} · ${shown.length} confirmed changes`,
+    `- ${rows.length} cases · Bonferroni family = ${rows.length} · ${confirmed.length} confirmed changes`,
   ]
+  if (shown.length < confirmed.length) {
+    lines.push(`- showing ${shown.length} of ${confirmed.length} confirmed changes`)
+  }
+  const underpowered = rows.filter(row => row.verdict === 'underpowered')
+  if (underpowered.length > 0) {
+    lines.push(`- ${underpowered.length} underpowered cases need at least ${Math.max(...underpowered.map(row => row.requiredPairs))} discordant pairs for this family`)
+  }
   if (shown.length > 0) {
     lines.push('', '| case | pairs | B wins | A wins | adjusted p | result |', '|---|---|---|---|---|---|')
     for (const row of shown) {
       const caseId = row.caseId.replace(/[\r\n|]/gu, ' ')
-      lines.push(`| ${caseId} | ${row.pairs} | ${row.wins} | ${row.losses} | ${row.adjustedP.toFixed(4)} | ${row.verdict} |`)
+      lines.push(`| ${caseId} | ${row.pairs} | ${row.wins} | ${row.losses} | ${formatPValue(row.adjustedP)} | ${row.verdict} |`)
     }
   }
   return `${lines.join('\n')}\n`

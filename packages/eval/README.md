@@ -150,9 +150,12 @@ significance is conclusive.
 trial outcomes by case, runs an exact sign test for each case, and corrects
 across the tested cases as a separate Bonferroni family. The markdown block
 lists only confirmed improvements/regressions (capped at 20 rows); `--json`
-emits every case with `pairs`, `wins`, `losses`, `adjustedP`, `detectable` and
-its `verdict`. Cases with too few discordant pairs are labelled
-`underpowered`, so a one-trial win is never mistaken for a proven fix.
+emits every case with `pairs`, `wins`, `losses`, `adjustedP`, `detectable`,
+`requiredPairs` and its `verdict`. Power is evaluated against the whole case
+family: with many cases tested at once, even a clean sweep may need more
+discordant pairs to clear the corrected threshold. Those cases are labelled
+`underpowered` and the report states how many pairs the family requires, so a
+small win is never mistaken for a proven fix.
 
 ## Judge calibration
 

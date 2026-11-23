@@ -238,6 +238,21 @@ describe('dsh-eval HTML dashboard', () => {
     expect(html).toContain('1 cases · Bonferroni family = 1')
   })
 
+  it('notes when the confirmed-case table is truncated', () => {
+    const make = (pass: boolean): ReturnType<typeof buildRun> => buildRun({
+      cases: Array.from({ length: 12 }, (_, caseIndex) =>
+        Array.from({ length: 12 }, (_, trialIndex) => ({
+          caseId: `c${caseIndex}`, trial: trialIndex + 1, status: 'completed' as const,
+          exitCode: 0, timedOut: false,
+          grade: { taskSuccess: pass, toolSelectionAccuracy: true },
+          judge: { finalAnswerScore: pass ? 5 : 2, hallucination: false },
+        }))).flat(),
+    })
+    const html = renderDashboard([make(false), make(true)])
+    expect(html).toContain('showing 10 of 12 confirmed changes')
+    expect(html).toContain('12 confirmed</p>')
+  })
+
   it('writes a standalone file through nested directories', async () => {
     const path = join(tempDir(), 'nested', 'dashboard.html')
     await writeDashboard([buildRun()], path)

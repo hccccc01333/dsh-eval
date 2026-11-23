@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Review follow-up.** Per-case significance reports the family-aware pair
+  requirement and true confirmed counts, flags truncated tables, and prints
+  tiny p-values as `<0.001` instead of `0.0000`.
 - **Dashboard case significance.** The two-run HTML dashboard shows a
   **Confirmed case changes** table alongside the discordant-case list.
 - **Per-case paired significance.** `compare` aggregates paired trial outcomes
@@ -307,7 +310,7 @@
 - **`test:pack` now verifies wildcard exports.** `./src/*` is expanded to the
   source tree and every file must be packed; previously removing
   `src/**/*.ts` from `files` passed the smoke test unnoticed.
-- **Documentation matches the tree.** Both READMEs report 291 tests, and a
+- **Documentation matches the tree.** Both READMEs report 293 tests, and a
   session-log discovery test is renamed for the behavior it actually asserts.
 
 ### Fixed

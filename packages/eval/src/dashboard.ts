@@ -13,7 +13,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { computeAgreement } from './agreement.ts'
 import { computeCalibration } from './calibration.ts'
-import { compareRuns, formatCaseValue, pairedCases, pairedCaseSignificance } from './compare.ts'
+import { compareRuns, formatCaseValue, formatPValue, pairedCases, pairedCaseSignificance } from './compare.ts'
 import { buildLeaderboard, formatLeaderboardSignificance } from './leaderboard.ts'
 import type { RateInterval } from './precision.ts'
 import { computePrecision } from './precision.ts'
@@ -107,12 +107,16 @@ function renderComparison(a: EvalRun, b: EvalRun): string {
   )}`
   const significance = pairedCaseSignificance(a, b) ?? []
   const confirmed = significance.filter(row =>
-    row.verdict === 'significantly-better' || row.verdict === 'significantly-worse').slice(0, 10)
-  const significanceRows = confirmed.map(row => [row.caseId, String(row.pairs),
-    String(row.wins), String(row.losses), row.adjustedP.toFixed(4), row.verdict]
+    row.verdict === 'significantly-better' || row.verdict === 'significantly-worse')
+  const shown = confirmed.slice(0, 10)
+  const significanceRows = shown.map(row => [row.caseId, String(row.pairs),
+    String(row.wins), String(row.losses), formatPValue(row.adjustedP), row.verdict]
     .map(value => `<td>${esc(value)}</td>`).join(''))
+  const truncation = shown.length < confirmed.length
+    ? `<p class="sub">showing ${shown.length} of ${confirmed.length} confirmed changes</p>` : ''
   const significanceBlock = confirmed.length === 0 ? '' : `<h2>Confirmed case changes</h2>`
-    + `<p class="sub">${significance.length} cases · Bonferroni family = ${significance.length}</p>`
+    + `<p class="sub">${significance.length} cases · Bonferroni family = ${significance.length} · ${confirmed.length} confirmed</p>`
+    + truncation
     + table(['Case', 'Pairs', 'B wins', 'A wins', 'Adjusted p', 'Result'], significanceRows)
   return `<h2>Run comparison</h2>${table(['Metric', 'A', 'B', 'B − A'], rows)}`
     + (inferenceRows.length === 0 ? '' : `<h2>Paired inference</h2>${table(['Test', 'Result'], inferenceRows)}`)
