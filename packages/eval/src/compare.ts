@@ -258,10 +258,10 @@ export interface PairedCase {
  * @param b - the candidate run.
  * @returns one row per completed pair, or null when there are no pairs.
  */
-export function pairedCases(a: EvalRun, b: EvalRun): PairedCase[] | null {
+export function pairedCases(a: EvalRun, b: EvalRun, metricOverride?: PairedMetric): PairedCase[] | null {
   const pairs = pairedTrials(a, b)
   if (pairs.length === 0) return null
-  const metric = pickMetric(pairs)
+  const metric = metricOverride ?? pickMetric(pairs)
   if (metric === null) return null
   return pairs.map(pair => {
     const aValue = metricOutcome(pair.a, metric)
@@ -295,8 +295,12 @@ export interface CaseSignificance {
  * Per-case exact sign tests with Bonferroni correction across the cases.
  * This is a separate inference family from the pooled paired metrics.
  */
-export function pairedCaseSignificance(a: EvalRun, b: EvalRun): CaseSignificance[] | null {
-  const cases = pairedCases(a, b)
+export function pairedCaseSignificance(
+  a: EvalRun,
+  b: EvalRun,
+  metricOverride?: PairedMetric,
+): CaseSignificance[] | null {
+  const cases = pairedCases(a, b, metricOverride)
   if (cases === null) return null
   const grouped = new Map<string, { pairs: number; wins: number; losses: number; ties: number }>()
   for (const item of cases) {

@@ -78,11 +78,51 @@ describe('dsh-eval CI gate', () => {
     expect(result.confirmedCaseRegressions![0]).toMatchObject({ caseId: 'flaky' })
     const markdown = renderGate(result)
     expect(markdown).toContain('confirmed case regressions: 1 case(s) survived family correction')
-    expect(markdown).toContain('- flaky: adjusted p')
+    expect(markdown).toContain('- flaky: task success, adjusted p')
     const json = JSON.parse(renderGateJson(result)) as {
       confirmedCaseRegressions: { caseId: string; adjustedP: number }[]
     }
     expect(json.confirmedCaseRegressions[0]!.caseId).toBe('flaky')
+  })
+
+  it('attributes case evidence to the metric that actually regressed', () => {
+    const make = (toolPass: boolean): EvalRun => buildRun({
+      trials: 8,
+      cases: Array.from({ length: 8 }, (_, index) => ({
+        caseId: 'tool-only', trial: index + 1, status: 'completed' as const,
+        exitCode: 0, timedOut: false,
+        grade: { taskSuccess: true, toolSelectionAccuracy: toolPass },
+      })),
+      grading: {
+        taskSuccessRate: 1, toolSelectionAccuracyRate: toolPass ? 1 : 0,
+        finalAnswerScore: 8, hallucinationRate: 0,
+      },
+    })
+    const result = evaluateGate(make(true), make(false), 0)
+    expect(result.confirmedCaseRegressions).toHaveLength(1)
+    expect(result.confirmedCaseRegressions![0]).toMatchObject({
+      caseId: 'tool-only', metric: 'tool selection accuracy',
+    })
+    expect(renderGate(result)).toContain('- tool-only: tool selection accuracy, adjusted p')
+  })
+
+  it('fails significance mode when a case regression is confirmed', () => {
+    const make = (pass: boolean): EvalRun => buildRun({
+      trials: 10,
+      cases: Array.from({ length: 10 }, (_, index) => ({
+        caseId: 'mixed', trial: index + 1, status: 'completed' as const,
+        exitCode: 0, timedOut: false,
+        grade: { taskSuccess: pass, toolSelectionAccuracy: true },
+      })),
+      grading: {
+        taskSuccessRate: pass ? 1 : 0, toolSelectionAccuracyRate: 1,
+        finalAnswerScore: 8, hallucinationRate: 0,
+      },
+    })
+    const result = evaluateGate(make(true), make(false), 0, false, {}, { requireSignificance: true })
+    expect(result.passed).toBe(false)
+    expect(result.checks.find(check => check.metric === 'confirmed case regressions'))
+      .toMatchObject({ passed: false })
   })
 
   it('fails when a resource budget is exceeded', () => {

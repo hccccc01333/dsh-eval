@@ -53,8 +53,8 @@ export interface GateResult {
 /** A regression that survives per-case multiple-comparison correction. */
 export interface ConfirmedCaseRegression {
   caseId: string
+  metric: PairedMetric
   adjustedP: number
-  requiredPairs: number
 }
 
 /** Optional resource budgets for a gate run. */
@@ -272,6 +272,20 @@ export function evaluateGate(
     checks.push(compareBudget('latency/trial', baseline.aggregate?.latencyMs ?? null,
       candidate.aggregate?.latencyMs ?? null, budgets.maxLatencyIncrease, 'ms'))
   }
+  // Per-case evidence uses each quality metric's own paired trials; the
+  // default metric chosen by pickMetric() would miss tool/judge-only drops.
+  const confirmedCaseRegressions = (['task success', 'tool selection accuracy', 'final answer score'] as const)
+    .flatMap(metric => (pairedCaseSignificance(baseline, candidate, metric) ?? [])
+      .filter(row => row.verdict === 'significantly-worse')
+      .map(row => ({ caseId: row.caseId, metric, adjustedP: row.adjustedP })))
+  if (options.requireSignificance === true && confirmedCaseRegressions.length > 0) {
+    checks.push({
+      metric: 'confirmed case regressions',
+      baseline: 0, candidate: confirmedCaseRegressions.length,
+      delta: confirmedCaseRegressions.length, passed: false, unit: 'count',
+      note: 'family-corrected per-case regression',
+    })
+  }
   return {
     checks,
     passed: checks.every(check => check.passed),
@@ -282,11 +296,7 @@ export function evaluateGate(
       ? {} : { maxLatencyIncrease: budgets.maxLatencyIncrease }),
     regressions: findRegressions(baseline, candidate, maxDrop)
       .filter(regression => suppressByMetric.get(regression.metric) !== true),
-    confirmedCaseRegressions: (pairedCaseSignificance(baseline, candidate) ?? [])
-      .filter(row => row.verdict === 'significantly-worse')
-      .map(row => ({
-        caseId: row.caseId, adjustedP: row.adjustedP, requiredPairs: row.requiredPairs,
-      })),
+    confirmedCaseRegressions,
   }
 }
 
@@ -347,7 +357,7 @@ export function renderGate(result: GateResult): string {
   })
   const confirmed = (result.confirmedCaseRegressions ?? []).slice(0, 5).map(item => {
     const caseId = item.caseId.replace(/[\r\n|]/gu, ' ')
-    return `  - ${caseId}: adjusted p ${formatPValue(item.adjustedP)}, needs ${item.requiredPairs} discordant pairs for this family`
+    return `  - ${caseId}: ${item.metric}, adjusted p ${formatPValue(item.adjustedP)}`
   })
   return [
     `# Gate: ${result.passed ? 'PASS' : 'FAIL'}`,
@@ -365,7 +375,7 @@ export function renderGate(result: GateResult): string {
       ...regressions,
     ]),
     ...(confirmed.length === 0 ? [] : [
-      `- confirmed case regressions: ${result.confirmedCaseRegressions!.length} case(s) survived family correction`,
+      `- confirmed case regressions: ${result.confirmedCaseRegressions!.length} case(s) survived family correction (showing up to 5)`,
       ...confirmed,
     ]),
     ...(regressions.length === 0 && confirmed.length === 0 ? [] : ['']),

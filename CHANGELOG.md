@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Gate evidence consistency.** Per-case evidence now uses the metric that
+  actually regressed; in significance mode a confirmed case regression also
+  fails the gate, so a PASS report cannot advertise one.
 - **Gate case evidence.** CI gate output lists family-corrected per-case
   regressions in markdown and `--json`, pointing at the exact cases behind a
   confirmed quality drop.
@@ -322,7 +325,7 @@
 - **`test:pack` now verifies wildcard exports.** `./src/*` is expanded to the
   source tree and every file must be packed; previously removing
   `src/**/*.ts` from `files` passed the smoke test unnoticed.
-- **Documentation matches the tree.** Both READMEs report 298 tests, and a
+- **Documentation matches the tree.** Both READMEs report 300 tests, and a
   session-log discovery test is renamed for the behavior it actually asserts.
 
 ### Fixed

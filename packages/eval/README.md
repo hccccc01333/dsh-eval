@@ -205,6 +205,10 @@ command prints a markdown PASS/FAIL table and exits 1 on any regression beyond
 the tolerance, making it suitable as a required CI step. It also lists
 **confirmed case regressions**: cases whose paired evidence survives the
 per-case Bonferroni family, so a CI log points at the specific cases to fix.
+Each case needs several trial pairs to be confirmable — with the usual one
+trial per case, no case can clear the corrected threshold. In significance
+mode a confirmed case regression also fails the gate, so a PASS report can
+never advertise one.
 
 Optional `--max-cost-increase 0.1` and `--max-latency-increase 0.2` add
 relative resource budgets, so a candidate that keeps quality but costs 2x more
