@@ -303,4 +303,3 @@ None; this package neither assembles nor sends a provider request, so no request
 - **Imported traces lack token usage** — Codex and Claude Code logs do not record provider usage, so imported runs report zero tokens and no cost.
 - **Direct-child timeout only** — a timed-out trial kills the direct dsh process; on Windows its descendants may survive.
 - **Windows launcher commands** — the spawned command runs without a shell, so `.cmd`/`.bat` shims need a direct executable or `node <path>` override (`--dsh "node C:/.../apps/cli/lib/bin.js"`).
-- **No atomic report write** — the run JSON is written in place; a crash mid-write can truncate the report.

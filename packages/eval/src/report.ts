@@ -4,8 +4,9 @@
  * @module dsh-eval/report
  */
 
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { dirname, resolve } from 'node:path'
+import { randomUUID } from 'node:crypto'
+import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
+import { basename, dirname, join, resolve } from 'node:path'
 import { z } from 'zod'
 import { computeAgreement, type AgreementSummary } from './agreement.ts'
 import { computeCalibration, type CalibrationSummary } from './calibration.ts'
@@ -15,13 +16,25 @@ import type { EvalRun } from './types.ts'
 
 /**
  * Write a run report as indented JSON with a trailing newline.
+ *
+ * The JSON is staged in a sibling temporary file and renamed into place, so a
+ * crash or a full disk cannot leave a half-written report that looks valid.
  * @param run - the run record to persist.
  * @param path - output path; parent directories are created.
  */
 export async function writeRunReport(run: EvalRun, path: string): Promise<void> {
   const absolute = resolve(path)
-  await mkdir(dirname(absolute), { recursive: true })
-  await writeFile(absolute, `${JSON.stringify(run, null, 2)}\n`, 'utf8')
+  const directory = dirname(absolute)
+  await mkdir(directory, { recursive: true })
+  const temp = join(directory, `.${basename(absolute)}.${process.pid}.${randomUUID()}.tmp`)
+  try {
+    await writeFile(temp, `${JSON.stringify(run, null, 2)}\n`, 'utf8')
+    await rename(temp, absolute)
+  } catch (error) {
+    /* v8 ignore next -- cleanup of a failed staged write is best-effort. */
+    await unlink(temp).catch(() => {})
+    throw error
+  }
 }
 
 const pricingSchema = z.object({

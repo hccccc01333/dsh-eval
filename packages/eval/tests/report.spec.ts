@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -49,6 +49,23 @@ describe('dsh-eval report persistence and rendering', () => {
     expect(renderMarkdownReport(loaded)).toContain(`- benchmark sha256: ${'c'.repeat(64)}`)
     expect(JSON.parse(renderReportJson(loaded)) as { benchmarkSha256: string })
       .toMatchObject({ benchmarkSha256: 'c'.repeat(64) })
+  })
+
+  it('replaces reports atomically without leaving staged files', async () => {
+    const dir = tempDir()
+    const path = join(dir, 'run.json')
+    writeFileSync(path, 'old')
+    await writeRunReport(buildRun({ benchmark: 'atomic' }), path)
+    expect(readFileSync(path, 'utf8')).toContain('"benchmark": "atomic"')
+    expect(readdirSync(dir)).toEqual(['run.json'])
+  })
+
+  it('removes the staged file when replacement fails', async () => {
+    const dir = tempDir()
+    const target = join(dir, 'target')
+    mkdirSync(target)
+    await expect(writeRunReport(buildRun(), target)).rejects.toThrow()
+    expect(readdirSync(dir)).toEqual(['target'])
   })
 
   it('rejects invalid JSON and non-report JSON', async () => {

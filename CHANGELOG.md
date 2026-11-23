@@ -4,6 +4,8 @@
 
 ### Added
 
+- **Atomic report writes.** Run JSON is staged in a sibling temporary file and
+  renamed into place, so an interrupted write cannot leave a truncated report.
 - **Override-aware provenance.** Effective `--trials`, `--concurrency`,
   `--profile` and `--dsh` values are persisted as `benchmarkOverrides` and
   folded into `benchmarkSha256`, so verification detects them.
@@ -300,7 +302,7 @@
 - **`test:pack` now verifies wildcard exports.** `./src/*` is expanded to the
   source tree and every file must be packed; previously removing
   `src/**/*.ts` from `files` passed the smoke test unnoticed.
-- **Documentation matches the tree.** Both READMEs report 287 tests, and a
+- **Documentation matches the tree.** Both READMEs report 289 tests, and a
   session-log discovery test is renamed for the behavior it actually asserts.
 
 ### Fixed
