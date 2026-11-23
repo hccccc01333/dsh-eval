@@ -36,13 +36,13 @@ async function hashPath(
   excluded: ReadonlySet<string>,
 ): Promise<void> {
   const absolute = resolve(path)
-  if (excluded.has(absolute)) return
   let real: string
   try {
     real = await realpath(absolute)
   } catch {
     real = absolute
   }
+  if (excluded.has(absolute) || excluded.has(real)) return
   if (seen.has(real)) return
   const visited = new Set(seen)
   visited.add(real)
@@ -88,8 +88,17 @@ export async function hashBenchmarkInputs(
   options: BenchmarkDigestOptions = {},
 ): Promise<string> {
   const hash = createHash('sha256')
-  const excluded = new Set((options.excludePaths ?? []).map(path =>
-    isAbsolute(path) ? path : resolve(path)))
+  const excluded = new Set<string>()
+  for (const path of options.excludePaths ?? []) {
+    const absolute = isAbsolute(path) ? path : resolve(path)
+    excluded.add(absolute)
+    // Windows temp paths can differ by short-name casing; canonicalize too.
+    try {
+      excluded.add(await realpath(absolute))
+    } catch {
+      /* Output paths often do not exist yet; the raw absolute form still applies. */
+    }
+  }
   const seen = new Set<string>()
   fragment(hash, 'yaml', text)
   for (const caseValue of benchmark.cases) {
