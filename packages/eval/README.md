@@ -142,7 +142,9 @@ Because a paired eval sample is small and its deltas are not normal, the paired 
 case x trial classified on the same primary metric as the sign test, with
 candidate wins listed before losses, capped at 20 rows. This makes a
 significant p-value traceable to the specific cases responsible. The two-run
-HTML dashboard shows the same discordant cases under **Changed cases**.
+HTML dashboard shows the same discordant cases under **Changed cases**, and
+adds a **Confirmed case changes** table for cases whose per-case corrected
+significance is conclusive.
 
 **Per-case paired significance** goes one step further: it aggregates those
 trial outcomes by case, runs an exact sign test for each case, and corrects
