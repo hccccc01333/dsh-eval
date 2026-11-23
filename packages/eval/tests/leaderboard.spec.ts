@@ -51,6 +51,52 @@ describe('dsh-eval leaderboard', () => {
     expect(markdown).toContain('| 2 | b — middle | 1/1 | 70.0% | 100.0% | 70.0% | 70.0% | $0.000002 | 120.0 ms | -20.0pp | underpowered (p=1.000, task success) |')
   })
 
+  it('can rank by strict pass@1 so mass errors cannot top the board', () => {
+    const many = (gradedPasses: number, errors: number): EvalRun => run({
+      model: `g${gradedPasses}e${errors}`,
+      trials: gradedPasses + errors,
+      grading: {
+        taskSuccessRate: gradedPasses === 0 ? null : 1,
+        toolSelectionAccuracyRate: null,
+        finalAnswerScore: null, hallucinationRate: null,
+      },
+      cases: [
+        ...Array.from({ length: gradedPasses }, (_, index) => ({
+          caseId: `p${index}`, trial: 1, status: 'completed' as const, exitCode: 0, timedOut: false,
+          grade: { taskSuccess: true, toolSelectionAccuracy: null }, metrics: METRICS,
+        })),
+        ...Array.from({ length: errors }, (_, index) => ({
+          caseId: `e${index}`, trial: 1, status: 'error' as const, error: 'boom', exitCode: 1, timedOut: false,
+        })),
+      ],
+    })
+    const errored = many(1, 99)
+    const honest = run({
+      model: 'honest',
+      trials: 10,
+      grading: {
+        taskSuccessRate: 0.9, toolSelectionAccuracyRate: null,
+        finalAnswerScore: null, hallucinationRate: null,
+      },
+      cases: Array.from({ length: 10 }, (_, index) => ({
+        caseId: `h${index}`, trial: 1, status: 'completed' as const, exitCode: 0, timedOut: false,
+        grade: { taskSuccess: index < 9, toolSelectionAccuracy: null }, metrics: METRICS,
+      })),
+    })
+    const byTask = buildLeaderboard([
+      { label: 'errored', run: errored }, { label: 'honest', run: honest },
+    ])
+    expect(byTask.map(row => row.label)).toEqual(['errored', 'honest'])
+    const rows = buildLeaderboard([
+      { label: 'errored', run: errored }, { label: 'honest', run: honest },
+    ], 'strictPassAt1')
+    expect(rows.map(row => [row.label, row.rank])).toEqual([['honest', 1], ['errored', 2]])
+    expect(rows[1]!.gapFromBest).toBeCloseTo(0.89)
+    expect(renderLeaderboard(rows, 'strictPassAt1')).toContain('ranked by strict pass@1')
+    expect(JSON.parse(renderLeaderboardJson(rows, 'strictPassAt1')) as { rankedBy: string })
+      .toMatchObject({ rankedBy: 'strictPassAt1' })
+  })
+
   it('shares a rank for ties and breaks ties deterministically', () => {
     const rows = buildLeaderboard([
       { label: 'z', run: graded(0.8, 'z') },

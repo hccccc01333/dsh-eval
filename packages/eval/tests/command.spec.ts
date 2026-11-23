@@ -586,6 +586,10 @@ describe('dsh-eval command composition', () => {
     expect(structured.exits).toEqual([0])
     const parsed = JSON.parse(structured.out) as { rows: { label: string; rank: number }[] }
     expect(parsed.rows.map(row => row.label)).toEqual(['b — strong', 'b — middle', 'b — weak'])
+
+    const strict = await bootEval(['leaderboard', ...paths, '--metric', 'strictPassAt1', '--json'])
+    expect(strict.exits).toEqual([0])
+    expect(JSON.parse(strict.out) as { rankedBy: string }).toMatchObject({ rankedBy: 'strictPassAt1' })
   })
 
   it('validates a benchmark through the CLI', async () => {
@@ -604,6 +608,18 @@ describe('dsh-eval command composition', () => {
     const invalid = await bootEval(['validate', invalidPath])
     expect(invalid.exits).toEqual([1])
     expect(invalid.err).toContain('at most one of check')
+  })
+
+  it('rejects an unknown leaderboard metric', async () => {
+    const dir = tempDir()
+    const path = join(dir, 'run.json')
+    await writeRunReport({
+      benchmark: 'b', model: 'm', createdAt: 1, trials: 1, seed: 0,
+      pricing: null, tempRoot: dir, cases: [], aggregate: null, grading: null,
+    }, path)
+    const observed = await bootEval(['leaderboard', path, '--metric', 'nope'])
+    expect(observed.exits).toEqual([1])
+    expect(observed.err).toContain('--metric must be taskSuccess or strictPassAt1')
   })
 
   it('verifies benchmark provenance through the CLI', async () => {

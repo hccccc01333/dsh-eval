@@ -16,6 +16,9 @@ import { computeCoverage, computeReliability } from './reliability.ts'
 import { signTestPower } from './stats.ts'
 import type { EvalRun } from './types.ts'
 
+/** Primary ranking metric for a leaderboard. */
+export type LeaderboardMetric = 'taskSuccess' | 'strictPassAt1'
+
 /** Paired evidence that a row really trails the current leader. */
 export interface LeaderboardSignificance {
   /** Adjusted p-value after both the compare family and leaderboard family. */
@@ -65,12 +68,21 @@ function descending(a: number | null, b: number | null): number {
   return b - a
 }
 
+/** Value used for ranking, gaps and ties. */
+function metricValue(entry: LeaderboardEntry, metric: LeaderboardMetric): number | null {
+  return metric === 'strictPassAt1' ? entry.strictPassAt1 : entry.taskSuccess
+}
+
 /**
- * Rank persisted runs by task success.
+ * Rank persisted runs by task success or strict pass@1.
  * @param runs - labelled run records; labels are usually `benchmark — model`.
+ * @param metric - primary ranking metric; default is pooled task success.
  * @returns ranked rows with ties sharing a rank.
  */
-export function buildLeaderboard(runs: readonly { label: string; run: EvalRun }[]): LeaderboardEntry[] {
+export function buildLeaderboard(
+  runs: readonly { label: string; run: EvalRun }[],
+  metric: LeaderboardMetric = 'taskSuccess',
+): LeaderboardEntry[] {
   const runByEntry = new Map<LeaderboardEntry, EvalRun>()
   const rows: LeaderboardEntry[] = runs.map(({ label, run }) => {
     const coverage = computeCoverage(run)
@@ -94,23 +106,25 @@ export function buildLeaderboard(runs: readonly { label: string; run: EvalRun }[
     runByEntry.set(entry, run)
     return entry
   })
-  rows.sort((a, b) => descending(a.taskSuccess, b.taskSuccess)
+  rows.sort((a, b) => descending(metricValue(a, metric), metricValue(b, metric))
     || descending(a.strictPassAt1, b.strictPassAt1)
+    || descending(a.taskSuccess, b.taskSuccess)
     || descending(a.toolSelection, b.toolSelection)
     || descending(a.judgeScore, b.judgeScore)
     || a.label.localeCompare(b.label))
-  const best = rows[0]?.taskSuccess ?? null
+  const best = rows.length === 0 ? null : metricValue(rows[0]!, metric)
   let lastRate: number | null = null
   let lastRank = 0
   let first = true
   rows.forEach((row, index) => {
-    if (row.taskSuccess === null || first || row.taskSuccess !== lastRate) {
+    const value = metricValue(row, metric)
+    if (value === null || first || value !== lastRate) {
       lastRank = index + 1
-      lastRate = row.taskSuccess
+      lastRate = value
       first = false
     }
     row.rank = lastRank
-    row.gapFromBest = best === null || row.taskSuccess === null ? null : best - row.taskSuccess
+    row.gapFromBest = best === null || value === null ? null : best - value
   })
   const leader = rows.find(row => row.rank === 1)
   const leaderRun = leader === undefined ? undefined : runByEntry.get(leader)
@@ -152,8 +166,11 @@ export function buildLeaderboard(runs: readonly { label: string; run: EvalRun }[
  * @param rows - rows from {@link buildLeaderboard}.
  * @returns a JSON string ending in a newline.
  */
-export function renderLeaderboardJson(rows: readonly LeaderboardEntry[]): string {
-  return `${JSON.stringify({ rankedBy: 'taskSuccess', rows })}\n`
+export function renderLeaderboardJson(
+  rows: readonly LeaderboardEntry[],
+  metric: LeaderboardMetric = 'taskSuccess',
+): string {
+  return `${JSON.stringify({ rankedBy: metric, rows })}\n`
 }
 
 /** Format a rate or a dash for markdown. */
@@ -180,11 +197,16 @@ export function formatLeaderboardSignificance(value: LeaderboardSignificance | n
  * @param rows - rows from {@link buildLeaderboard}.
  * @returns markdown ending in a newline.
  */
-export function renderLeaderboard(rows: readonly LeaderboardEntry[]): string {
+export function renderLeaderboard(
+  rows: readonly LeaderboardEntry[],
+  metric: LeaderboardMetric = 'taskSuccess',
+): string {
   const lines = [
     '# Leaderboard',
     '',
-    '- ranked by pooled task success; ties share a rank',
+    metric === 'strictPassAt1'
+      ? '- ranked by strict pass@1 (errors and timeouts stay in the denominator); ties share a rank'
+      : '- ranked by pooled task success; ties share a rank',
     '- ranks are a screening view; `vs leader` applies a Bonferroni-corrected paired sign test',
     '',
     '| rank | run | completed | task | strict pass@1 | tool | judge | cost/trial | latency/trial | Δ best | vs leader |',

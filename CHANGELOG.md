@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Strict leaderboard ranking.** `leaderboard --metric strictPassAt1` ranks by
+  the error-inclusive pass rate so a run with many timeouts cannot top the board
+  on graded-only successes; JSON output reports the chosen `rankedBy` metric.
 - **Provenance verification.** The new `provenance <run.json> <benchmark.yaml>`
   command re-hashes benchmark inputs and exits 1 on a mismatch or missing
   digest, with `--json` and `--out` support for CI.
@@ -290,7 +293,7 @@
 - **`test:pack` now verifies wildcard exports.** `./src/*` is expanded to the
   source tree and every file must be packed; previously removing
   `src/**/*.ts` from `files` passed the smoke test unnoticed.
-- **Documentation matches the tree.** Both READMEs report 276 tests, and a
+- **Documentation matches the tree.** Both READMEs report 279 tests, and a
   session-log discovery test is renamed for the behavior it actually asserts.
 
 ### Fixed

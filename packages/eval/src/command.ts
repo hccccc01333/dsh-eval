@@ -71,6 +71,7 @@ export type EvalStartupValues =
     runPaths: readonly string[]
     json?: boolean
     outPath?: string
+    metric?: 'taskSuccess' | 'strictPassAt1'
   }
   | {
     kind: 'gate'
@@ -161,6 +162,16 @@ function positiveInteger(program: Command, flag: string): (value: string) => num
     const parsed = Number(value)
     if (!Number.isInteger(parsed) || parsed <= 0) program.error(`error: ${flag} must be a positive integer`)
     return parsed
+  }
+}
+
+/** Build a parser for the leaderboard primary metric flag. */
+function leaderboardMetric(program: Command, flag: string): (value: string) => 'taskSuccess' | 'strictPassAt1' {
+  return (value) => {
+    if (value !== 'taskSuccess' && value !== 'strictPassAt1') {
+      program.error(`error: ${flag} must be taskSuccess or strictPassAt1`)
+    }
+    return value
   }
 }
 
@@ -306,8 +317,14 @@ Examples:
     .argument('<run.json...>', 'paths to run reports')
     .option('--json', 'emit a machine-readable JSON leaderboard')
     .option('--out <path>', 'write the leaderboard to a file instead of stdout')
-    .action((runPaths: string[], options: { json?: boolean; out?: string }) => {
-      publish({ kind: 'leaderboard', runPaths, json: options.json === true, ...optionalOut(options) })
+    .option('--metric <name>', 'primary ranking metric: taskSuccess (default) or strictPassAt1',
+      leaderboardMetric(program, '--metric'))
+    .action((runPaths: string[], options: { json?: boolean; out?: string; metric?: 'taskSuccess' | 'strictPassAt1' }) => {
+      publish({
+        kind: 'leaderboard', runPaths, json: options.json === true,
+        ...(options.metric === undefined ? {} : { metric: options.metric }),
+        ...optionalOut(options),
+      })
     })
   const gate = program.command('gate').description('fail a CI build when a candidate run regresses against a baseline')
   gate

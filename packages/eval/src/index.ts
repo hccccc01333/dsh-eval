@@ -188,9 +188,10 @@ export async function executeEval(
       const entries = buildLeaderboard(runs.map(run => ({
         label: `${run.benchmark} — ${run.model}`,
         run,
-      })))
-      await emitText(io, values.json === true ? renderLeaderboardJson(entries) : renderLeaderboard(entries),
-        values.outPath)
+      })), values.metric)
+      await emitText(io, values.json === true
+        ? renderLeaderboardJson(entries, values.metric)
+        : renderLeaderboard(entries, values.metric), values.outPath)
       return 0
     }
     if (values.kind === 'gate') {

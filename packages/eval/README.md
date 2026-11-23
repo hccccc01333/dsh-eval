@@ -171,7 +171,9 @@ spending tokens on a benchmark that cannot answer its own question.
 
 `dsh eval leaderboard a.json b.json c.json ...` ranks any number of runs by
 pooled task success, with strict pass@1, tool selection, normalized judge
-score, cost, latency and a gap-to-leader column. Ties share a rank and missing
+score, cost, latency and a gap-to-leader column. Pass
+`--metric strictPassAt1` to rank by the error-inclusive rate instead; JSON
+reports carry the chosen metric as `rankedBy`. Ties share a rank and missing
 metrics sort last instead of being invented. It is explicitly a screening
 view: the output points users back to `dsh eval compare` for paired inference
 between two close runs.
