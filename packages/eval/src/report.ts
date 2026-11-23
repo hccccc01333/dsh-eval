@@ -104,6 +104,12 @@ const runReportSchema = z.object({
   benchmark: z.string(),
   model: z.string(),
   benchmarkSha256: z.string().regex(/^[0-9a-f]{64}$/u).optional(),
+  benchmarkOverrides: z.object({
+    trials: z.number().int().positive().optional(),
+    concurrency: z.number().int().positive().optional(),
+    profile: z.string().min(1).optional(),
+    dshCommand: z.array(z.string().min(1)).optional(),
+  }).strict().optional(),
   createdAt: z.number(),
   trials: z.number(),
   seed: z.number(),

@@ -18,6 +18,7 @@ import { cp, mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { splitArgv } from './argv.ts'
+import { hashBenchmarkOverrides, type BenchmarkOverrides } from './digest.ts'
 import { safeRegexTest, safeRegexTestAny } from './safe-regex.ts'
 import type { Benchmark, BenchmarkExpectation, EvalRun, EvalTrialResult } from './types.ts'
 import type { EvalGrade, EvalRunGrading } from './types.ts'
@@ -482,6 +483,13 @@ export async function runBenchmark(benchmark: Benchmark, options: RunOptions = {
     ...(options.command !== undefined ? { command: options.command } : {}),
     concurrency,
   }
+  const overrides: BenchmarkOverrides = {
+    ...(options.trials === undefined ? {} : { trials }),
+    ...(options.concurrency === undefined ? {} : { concurrency }),
+    ...(options.profile === undefined ? {} : { profile: options.profile }),
+    ...(options.command === undefined ? {} : { dshCommand: [...options.command] }),
+  }
+  const hasOverrides = Object.keys(overrides).length > 0
   const tasks: { caseValue: Benchmark['cases'][number]; trial: number }[] = []
   for (const caseValue of effective.cases) {
     for (let trial = 1; trial <= trials; trial++) tasks.push({ caseValue, trial })
@@ -522,7 +530,12 @@ export async function runBenchmark(benchmark: Benchmark, options: RunOptions = {
   return {
     benchmark: benchmark.name,
     model: benchmark.model,
-    ...(benchmark.sourceSha256 === undefined ? {} : { benchmarkSha256: benchmark.sourceSha256 }),
+    ...(benchmark.sourceSha256 === undefined ? {} : {
+      benchmarkSha256: hasOverrides
+        ? hashBenchmarkOverrides(benchmark.sourceSha256, overrides)
+        : benchmark.sourceSha256,
+    }),
+    ...(hasOverrides ? { benchmarkOverrides: overrides } : {}),
     createdAt: Date.now(),
     trials,
     seed: benchmark.seed,

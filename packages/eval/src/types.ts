@@ -254,8 +254,15 @@ export interface EvalRun {
   benchmark: string
   /** Model id the benchmark targeted. */
   model: string
-  /** SHA-256 of the benchmark YAML and its resolved input files, when known. */
+  /** SHA-256 of the benchmark YAML, resolved inputs and CLI overrides, when known. */
   benchmarkSha256?: string
+  /** CLI overrides that changed the effective benchmark configuration. */
+  benchmarkOverrides?: {
+    trials?: number
+    concurrency?: number
+    profile?: string
+    dshCommand?: readonly string[]
+  }
   /** Run creation time, epoch milliseconds. */
   createdAt: number
   /** Trials per case actually executed. */

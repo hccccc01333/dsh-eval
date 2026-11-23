@@ -17,6 +17,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import { loadBenchmark } from './benchmark.ts'
+import { hashBenchmarkOverrides } from './digest.ts'
 import { applyEval, type EvalStartupValues } from './command.ts'
 import { compareRuns, pairedCases, renderCompareJson, renderCompareMarkdown, renderPairedCases } from './compare.ts'
 import { writeDashboard } from './dashboard.ts'
@@ -174,8 +175,11 @@ export async function executeEval(
         excludeFromDigest: [values.runPath],
       })
       const runSha256 = run.benchmarkSha256 ?? null
-      // loadBenchmark always computes this digest from the resolved inputs.
-      const benchmarkSha256 = benchmark.sourceSha256!
+      // loadBenchmark always computes this digest from the resolved inputs;
+      // CLI overrides are folded in exactly as runBenchmark did.
+      const benchmarkSha256 = run.benchmarkOverrides === undefined
+        ? benchmark.sourceSha256!
+        : hashBenchmarkOverrides(benchmark.sourceSha256!, run.benchmarkOverrides)
       const status = runSha256 === null ? 'missing'
         : runSha256 === benchmarkSha256 ? 'match' : 'mismatch'
       const text = values.json === true

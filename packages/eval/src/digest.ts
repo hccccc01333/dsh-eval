@@ -69,6 +69,28 @@ async function hashPath(
   }
 }
 
+/** CLI overrides that change the effective benchmark configuration. */
+export interface BenchmarkOverrides {
+  trials?: number
+  concurrency?: number
+  profile?: string
+  dshCommand?: readonly string[]
+}
+
+/**
+ * Fold CLI overrides into a benchmark digest so provenance cannot report a
+ * match for a run whose effective configuration differed from the YAML.
+ */
+export function hashBenchmarkOverrides(baseSha256: string, overrides: BenchmarkOverrides): string {
+  const hash = createHash('sha256')
+  fragment(hash, 'benchmark-sha256', baseSha256)
+  fragment(hash, 'trials', overrides.trials === undefined ? '' : String(overrides.trials))
+  fragment(hash, 'concurrency', overrides.concurrency === undefined ? '' : String(overrides.concurrency))
+  fragment(hash, 'profile', overrides.profile ?? '')
+  fragment(hash, 'dshCommand', (overrides.dshCommand ?? []).join('\u0000'))
+  return hash.digest('hex')
+}
+
 /** Options that affect only the digest, not the benchmark itself. */
 export interface BenchmarkDigestOptions {
   /** Absolute paths to omit, e.g. the run report written into a `workspace: .` tree. */

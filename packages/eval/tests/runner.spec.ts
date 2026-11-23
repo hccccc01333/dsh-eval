@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { hashBenchmarkOverrides } from '../src/digest.ts'
 import { runBenchmark } from '../src/runner.ts'
 import type { Benchmark } from '../src/types.ts'
 
@@ -120,6 +121,24 @@ describe('dsh-eval benchmark runner', () => {
     expect(run.caseInputs).toEqual([{
       caseId: 'golden', prompt: 'What is the answer?', answer: '42',
     }])
+  })
+
+  it('persists CLI overrides in the provenance digest', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const base = 'a'.repeat(64)
+    const benchmark = buildBenchmark({ trials: 1 })
+    benchmark.sourceSha256 = base
+    const run = await runBenchmark(benchmark, {
+      tempRoot: tempDir(), trials: 2, concurrency: 3, profile: 'custom',
+      command: [process.execPath, FAKE_SCRIPT],
+    })
+    expect(run.benchmarkOverrides).toEqual({
+      trials: 2, concurrency: 3, profile: 'custom',
+      dshCommand: [process.execPath, FAKE_SCRIPT],
+    })
+    expect(run.benchmarkSha256).toBe(hashBenchmarkOverrides(base, run.benchmarkOverrides!))
+    expect(run.benchmarkSha256).not.toBe(base)
   })
 
   it('runs every trial, harvests traces, and folds metrics', async () => {

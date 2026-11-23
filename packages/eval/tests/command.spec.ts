@@ -8,6 +8,7 @@ import Include from '@deepseek-ai/cordis-plugin-include'
 import { internals as cmdlineInternals, provideCmdline } from '@deepseek-ai/dsh-cmdline'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { loadBenchmark } from '../src/benchmark.ts'
+import { hashBenchmarkOverrides } from '../src/digest.ts'
 import { evalCommand, type EvalStartupValues } from '../src/command.ts'
 import { apply, executeEval, internals, renderProgress, resolveJudgeChat } from '../src/index.ts'
 import { loadRunReport, writeRunReport } from '../src/report.ts'
@@ -640,6 +641,16 @@ describe('dsh-eval command composition', () => {
     expect(observed.out).toContain('Provenance: match')
     const structured = await bootEval(['provenance', runPath, benchmarkPath, '--json'])
     expect(JSON.parse(structured.out) as { status: string }).toMatchObject({ status: 'match' })
+
+    const overrides = { trials: 3, profile: 'custom', dshCommand: ['dsh', 'run'] }
+    await writeRunReport({
+      ...base,
+      benchmarkSha256: hashBenchmarkOverrides(benchmark.sourceSha256!, overrides),
+      benchmarkOverrides: overrides,
+    }, runPath)
+    const overridden = await bootEval(['provenance', runPath, benchmarkPath])
+    expect(overridden.exits).toEqual([0])
+    expect(overridden.out).toContain('Provenance: match')
 
     await writeRunReport(base, runPath)
     const missing = await bootEval(['provenance', runPath, benchmarkPath])

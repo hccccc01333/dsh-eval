@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Override-aware provenance.** Effective `--trials`, `--concurrency`,
+  `--profile` and `--dsh` values are persisted as `benchmarkOverrides` and
+  folded into `benchmarkSha256`, so verification detects them.
 - **Follow-up review fixes.** Provenance digests use locale-independent sorting,
   follow symlinked fixtures and exclude the run report from `workspace: .`
   trees; strict-ranking verdicts use strict-pass paired evidence; and batched
@@ -297,7 +300,7 @@
 - **`test:pack` now verifies wildcard exports.** `./src/*` is expanded to the
   source tree and every file must be packed; previously removing
   `src/**/*.ts` from `files` passed the smoke test unnoticed.
-- **Documentation matches the tree.** Both READMEs report 285 tests, and a
+- **Documentation matches the tree.** Both READMEs report 287 tests, and a
   session-log discovery test is renamed for the behavior it actually asserts.
 
 ### Fixed

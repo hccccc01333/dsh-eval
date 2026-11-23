@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { hashBenchmarkInputs } from '../src/digest.ts'
+import { hashBenchmarkInputs, hashBenchmarkOverrides } from '../src/digest.ts'
 import type { Benchmark } from '../src/types.ts'
 
 const dirs: string[] = []
@@ -95,6 +95,15 @@ describe('dsh-eval benchmark input digest', () => {
     const digest = await hashBenchmarkInputs('yaml', benchmark(join(dir, 'absent')))
     expect(digest).toMatch(/^[0-9a-f]{64}$/u)
     expect(await hashBenchmarkInputs('yaml', benchmark(join(dir, 'absent')))).toBe(digest)
+  })
+
+  it('folds CLI overrides into a distinct, deterministic digest', async () => {
+    const base = 'a'.repeat(64)
+    const first = hashBenchmarkOverrides(base, { trials: 2, concurrency: 2, profile: 'headless' })
+    expect(first).toBe(hashBenchmarkOverrides(base, { trials: 2, concurrency: 2, profile: 'headless' }))
+    expect(hashBenchmarkOverrides(base, { trials: 3, concurrency: 2, profile: 'headless' })).not.toBe(first)
+    expect(hashBenchmarkOverrides(base, { dshCommand: ['dsh'] })).not.toBe(first)
+    expect(hashBenchmarkOverrides(base, {})).not.toBe(first)
   })
 
   it('separates adjacent fragments so inputs cannot collide by concatenation', async () => {
