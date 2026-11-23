@@ -32,6 +32,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - `dsh eval export run.json [--out trials.csv]` — flat trial-level CSV for spreadsheets and notebooks, with formula injection and quoting safely escaped
 - `dsh eval dashboard a.json [b.json ...] --out report.html` — standalone dark-mode-aware HTML dashboard: one run, two-run comparison, or a leaderboard for three or more (including the paired verdict against the leader), no external assets
 - `dsh eval validate benchmark.yaml [--json]` — preflight a benchmark and warn about weak evidence before spending tokens
+- `dsh eval provenance run.json benchmark.yaml [--json]` — verify the stored benchmark digest against the current YAML, prompts, workspaces and replay inputs; a mismatch or missing digest exits 1
 - `dsh eval leaderboard a.json b.json c.json` — rank any number of runs by task success with gap-to-leader and a Bonferroni-corrected paired verdict against the leader; `--json` for automation
 - `dsh eval gate candidate.json --baseline base.json --max-drop 0.05 [--require-significance] [--json]` — CI quality and resource-budget gate; significance mode only fails on statistically confirmed regressions
 - `dsh eval compare v1.json v2.json` — signed `B - A` table plus paired inference; `--json` for structured output
@@ -39,7 +40,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 
 ## Status
 
-`dsh-eval@0.4.0` · 276 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.4.0` · 277 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 
@@ -133,6 +134,7 @@ are recorded separately in the run's option fields.
 | `dsh eval export run.json [--out trials.csv]` | Flatten trials into a safely escaped CSV |
 | `dsh eval dashboard a.json [b.json ...] --out report.html` | Write a standalone HTML dashboard or multi-run leaderboard |
 | `dsh eval validate benchmark.yaml [--json] [--out file]` | Preflight a benchmark with evidence warnings |
+| `dsh eval provenance run.json benchmark.yaml [--json] [--out file]` | Verify the run's benchmark SHA-256 against the current inputs; mismatches exit 1 |
 | `dsh eval leaderboard a.json b.json ... [--json] [--out file]` | Rank multiple runs with optional JSON output |
 | `dsh eval gate candidate.json --baseline base.json [--json] [--out file]` | Fail CI on regressions; `--json` emits a machine-readable verdict |
 | `dsh eval compare base.json candidate.json [--json] [--out file]` | Compare two runs with deltas and paired inference |

@@ -167,6 +167,22 @@ export async function executeEval(
         : renderBenchmarkSummary(benchmark), values.outPath)
       return 0
     }
+    if (values.kind === 'provenance') {
+      const run = await loadRunReport(values.runPath)
+      const benchmark = await loadBenchmark(values.benchmarkPath, {
+        allowExternalPaths: values.allowExternalPaths === true,
+      })
+      const runSha256 = run.benchmarkSha256 ?? null
+      // loadBenchmark always computes this digest from the resolved inputs.
+      const benchmarkSha256 = benchmark.sourceSha256!
+      const status = runSha256 === null ? 'missing'
+        : runSha256 === benchmarkSha256 ? 'match' : 'mismatch'
+      const text = values.json === true
+        ? `${JSON.stringify({ status, runSha256, benchmarkSha256 })}\n`
+        : `Provenance: ${status}\nrun: ${runSha256 ?? 'n/a'}\nbenchmark: ${benchmarkSha256}\n`
+      await emitText(io, text, values.outPath)
+      return status === 'match' ? 0 : 1
+    }
     if (values.kind === 'leaderboard') {
       const runs = await Promise.all(values.runPaths.map(async path => loadRunReport(path)))
       const entries = buildLeaderboard(runs.map(run => ({

@@ -11,7 +11,10 @@ dsh plugin --profile eval add dsh-eval
 dsh eval run benchmark.yaml
 dsh eval report eval-run.json
 dsh eval compare eval-v1.json eval-v2.json
+dsh eval provenance eval-run.json benchmark.yaml
 ```
+
+`dsh eval provenance <run.json> <benchmark.yaml>` re-hashes the benchmark YAML, its prompt files, workspace trees and replay logs and compares the result with the run's `benchmarkSha256`. It prints `match`, `missing` or `mismatch`, supports `--json`, and exits 1 unless the digests match, so CI can reject reports whose inputs changed after the run.
 
 `dsh eval` is a launcher alias for `--profile eval`; the eval profile composes `dsh-base` plus this bundle. Each trial spawns the benchmark-configured `dsh` command (default `dsh`) against the benchmark-configured profile (default `headless`) with a private temp workspace, an isolated `DSH_HOME`, and a patch overlay forcing plain-JSONL persistence and non-interactive workspace-write/never-approval permissions. The harvested primary session log becomes the trial's trace, and subagent child logs under the trial's `DSH_HOME` are merged into it before the metric fold.
 

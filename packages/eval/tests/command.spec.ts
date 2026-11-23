@@ -7,6 +7,7 @@ import Loader from '@deepseek-ai/cordis-plugin-loader'
 import Include from '@deepseek-ai/cordis-plugin-include'
 import { internals as cmdlineInternals, provideCmdline } from '@deepseek-ai/dsh-cmdline'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { loadBenchmark } from '../src/benchmark.ts'
 import { evalCommand, type EvalStartupValues } from '../src/command.ts'
 import { apply, executeEval, internals, renderProgress, resolveJudgeChat } from '../src/index.ts'
 import { loadRunReport, writeRunReport } from '../src/report.ts'
@@ -603,6 +604,37 @@ describe('dsh-eval command composition', () => {
     const invalid = await bootEval(['validate', invalidPath])
     expect(invalid.exits).toEqual([1])
     expect(invalid.err).toContain('at most one of check')
+  })
+
+  it('verifies benchmark provenance through the CLI', async () => {
+    const dir = tempDir()
+    const benchmarkPath = benchmarkYaml(dir)
+    const benchmark = await loadBenchmark(benchmarkPath)
+    const runPath = join(dir, 'run.json')
+    const base = {
+      benchmark: 'command-smoke', model: 'm', createdAt: 1, trials: 1, seed: 0,
+      pricing: null, tempRoot: dir, cases: [], aggregate: null, grading: null,
+    }
+    await writeRunReport({
+      ...base,
+      ...(benchmark.sourceSha256 !== undefined ? { benchmarkSha256: benchmark.sourceSha256 } : {}),
+    }, runPath)
+    const observed = await bootEval(['provenance', runPath, benchmarkPath])
+    expect(observed.exits).toEqual([0])
+    expect(observed.out).toContain('Provenance: match')
+    const structured = await bootEval(['provenance', runPath, benchmarkPath, '--json'])
+    expect(JSON.parse(structured.out) as { status: string }).toMatchObject({ status: 'match' })
+
+    await writeRunReport(base, runPath)
+    const missing = await bootEval(['provenance', runPath, benchmarkPath])
+    expect(missing.exits).toEqual([1])
+    expect(missing.out).toContain('Provenance: missing')
+
+    await writeRunReport({ ...base, benchmarkSha256: 'a'.repeat(64) }, runPath)
+    const mismatch = await bootEval(['provenance', runPath, benchmarkPath, '--json'])
+    expect(mismatch.exits).toEqual([1])
+    expect(JSON.parse(mismatch.out) as { status: string }).toMatchObject({ status: 'mismatch' })
+    expect(mismatch.out).toContain('benchmarkSha256')
   })
 
   it('fails loudly for a missing compare input', async () => {

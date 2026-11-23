@@ -59,6 +59,14 @@ export type EvalStartupValues =
     allowExternalPaths?: boolean
   }
   | {
+    kind: 'provenance'
+    runPath: string
+    benchmarkPath: string
+    json?: boolean
+    outPath?: string
+    allowExternalPaths?: boolean
+  }
+  | {
     kind: 'leaderboard'
     runPaths: readonly string[]
     json?: boolean
@@ -185,6 +193,7 @@ export function evalCommand(publish: (values: EvalStartupValues) => void): Comma
 Examples:
   dsh --profile eval validate benchmark.yaml
   dsh --profile eval run benchmark.yaml --out run.json
+  dsh --profile eval provenance run.json benchmark.yaml
   dsh --profile eval report run.json --brief
   dsh --profile eval export run.json --out trials.csv
   dsh --profile eval compare base.json candidate.json
@@ -193,7 +202,7 @@ Examples:
   dsh --profile eval gate candidate.json --baseline base.json --require-significance --json
 `)
     .action(() => {
-      program.error('error: eval needs a subcommand: run <benchmark.yaml>, validate <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, export <run.json>, rejudge <run.json>, dashboard <run.json>, leaderboard <run.json>..., gate <candidate.json>, or import <format> <log.jsonl>')
+      program.error('error: eval needs a subcommand: run <benchmark.yaml>, validate <benchmark.yaml>, provenance <run.json> <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, export <run.json>, rejudge <run.json>, dashboard <run.json>, leaderboard <run.json>..., gate <candidate.json>, or import <format> <log.jsonl>')
     })
   const run = program.command('run').description('run a benchmark and write its JSON report')
   run
@@ -272,6 +281,22 @@ Examples:
     .action((benchmarkPath: string, options: { json?: boolean; out?: string; allowExternalPaths?: boolean }) => {
       publish({
         kind: 'validate', benchmarkPath, json: options.json === true,
+        allowExternalPaths: options.allowExternalPaths === true,
+        ...optionalOut(options),
+      })
+    })
+  const provenance = program.command('provenance').description('verify a run report against its benchmark inputs')
+  provenance
+    .argument('<run.json>', 'path to a persisted run report')
+    .argument('<benchmark.yaml>', 'path to the benchmark document')
+    .option('--json', 'emit a machine-readable verification result')
+    .option('--out <path>', 'write the verification result to a file instead of stdout')
+    .option('--allow-external-paths', 'allow referenced files outside the benchmark directory (trusted benchmarks only)')
+    .action((runPath: string, benchmarkPath: string,
+      options: { json?: boolean; out?: string; allowExternalPaths?: boolean }) => {
+      publish({
+        kind: 'provenance', runPath, benchmarkPath,
+        json: options.json === true,
         allowExternalPaths: options.allowExternalPaths === true,
         ...optionalOut(options),
       })

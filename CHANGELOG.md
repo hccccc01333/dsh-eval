@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Provenance verification.** The new `provenance <run.json> <benchmark.yaml>`
+  command re-hashes benchmark inputs and exits 1 on a mismatch or missing
+  digest, with `--json` and `--out` support for CI.
 - **Documentation consistency.** The module header no longer claims the judge
   and paired inference are deferred; the release checklist points to the root
   changelog; both READMEs list `--quiet` and `--allow-external-paths`.
