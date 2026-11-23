@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Shared atomic output.** Run JSON, Markdown/JSON reports, CSV and HTML
+  dashboards all go through one staged-write helper; an interrupted write
+  cannot leave a truncated artifact anywhere in the CLI.
 - **Dashboard metric flag.** `dashboard --metric strictPassAt1` ranks a 3+ run
   leaderboard page by the error-inclusive rate, matching `leaderboard`.
 - **Review follow-up.** Per-case significance reports the family-aware pair

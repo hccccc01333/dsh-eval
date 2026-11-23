@@ -13,8 +13,7 @@
  * @module dsh-eval
  */
 
-import { mkdir, writeFile } from 'node:fs/promises'
-import { dirname, resolve } from 'node:path'
+import { writeTextAtomic } from './atomic-write.ts'
 import type { Context } from '@deepseek-ai/cordis'
 import { loadBenchmark } from './benchmark.ts'
 import { hashBenchmarkOverrides } from './digest.ts'
@@ -110,8 +109,7 @@ async function emitText(io: EvalIo, text: string, outPath?: string, detail = '')
     io.stdout.write(text)
     return
   }
-  await mkdir(dirname(resolve(outPath)), { recursive: true })
-  await writeFile(outPath, text, 'utf8')
+  await writeTextAtomic(outPath, text)
   io.stdout.write(`Wrote ${outPath}${detail}\n`)
 }
 

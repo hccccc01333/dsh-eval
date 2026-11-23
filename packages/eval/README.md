@@ -115,7 +115,9 @@ summary cards for coverage, pass@1/pass@k, latency p95 and cost, followed by
 reliability, precision, judge/script agreement and a per-trial table. It has no
 external CSS, fonts or scripts, respects the OS light/dark preference, and
 HTML-escapes benchmark ids, case ids and error strings — an agent-produced
-error message cannot inject markup into the page. Supplying a second run adds a
+error message cannot inject markup into the page. Every file output (run JSON,
+Markdown, CSV, HTML) is staged and renamed into place, so an interrupted write
+cannot leave a truncated report. Supplying a second run adds a
 comparison table built from the same rows as `dsh eval compare`, including
 signed `B − A` deltas and the Bonferroni-corrected paired inference rows. Three
 or more runs instead produce a leaderboard page using the same ranking as

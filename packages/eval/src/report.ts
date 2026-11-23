@@ -4,10 +4,10 @@
  * @module dsh-eval/report
  */
 
-import { randomUUID } from 'node:crypto'
-import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
-import { basename, dirname, join, resolve } from 'node:path'
+import { readFile } from 'node:fs/promises'
+import { resolve } from 'node:path'
 import { z } from 'zod'
+import { writeTextAtomic } from './atomic-write.ts'
 import { computeAgreement, type AgreementSummary } from './agreement.ts'
 import { computeCalibration, type CalibrationSummary } from './calibration.ts'
 import { computePrecision, type RateInterval, type RunPrecision } from './precision.ts'
@@ -23,18 +23,7 @@ import type { EvalRun } from './types.ts'
  * @param path - output path; parent directories are created.
  */
 export async function writeRunReport(run: EvalRun, path: string): Promise<void> {
-  const absolute = resolve(path)
-  const directory = dirname(absolute)
-  await mkdir(directory, { recursive: true })
-  const temp = join(directory, `.${basename(absolute)}.${process.pid}.${randomUUID()}.tmp`)
-  try {
-    await writeFile(temp, `${JSON.stringify(run, null, 2)}\n`, 'utf8')
-    await rename(temp, absolute)
-  } catch (error) {
-    /* v8 ignore next -- cleanup of a failed staged write is best-effort. */
-    await unlink(temp).catch(() => {})
-    throw error
-  }
+  await writeTextAtomic(path, `${JSON.stringify(run, null, 2)}\n`)
 }
 
 const pricingSchema = z.object({

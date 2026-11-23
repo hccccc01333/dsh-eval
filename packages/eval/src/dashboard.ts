@@ -9,8 +9,7 @@
  * @module dsh-eval/dashboard
  */
 
-import { mkdir, writeFile } from 'node:fs/promises'
-import { dirname, resolve } from 'node:path'
+import { writeTextAtomic } from './atomic-write.ts'
 import { computeAgreement } from './agreement.ts'
 import { computeCalibration } from './calibration.ts'
 import { compareRuns, formatCaseValue, formatPValue, pairedCases, pairedCaseSignificance } from './compare.ts'
@@ -47,9 +46,7 @@ export async function writeDashboard(
   path: string,
   metric: LeaderboardMetric = 'taskSuccess',
 ): Promise<void> {
-  const absolute = resolve(path)
-  await mkdir(dirname(absolute), { recursive: true })
-  await writeFile(absolute, renderDashboard(runs, metric), 'utf8')
+  await writeTextAtomic(path, renderDashboard(runs, metric))
 }
 
 /** Escape text for interpolation into HTML. */
