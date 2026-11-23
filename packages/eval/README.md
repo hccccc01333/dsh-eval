@@ -144,6 +144,14 @@ candidate wins listed before losses, capped at 20 rows. This makes a
 significant p-value traceable to the specific cases responsible. The two-run
 HTML dashboard shows the same discordant cases under **Changed cases**.
 
+**Per-case paired significance** goes one step further: it aggregates those
+trial outcomes by case, runs an exact sign test for each case, and corrects
+across the tested cases as a separate Bonferroni family. The markdown block
+lists only confirmed improvements/regressions (capped at 20 rows); `--json`
+emits every case with `pairs`, `wins`, `losses`, `adjustedP`, `detectable` and
+its `verdict`. Cases with too few discordant pairs are labelled
+`underpowered`, so a one-trial win is never mistaken for a proven fix.
+
 ## Judge calibration
 
 Agreement and kappa answer "do the judge and the scripted check decide the

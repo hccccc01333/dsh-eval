@@ -545,6 +545,7 @@ describe('dsh-eval command composition', () => {
     expect(observed.out).toContain('| benchmark | base | candidate | – |')
     expect(observed.out).toContain('## Paired case outcomes')
     expect(observed.out).toContain('| c | 1 | pass | fail | A better |')
+    expect(observed.out).toContain('## Per-case paired significance')
 
     const emptyA = join(dir, 'empty-a.json')
     const emptyB = join(dir, 'empty-b.json')
@@ -556,8 +557,12 @@ describe('dsh-eval command composition', () => {
 
     const structured = await bootEval(['compare', pathA, pathB, '--json'])
     expect(structured.exits).toEqual([0])
-    const parsed = JSON.parse(structured.out) as { baseline: { benchmark: string } }
+    const parsed = JSON.parse(structured.out) as {
+      baseline: { benchmark: string }
+      caseSignificance: { caseId: string; verdict: string }[]
+    }
     expect(parsed.baseline.benchmark).toBe('base')
+    expect(parsed.caseSignificance[0]).toMatchObject({ caseId: 'c', verdict: 'underpowered' })
   })
 
   it('ranks several persisted runs through the CLI', async () => {

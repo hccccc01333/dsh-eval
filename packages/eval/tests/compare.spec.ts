@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { compareRuns, pairedCases, pairedCompare, pairedSigns, renderCompareJson, renderCompareMarkdown, renderPairedCases } from '../src/compare.ts'
+import {
+  compareRuns, pairedCases, pairedCaseSignificance, pairedCompare, pairedSigns,
+  renderCaseSignificance, renderCompareJson, renderCompareMarkdown, renderPairedCases,
+} from '../src/compare.ts'
 import type { EvalRun, EvalTrialResult } from '../src/types.ts'
 
 function buildRun(overrides: Partial<EvalRun> = {}): EvalRun {
@@ -196,6 +199,36 @@ describe('dsh-eval comparison', () => {
     const manyA = buildRun({ cases: Array.from({ length: 21 }, (_, i) => trial(`m${i}`, 1, false, 2, 10, 5)) })
     const manyB = buildRun({ cases: Array.from({ length: 21 }, (_, i) => trial(`m${i}`, 1, true, 2, 10, 5)) })
     expect(renderPairedCases(pairedCases(manyA, manyB)!)).toContain('showing 20 of 21 discordant pairs')
+  })
+
+  it('aggregates paired evidence per case with its own correction family', () => {
+    const make = (outcomes: Record<string, boolean[]>): EvalRun => buildRun({
+      cases: Object.entries(outcomes).flatMap(([caseId, values]) =>
+        values.map((pass, index) => trial(caseId, index + 1, pass, 2, 10))),
+    })
+    const a = make({
+      better: Array(8).fill(false), worse: Array(8).fill(true),
+      mixed: [false, false, false, false, true, true, true, true], weak: [false],
+      tie: [false, false],
+    })
+    const b = make({
+      better: Array(8).fill(true), worse: Array(8).fill(false),
+      mixed: [true, true, true, true, false, false, false, false], weak: [true],
+      tie: [false, false],
+    })
+    const rows = pairedCaseSignificance(a, b)!
+    expect(rows.map(row => [row.caseId, row.verdict])).toEqual([
+      ['better', 'significantly-better'],
+      ['worse', 'significantly-worse'],
+      ['mixed', 'not-significant'],
+      ['tie', 'underpowered'],
+      ['weak', 'underpowered'],
+    ])
+    const markdown = renderCaseSignificance(rows)
+    expect(markdown).toContain('5 cases · Bonferroni family = 5 · 2 confirmed changes')
+    expect(markdown).toContain('| better | 8 | 8 | 0 |')
+    expect(pairedCaseSignificance(buildRun(), buildRun())).toBeNull()
+    expect(renderCaseSignificance([])).toContain('0 cases · Bonferroni family = 0')
   })
 
   it('does not call unmeasured pairs ties', () => {

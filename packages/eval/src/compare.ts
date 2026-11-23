@@ -275,6 +275,77 @@ export function pairedCases(a: EvalRun, b: EvalRun): PairedCase[] | null {
   })
 }
 
+/** Aggregated paired evidence for one case across its trial pairs. */
+export interface CaseSignificance {
+  caseId: string
+  pairs: number
+  wins: number
+  losses: number
+  ties: number
+  adjustedP: number
+  detectable: boolean
+  verdict: 'significantly-better' | 'significantly-worse' | 'not-significant' | 'underpowered'
+}
+
+/**
+ * Per-case exact sign tests with Bonferroni correction across the cases.
+ * This is a separate inference family from the pooled paired metrics.
+ */
+export function pairedCaseSignificance(a: EvalRun, b: EvalRun): CaseSignificance[] | null {
+  const cases = pairedCases(a, b)
+  if (cases === null) return null
+  const grouped = new Map<string, { pairs: number; wins: number; losses: number; ties: number }>()
+  for (const item of cases) {
+    const row = grouped.get(item.caseId) ?? { pairs: 0, wins: 0, losses: 0, ties: 0 }
+    row.pairs += 1
+    if (item.outcome === 'B better') row.wins += 1
+    else if (item.outcome === 'A better') row.losses += 1
+    else row.ties += 1
+    grouped.set(item.caseId, row)
+  }
+  const family = Math.max(1, grouped.size)
+  const alpha = bonferroni(1, family).alpha
+  return [...grouped.entries()]
+    .map(([caseId, counts]) => {
+      const test = signTest(counts.wins, counts.losses)
+      const adjustedP = Math.min(1, test.pValue * family)
+      const detectable = signTestPower(counts.wins + counts.losses, family, alpha).detectable
+      const better = counts.wins > counts.losses
+      const worse = counts.losses > counts.wins
+      return {
+        caseId,
+        ...counts,
+        adjustedP,
+        detectable,
+        verdict: !detectable ? 'underpowered' as const
+          : better && adjustedP <= alpha ? 'significantly-better' as const
+            : worse && adjustedP <= alpha ? 'significantly-worse' as const
+              : 'not-significant' as const,
+      }
+    })
+    .sort((left, right) => left.adjustedP - right.adjustedP
+      /* v8 ignore next -- case-id tie direction depends on engine sort order. */
+      || (left.caseId < right.caseId ? -1 : 1))
+}
+
+/** Render per-case paired significance as a markdown block. */
+export function renderCaseSignificance(rows: readonly CaseSignificance[]): string {
+  const shown = rows.filter(row => row.verdict !== 'not-significant' && row.verdict !== 'underpowered').slice(0, 20)
+  const lines = [
+    '## Per-case paired significance',
+    '',
+    `- ${rows.length} cases · Bonferroni family = ${rows.length} · ${shown.length} confirmed changes`,
+  ]
+  if (shown.length > 0) {
+    lines.push('', '| case | pairs | B wins | A wins | adjusted p | result |', '|---|---|---|---|---|---|')
+    for (const row of shown) {
+      const caseId = row.caseId.replace(/[\r\n|]/gu, ' ')
+      lines.push(`| ${caseId} | ${row.pairs} | ${row.wins} | ${row.losses} | ${row.adjustedP.toFixed(4)} | ${row.verdict} |`)
+    }
+  }
+  return `${lines.join('\n')}\n`
+}
+
 /** Format a paired case value for reports and dashboards. */
 export function formatCaseValue(value: boolean | number | null): string {
   if (value === null) return '–'
@@ -497,5 +568,6 @@ export function renderCompareJson(a: EvalRun, b: EvalRun): string {
     paired: pairedCompare(a, b),
     caseOutcomesMeasured: cases !== null,
     cases,
+    caseSignificance: pairedCaseSignificance(a, b),
   })}\n`
 }

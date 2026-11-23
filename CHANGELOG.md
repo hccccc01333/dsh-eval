@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Per-case paired significance.** `compare` aggregates paired trial outcomes
+  by case, runs exact sign tests per case and corrects across the case family;
+  confirmed regressions appear in markdown and `--json`.
 - **Atomic report writes.** Run JSON is staged in a sibling temporary file and
   renamed into place, so an interrupted write cannot leave a truncated report.
 - **Override-aware provenance.** Effective `--trials`, `--concurrency`,
@@ -302,7 +305,7 @@
 - **`test:pack` now verifies wildcard exports.** `./src/*` is expanded to the
   source tree and every file must be packed; previously removing
   `src/**/*.ts` from `files` passed the smoke test unnoticed.
-- **Documentation matches the tree.** Both READMEs report 289 tests, and a
+- **Documentation matches the tree.** Both READMEs report 290 tests, and a
   session-log discovery test is renamed for the behavior it actually asserts.
 
 ### Fixed

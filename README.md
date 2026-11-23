@@ -21,7 +21,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - LLM judge: final-answer score and hallucination flags, with optional gold answers and visible judge failures
 - Subagent trace merging: child session logs fold into the trial metrics
 - Paired A/B: same-case win/lose/tie statistics across two runs
-- Paired inference: exact sign test with power/MDE floor, seeded bootstrap intervals on every mean delta, Bonferroni-corrected across the printed family
+- Paired inference: exact sign test with power/MDE floor, seeded bootstrap intervals on every mean delta, Bonferroni-corrected across the printed family, plus per-case significance to locate confirmed regressions
 - Reliability: per-case pass@1 / pass@k / pass^k, flaky-case detection, hardest-case ranking, and a strict rate that keeps timed-out/error trials in the denominator
 - Precision: seeded bootstrap intervals for single-run rates (including strict pass@1 over all trials) plus latency p50/p95, so small runs show their uncertainty
 - Agreement: judge/script concordance and Cohen's kappa, so a proxy judge can be checked against real checks
@@ -40,7 +40,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 
 ## Status
 
-`dsh-eval@0.4.0` · 289 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.4.0` · 290 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 
