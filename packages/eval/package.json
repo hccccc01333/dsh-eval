@@ -1,6 +1,6 @@
 {
   "name": "dsh-eval",
-  "description": "Agent evaluation platform: benchmark YAML, headless run orchestration, trace-based metrics, and run reports",
+  "description": "Evidence-grade agent evaluation for deepseek-harness: headless benchmarks, paired statistics, provenance, CI gates and standalone HTML dashboards",
   "version": "0.5.0",
   "publishConfig": {
     "access": "public"

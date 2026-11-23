@@ -7,6 +7,8 @@
 [![npm version](https://img.shields.io/npm/v/dsh-eval)](https://www.npmjs.com/package/dsh-eval)
 [![license](https://img.shields.io/github/license/hccccc01333/dsh-eval)](LICENSE)
 
+![dsh-eval —— 有证据的 Agent 评测](https://raw.githubusercontent.com/hccccc01333/dsh-eval/master/assets/hero.png)
+
 对 headless `dsh` profile 跑 benchmark，把持久化的 session 日志收获成 trace，折叠出自动指标，评分任务成功与工具选择，并把 run 输出为报告或做对比 —— 一份 `benchmark.yaml` 进，一份 JSON run + Markdown 报告出。
 
 > dsh 生态已有可观测与调试工具（`dsh-trace`、`dsh-tps`、`dsh-context-doctor`）。dsh-eval 补的是缺的那一格：**评测平台**。
@@ -36,6 +38,38 @@
 - `dsh eval gate candidate.json --baseline base.json --max-drop 0.05 [--require-significance] [--json]` —— CI 质量与资源预算门禁；显著性模式只在统计确认回退时失败
 - `dsh eval compare v1.json v2.json` —— 带符号的 `B - A` 对比表和配对推断；`--json` 输出结构化数据
 - `dsh eval rejudge run.json --out rejudged.json` —— 用新判官模型或 rubric 离线重评分，无需重跑 agent；记录的 SHA-256 trace 摘要可拒绝被篡改的日志
+
+## 为什么选 dsh-eval，而不是临时脚本
+
+| 关注点 | 临时脚本 | dsh-eval |
+|---|---|---|
+| 模型超时 | 从平均值里悄悄丢掉 | 计入严格 pass@1 |
+| "B 更好" | 一个汇总数字 | 配对符号检验、功效下限、bootstrap 区间 |
+| 比较很多 case | 容易挑 cherry-pick | 逐 case Bonferroni 校正 |
+| 配置不同却同名报告 | 很容易误标 | 摘要覆盖 YAML、提示词、工作区与 CLI 覆盖项 |
+| CI 回退检查 | 脆弱的固定阈值 | 硬资源预算 + 可选显著性门禁 |
+| 判官质量 | 默认可信 | 一致率、kappa、区分度、排序准确率、Brier |
+| 分享结果 | 终端截图 | 自包含 HTML、JSON、CSV |
+
+## 实际效果
+
+### 独立 HTML 仪表盘
+
+![汇总卡片、双 run 对比、确认 case 变化与校准表格](https://raw.githubusercontent.com/hccccc01333/dsh-eval/master/assets/dashboard.png)
+
+`dsh eval dashboard a.json b.json --out report.html` 生成单个自包含文件：无 CDN、无运行时请求、无外部 CSS。双 run 视图按 `caseId` 配对 trial，展示 bootstrap 区间，并且只突出通过 Bonferroni 校正的 case 变化。
+
+### 多 run 排行榜
+
+![按严格 pass@1 排名并给出对领先者配对判定的排行榜](https://raw.githubusercontent.com/hccccc01333/dsh-eval/master/assets/leaderboard.png)
+
+三个及以上 run 时，同一个仪表盘变成排行榜。`--metric strictPassAt1` 按含错误/超时的严格通过率排序，避免模型靠"难题直接放弃"在幸存者平均值上获胜；最后一列给出对领先者的族校正配对判定。
+
+### CI 门禁与终端输出
+
+![带剩余时间估算的进度行，以及列出确认 case 回退的 PASS 门禁](https://raw.githubusercontent.com/hccccc01333/dsh-eval/master/assets/cli.png)
+
+进度行对控制字符安全且有长度上限，`dsh eval gate` 把对比变成带硬资源预算的 PASS/FAIL 构建步骤。显著性模式下，确认的 case 回退也会让门禁失败，绿灯构建不会同时宣称已知回退。
 
 ## 状态
 

@@ -8,7 +8,11 @@ English | [中文](README.zh.md)
 [![CI](https://github.com/hccccc01333/dsh-eval/actions/workflows/ci.yml/badge.svg)](https://github.com/hccccc01333/dsh-eval/actions/workflows/ci.yml)
 [![license](https://img.shields.io/github/license/hccccc01333/dsh-eval)](LICENSE)
 
+![dsh-eval — evidence-grade agent evaluation](https://raw.githubusercontent.com/hccccc01333/dsh-eval/master/assets/hero.png)
+
 Run benchmarks against headless `dsh` profiles, harvest persisted session logs as traces, fold automatic metrics, grade task success and tool selection, and report or compare runs — one `benchmark.yaml` in, one JSON run + Markdown report out.
+
+> **Why this exists:** an accuracy number without its uncertainty, paired evidence and provenance is a guess. dsh-eval makes every claim in a report auditable down to the trial, the prompt and the benchmark file hash.
 
 > The dsh ecosystem already has observability and debugging tools (`dsh-trace`, `dsh-tps`, `dsh-context-doctor`). dsh-eval fills the missing slot: **an evaluation platform**.
 
@@ -37,6 +41,38 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - `dsh eval gate candidate.json --baseline base.json --max-drop 0.05 [--require-significance] [--json]` — CI quality and resource-budget gate; significance mode only fails on statistically confirmed regressions, and the output also lists family-corrected per-case regressions
 - `dsh eval compare v1.json v2.json` — signed `B - A` table plus paired inference; `--json` for structured output
 - `dsh eval rejudge run.json --out rejudged.json` — re-judge stored traces with a new judge model or rubric, without re-running the agent; a recorded SHA-256 trace digest rejects tampered logs
+
+## Why dsh-eval instead of an ad-hoc script
+
+| Concern | Ad-hoc loop | dsh-eval |
+|---|---|---|
+| A model times out | Dropped from the average | Counted in strict pass@1 |
+| "Model B is better" | One pooled number | Paired sign test, power floor, bootstrap intervals |
+| Many cases compared | P-hacking by cherry-picking | Bonferroni-corrected per-case evidence |
+| Different config, same report | Easy to mislabel | Digest folds YAML, prompts, workspaces and CLI overrides |
+| CI regression check | Brittle threshold | Hard budgets + optional significance gate |
+| Judge quality | Assumed reliable | Agreement, kappa, separation, ranking accuracy, Brier |
+| Share results | Screenshots of a terminal | Self-contained HTML, JSON, CSV |
+
+## What it looks like
+
+### Standalone HTML dashboard
+
+![Standalone dashboard with summary cards, paired comparison, confirmed case changes and calibration](https://raw.githubusercontent.com/hccccc01333/dsh-eval/master/assets/dashboard.png)
+
+`dsh eval dashboard a.json b.json --out report.html` produces one self-contained file: no CDN, no runtime fetch, no external CSS. The two-run view pairs trials by `caseId`, shows bootstrap intervals, and highlights only the case changes that survive Bonferroni correction.
+
+### Multi-run leaderboard
+
+![Leaderboard ranked by strict pass@1 with paired verdicts against the leader](https://raw.githubusercontent.com/hccccc01333/dsh-eval/master/assets/leaderboard.png)
+
+With three or more runs, the same dashboard becomes a leaderboard. `--metric strictPassAt1` ranks by the error-inclusive rate so a model that times out on hard cases cannot win on a survivor-only average; the last column reports the family-corrected paired verdict against the leader.
+
+### CI gate and terminal output
+
+![CLI progress lines and a passing CI gate with confirmed case regressions](https://raw.githubusercontent.com/hccccc01333/dsh-eval/master/assets/cli.png)
+
+Progress lines are bounded and control-character safe, and `dsh eval gate` turns a comparison into a PASS/FAIL build step with hard resource budgets. In significance mode a confirmed case regression also fails the gate, so a green build never advertises a known regression.
 
 ## Status
 

@@ -2,7 +2,22 @@
 
 English | [中文](README.zh.md)
 
-Agent evaluation over headless dsh profiles: a benchmark YAML document, one headless dsh subprocess per case x trial, trace harvesting from persisted session logs, automatic metric folding, and JSON/markdown run reports.
+[![npm version](https://img.shields.io/npm/v/dsh-eval)](https://www.npmjs.com/package/dsh-eval)
+[![CI](https://github.com/hccccc01333/dsh-eval/actions/workflows/ci.yml/badge.svg)](https://github.com/hccccc01333/dsh-eval/actions/workflows/ci.yml)
+[![license](https://img.shields.io/github/license/hccccc01333/dsh-eval)](LICENSE)
+
+![dsh-eval — evidence-grade agent evaluation](https://raw.githubusercontent.com/hccccc01333/dsh-eval/master/assets/hero.png)
+
+**Evidence-grade agent evaluation for [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness).** One `benchmark.yaml` in; auditable JSON, Markdown, CSV and self-contained HTML out.
+
+| | |
+|---|---|
+| **Honest rates** | Strict pass@1 keeps timeouts and errors in the denominator |
+| **Real inference** | Paired sign tests, power floors, bootstrap intervals, Bonferroni correction |
+| **Auditable runs** | YAML + prompts + workspaces + overrides folded into one digest |
+| **Judge QA** | Agreement, kappa, separation, ranking accuracy and Brier score |
+| **CI-ready** | `--require-significance` gate with hard cost/latency budgets |
+| **Zero-asset reports** | Standalone dark-mode HTML dashboards with no external dependencies |
 
 The package is a bundle and a command-line app. Install it into a profile and run benchmarks with:
 
@@ -21,6 +36,20 @@ dsh eval provenance eval-run.json benchmark.yaml
 Trials are independent — private temp workspace, isolated `DSH_HOME`, own patch overlay — so `concurrency` runs that many of them at once. The run record still lists results in case-then-trial order whatever the interleaving, and `--concurrency` overrides the document. Raising it trades wall time for peak CPU, memory, and concurrent model quota.
 
 While a run is in flight, each finished trial writes one bounded line to stderr, e.g. `[eval] 3/12 golden #1 task pass, 1204 ms`. Errors print their sanitized message, and agent-controlled case ids cannot inject newlines. Pass `--quiet` for scripts that want only the final stdout summary.
+
+## See it in action
+
+![Standalone dashboard](https://raw.githubusercontent.com/hccccc01333/dsh-eval/master/assets/dashboard.png)
+
+*Two-run dashboard: paired comparison, confirmed case changes and judge calibration in one self-contained file.*
+
+![Leaderboard](https://raw.githubusercontent.com/hccccc01333/dsh-eval/master/assets/leaderboard.png)
+
+*Three-plus-run leaderboard with strict pass@1 ranking and paired verdicts against the leader.*
+
+![CLI gate](https://raw.githubusercontent.com/hccccc01333/dsh-eval/master/assets/cli.png)
+
+*Bounded progress lines and a CI gate that fails on confirmed per-case regressions.*
 
 ## Benchmark document
 

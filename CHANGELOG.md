@@ -4,6 +4,11 @@
 
 ### Added
 
+- **Illustrated documentation (round 73).** All four READMEs now include a
+  hero banner and screenshots of the dashboard, leaderboard and CI gate, with
+  a comparison table explaining why the evaluation is trustworthy. npm
+  metadata and the package README lead with the same benefits. Images are
+  generated reproducibly by `scripts/generate_docs_images.py`.
 - **Audit follow-up (round 72).** Ungraded pairs no longer inflate per-case
   Bonferroni families; leaderboards print boundary-aware p-values; HTML power
   notes appear without confirmed cases; brief reports show Brier for one-sided

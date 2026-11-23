@@ -2,7 +2,16 @@
 
 [English](README.md) | 中文
 
-基于 headless dsh profile 的 Agent 评测：一份 benchmark YAML 文档，每个 case × trial 一个 headless dsh 子进程，从持久化 session 日志收获 trace，自动折叠指标，并产出 JSON/Markdown 运行报告。
+![dsh-eval —— 有证据的 Agent 评测](https://raw.githubusercontent.com/hccccc01333/dsh-eval/master/assets/hero.png)
+
+**面向 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) 的有证据 Agent 评测。** 一份 `benchmark.yaml` 进，可审计的 JSON、Markdown、CSV 与自包含 HTML 出。
+
+- **诚实的比率**：严格 pass@1 把超时和错误留在分母里
+- **真正的推断**：配对符号检验、功效下限、bootstrap 区间、Bonferroni 校正
+- **可审计的 run**：YAML、提示词、工作区与 CLI 覆盖项折叠成一个摘要
+- **判官质检**：一致率、kappa、区分度、排序准确率、Brier
+- **面向 CI**：`--require-significance` 门禁 + 硬成本/延迟预算
+- **零外部资源报告**：自包含深色模式 HTML 仪表盘
 
 本包同时是一个 bundle 和一个命令行应用。装进 profile 后即可运行评测：
 
@@ -18,6 +27,20 @@ dsh eval compare eval-v1.json eval-v2.json
 trial 之间彼此独立——各自的临时工作区、隔离的 `DSH_HOME`、各自的补丁层——所以 `concurrency` 可以让这么多个 trial 同时跑。无论并发如何交错，run 记录仍按 case、再按 trial 的顺序列出结果；`--concurrency` 可覆盖文档里的值。调高它是用墙钟时间换峰值 CPU、内存与并发的模型额度。
 
 run 进行中时，每个完成的 trial 会向 stderr 写一行有长度上限的进度，例如 `[eval] 3/12 golden #1 task pass, 1204 ms`。错误会输出净化后的消息，agent 控制的 case id 无法注入换行。只想要最终 stdout 摘要的脚本可以传 `--quiet`。
+
+## 实际效果
+
+![独立仪表盘](https://raw.githubusercontent.com/hccccc01333/dsh-eval/master/assets/dashboard.png)
+
+*双 run 仪表盘：配对对比、确认 case 变化与判官校准集中在一个自包含文件里。*
+
+![排行榜](https://raw.githubusercontent.com/hccccc01333/dsh-eval/master/assets/leaderboard.png)
+
+*三个及以上 run 的排行榜，按严格 pass@1 排序并给出对领先者的配对判定。*
+
+![CI 门禁](https://raw.githubusercontent.com/hccccc01333/dsh-eval/master/assets/cli.png)
+
+*有长度上限的进度行，以及会因确认的逐 case 回退而失败的 CI 门禁。*
 
 ## Benchmark 文档
 
