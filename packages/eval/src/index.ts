@@ -6,8 +6,9 @@
  * headless dsh subprocess per case x trial, harvests each persisted session
  * log as a trace, folds automatic metrics, scripted grading (task success,
  * tool-selection accuracy), and cross-run comparison, and writes a JSON run
- * report. LLM-judge metrics (final-answer score, hallucination) and paired
- * same-seed trials are deferred to later milestones.
+ * report. LLM-judge metrics (final-answer score, hallucination), offline
+ * rejudging, paired same-seed inference, calibration and statistical gates
+ * are implemented and available from the same CLI.
  *
  * @module dsh-eval
  */

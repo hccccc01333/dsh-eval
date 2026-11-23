@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Documentation consistency.** The module header no longer claims the judge
+  and paired inference are deferred; the release checklist points to the root
+  changelog; both READMEs list `--quiet` and `--allow-external-paths`.
 - **Bugbot review fixes.** The regex worker budget now covers startup under
   high concurrency; `allowExternalPaths` must come from the trusted CLI/API
   rather than the benchmark document; path containment follows symlinks; and
@@ -278,12 +281,13 @@
   falling back to the default launcher. A run with failed trials now also writes
   the first failure reasons to stderr, rather than exiting with only a bare
   "no completed trials" line on stdout.
-- **The bare-invocation hint lists all four subcommands** (`run`, `report`,
-  `compare`, `import`), not just the first two.
+- **The bare-invocation hint lists every subcommand** (`run`, `report`,
+  `compare`, `export`, `validate`, `leaderboard`, `gate`, `dashboard`,
+  `rejudge`, `import`), not just the first two.
 - **`test:pack` now verifies wildcard exports.** `./src/*` is expanded to the
   source tree and every file must be packed; previously removing
   `src/**/*.ts` from `files` passed the smoke test unnoticed.
-- **Documentation matches the tree.** Both READMEs report 137 tests, and a
+- **Documentation matches the tree.** Both READMEs report 276 tests, and a
   session-log discovery test is renamed for the behavior it actually asserts.
 
 ### Fixed

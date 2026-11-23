@@ -140,7 +140,7 @@ HTML 仪表盘中展示,因此 fixture 改动不会悄悄改变结果含义。CL
 所有只读渲染命令(`report`、`compare`、`validate`、`leaderboard`、`gate`、
 `export`)都支持 `--out <file>`,会自动创建父目录;省略时输出到终端。
 
-`dsh eval run` 还支持 `--trials`、`--concurrency`、`--dsh`、`--profile` 覆盖 benchmark 文档，`dsh eval import` 支持 `--case-id`。
+`dsh eval run` 还支持 `--trials`、`--concurrency`、`--dsh`、`--profile`、`--quiet`、`--allow-external-paths` 覆盖 benchmark 文档；`dsh eval validate` 也接受 `--allow-external-paths`，`dsh eval import` 支持 `--case-id`。第三方 benchmark 默认限制路径范围，只有可信操作者显式传入 `--allow-external-paths` 才放行。
 
 ## 路线图
 

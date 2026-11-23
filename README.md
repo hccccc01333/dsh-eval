@@ -155,7 +155,7 @@ packages/eval/    plugin bundle + CLI app + tests
 scripts/          harness-closure.mjs — optional local-harness workspace closure
 ```
 
-`dsh eval run` also takes `--trials`, `--concurrency`, `--dsh` and `--profile` to override the benchmark document, and `dsh eval import` takes `--case-id`. Replay runs need a `dsh` built from harness source; everything else runs against the released peers.
+`dsh eval run` also takes `--trials`, `--concurrency`, `--dsh`, `--profile`, `--quiet` and `--allow-external-paths`; `dsh eval validate` accepts `--allow-external-paths` too, and `dsh eval import` takes `--case-id`. Third-party benchmarks are path-contained unless the trusted operator passes `--allow-external-paths`. Replay runs need a `dsh` built from harness source; everything else runs against the released peers.
 
 ## Releasing
 

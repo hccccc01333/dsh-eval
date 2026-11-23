@@ -26,7 +26,7 @@ GitHub `job_workflow_ref` against the configured filename.
 
 ## Cutting a release
 
-1. Move the `Unreleased` entries in `packages/eval/CHANGELOG.md` into a new
+1. Move the `Unreleased` entries in the root `CHANGELOG.md` into a new
    `## X.Y.Z` section with the release date.
 2. Set `version` in `packages/eval/package.json` to `X.Y.Z`.
 3. Run the local gates from the repository root:
