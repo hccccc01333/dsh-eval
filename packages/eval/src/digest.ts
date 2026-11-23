@@ -12,7 +12,7 @@
 
 import { createHash, type Hash } from 'node:crypto'
 import { realpath, readFile, readdir, stat } from 'node:fs/promises'
-import { isAbsolute, join, relative, resolve } from 'node:path'
+import { join, relative, resolve } from 'node:path'
 import type { Benchmark } from './types.ts'
 
 /** Code-point ordering: `localeCompare` varies with the host's ICU locale. */
@@ -90,7 +90,7 @@ export async function hashBenchmarkInputs(
   const hash = createHash('sha256')
   const excluded = new Set<string>()
   for (const path of options.excludePaths ?? []) {
-    const absolute = isAbsolute(path) ? path : resolve(path)
+    const absolute = resolve(path)
     excluded.add(absolute)
     // Windows temp paths can differ by short-name casing; canonicalize too.
     try {
