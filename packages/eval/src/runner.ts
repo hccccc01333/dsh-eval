@@ -467,6 +467,10 @@ export async function runBenchmark(benchmark: Benchmark, options: RunOptions = {
   if (benchmark.judge !== undefined && benchmark.replay !== undefined) {
     throw new Error('eval: judge and replay cannot be combined in one run')
   }
+  // Validate extension-point overrides as strictly as the YAML schema does.
+  if (options.seed !== undefined && !Number.isSafeInteger(options.seed)) {
+    throw new Error('eval: seed must be a safe integer')
+  }
   const trials = options.trials ?? benchmark.trials
   const concurrency = options.concurrency ?? benchmark.concurrency
   // `runBenchmark` is a documented extension point: runtime overrides need the

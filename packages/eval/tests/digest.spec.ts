@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
@@ -95,6 +96,18 @@ describe('dsh-eval benchmark input digest', () => {
     const digest = await hashBenchmarkInputs('yaml', benchmark(join(dir, 'absent')))
     expect(digest).toMatch(/^[0-9a-f]{64}$/u)
     expect(await hashBenchmarkInputs('yaml', benchmark(join(dir, 'absent')))).toBe(digest)
+  })
+
+  it('keeps pre-seed override digests byte-identical', () => {
+    const base = 'b'.repeat(64)
+    const legacy = createHash('sha256')
+    for (const [label, value] of [
+      ['benchmark-sha256', base],
+      ['trials', '2'], ['concurrency', '2'], ['profile', 'headless'], ['dshCommand', ''],
+    ]) legacy.update(`${label}\0${value}\0`)
+    expect(hashBenchmarkOverrides(base, {
+      trials: 2, concurrency: 2, profile: 'headless',
+    })).toBe(legacy.digest('hex'))
   })
 
   it('folds CLI overrides into a distinct, deterministic digest', async () => {

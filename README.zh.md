@@ -39,7 +39,7 @@
 
 ## 状态
 
-`dsh-eval@0.4.0` · 302 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.4.0` · 303 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 `0.3.1` 起可安装：`0.3.0` 的 tarball 漏掉了入口 import 的运行时模块，导致每次安装都报 `ERR_MODULE_NOT_FOUND`。详见 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -124,7 +124,7 @@ HTML 仪表盘中展示,因此 fixture 改动不会悄悄改变结果含义。CL
 
 | 命令 | 作用 |
 |---|---|
-| `dsh eval run benchmark.yaml --out run.json` | 执行 benchmark，向 stderr 输出进度并写出 JSON run |
+| `dsh eval run benchmark.yaml --out run.json [--trials N] [--concurrency N] [--seed N]` | 执行 benchmark，向 stderr 输出进度并写出 JSON run；覆盖项会写入 provenance |
 | `dsh eval report run.json` | 把 run 渲染为 Markdown |
 | `dsh eval report run.json --brief` | 省略逐 trial 表格，输出紧凑终端摘要 |
 | `dsh eval report run.json --json` | 输出 run 与全部派生区块的 JSON |

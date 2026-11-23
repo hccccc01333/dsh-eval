@@ -512,6 +512,12 @@ describe('dsh-eval command composition', () => {
     const observed = await bootEval(['run', benchmarkPath, '--seed', '1.5'])
     expect(observed.exits).toEqual([1])
     expect(observed.err).toContain('--seed must be an integer')
+    const hex = await bootEval(['run', benchmarkPath, '--seed', '0x10'])
+    expect(hex.exits).toEqual([1])
+    expect(hex.err).toContain('--seed must be an integer')
+    const unsafe = await bootEval(['run', benchmarkPath, '--seed', '9007199254740992'])
+    expect(unsafe.exits).toEqual([1])
+    expect(unsafe.err).toContain('--seed must be an integer')
   })
 
   it('rejects an invalid concurrency override', async () => {

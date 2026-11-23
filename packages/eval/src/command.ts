@@ -171,8 +171,9 @@ function positiveInteger(program: Command, flag: string): (value: string) => num
 /** Build a parser for an integer flag such as a reproducibility seed. */
 function integer(program: Command, flag: string): (value: string) => number {
   return (value) => {
+    if (!/^[+-]?\d+$/u.test(value)) program.error(`error: ${flag} must be an integer`)
     const parsed = Number(value)
-    if (!Number.isInteger(parsed)) program.error(`error: ${flag} must be an integer`)
+    if (!Number.isSafeInteger(parsed)) program.error(`error: ${flag} must be an integer`)
     return parsed
   }
 }

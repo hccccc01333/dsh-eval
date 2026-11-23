@@ -87,9 +87,14 @@ export function hashBenchmarkOverrides(baseSha256: string, overrides: BenchmarkO
   fragment(hash, 'benchmark-sha256', baseSha256)
   fragment(hash, 'trials', overrides.trials === undefined ? '' : String(overrides.trials))
   fragment(hash, 'concurrency', overrides.concurrency === undefined ? '' : String(overrides.concurrency))
-  fragment(hash, 'seed', overrides.seed === undefined ? '' : String(overrides.seed))
   fragment(hash, 'profile', overrides.profile ?? '')
   fragment(hash, 'dshCommand', (overrides.dshCommand ?? []).join('\u0000'))
+  // Version only the seed case: reports written before this override existed
+  // must still verify against their original digest.
+  if (overrides.seed !== undefined) {
+    fragment(hash, 'digest-version', '2')
+    fragment(hash, 'seed', String(overrides.seed))
+  }
   return hash.digest('hex')
 }
 

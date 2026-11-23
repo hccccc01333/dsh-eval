@@ -286,6 +286,10 @@ describe('dsh-eval benchmark runner', () => {
       .rejects.toThrow('trials must be a positive integer')
     await expect(runBenchmark(buildBenchmark(), { concurrency: 0 }))
       .rejects.toThrow('concurrency must be a positive integer')
+    await expect(runBenchmark(buildBenchmark(), { seed: 1.5 }))
+      .rejects.toThrow('seed must be a safe integer')
+    await expect(runBenchmark(buildBenchmark(), { seed: Number.POSITIVE_INFINITY }))
+      .rejects.toThrow('seed must be a safe integer')
   })
 
   it('turns a spawn failure into an error trial', async () => {
