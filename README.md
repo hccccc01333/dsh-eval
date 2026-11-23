@@ -34,13 +34,13 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - `dsh eval validate benchmark.yaml [--json]` — preflight a benchmark and warn about weak evidence before spending tokens
 - `dsh eval provenance run.json benchmark.yaml [--json]` — verify the stored benchmark digest against the current YAML, prompts, workspaces and replay inputs; a mismatch or missing digest exits 1
 - `dsh eval leaderboard a.json b.json c.json` — rank any number of runs by task success with gap-to-leader and a Bonferroni-corrected paired verdict against the leader; `--metric strictPassAt1` ranks by the error-inclusive rate instead, and `--json` supports automation
-- `dsh eval gate candidate.json --baseline base.json --max-drop 0.05 [--require-significance] [--json]` — CI quality and resource-budget gate; significance mode only fails on statistically confirmed regressions
+- `dsh eval gate candidate.json --baseline base.json --max-drop 0.05 [--require-significance] [--json]` — CI quality and resource-budget gate; significance mode only fails on statistically confirmed regressions, and the output also lists family-corrected per-case regressions
 - `dsh eval compare v1.json v2.json` — signed `B - A` table plus paired inference; `--json` for structured output
 - `dsh eval rejudge run.json --out rejudged.json` — re-judge stored traces with a new judge model or rubric, without re-running the agent; a recorded SHA-256 trace digest rejects tampered logs
 
 ## Status
 
-`dsh-eval@0.4.0` · 297 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.4.0` · 298 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 

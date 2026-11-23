@@ -60,6 +60,31 @@ describe('dsh-eval CI gate', () => {
     expect(markdown).toContain('| latency/trial | 100.0 ms | 110.0 ms | +10.0% | PASS |')
   })
 
+  it('reports family-corrected case regressions', () => {
+    const make = (pass: boolean): EvalRun => buildRun({
+      trials: 8,
+      cases: Array.from({ length: 8 }, (_, index) => ({
+        caseId: 'flaky', trial: index + 1, status: 'completed' as const,
+        exitCode: 0, timedOut: false,
+        grade: { taskSuccess: pass, toolSelectionAccuracy: true },
+      })),
+      grading: {
+        taskSuccessRate: pass ? 1 : 0, toolSelectionAccuracyRate: 1,
+        finalAnswerScore: 8, hallucinationRate: 0,
+      },
+    })
+    const result = evaluateGate(make(true), make(false), 0)
+    expect(result.confirmedCaseRegressions).toHaveLength(1)
+    expect(result.confirmedCaseRegressions![0]).toMatchObject({ caseId: 'flaky' })
+    const markdown = renderGate(result)
+    expect(markdown).toContain('confirmed case regressions: 1 case(s) survived family correction')
+    expect(markdown).toContain('- flaky: adjusted p')
+    const json = JSON.parse(renderGateJson(result)) as {
+      confirmedCaseRegressions: { caseId: string; adjustedP: number }[]
+    }
+    expect(json.confirmedCaseRegressions[0]!.caseId).toBe('flaky')
+  })
+
   it('fails when a resource budget is exceeded', () => {
     const result = evaluateGate(
       buildRun({ aggregate: METRICS }),

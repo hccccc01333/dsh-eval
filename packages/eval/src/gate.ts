@@ -9,7 +9,7 @@
  * @module dsh-eval/gate
  */
 
-import { pairedSigns, type PairedMetric } from './compare.ts'
+import { formatPValue, pairedCaseSignificance, pairedSigns, type PairedMetric } from './compare.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
 import { signTest, signTestPower } from './stats.ts'
 import type { EvalRun } from './types.ts'
@@ -46,6 +46,15 @@ export interface GateResult {
   maxCostIncrease?: number
   /** Enabled relative latency budget, if any. */
   maxLatencyIncrease?: number
+  /** Cases with a family-corrected, statistically confirmed paired regression. */
+  confirmedCaseRegressions?: readonly ConfirmedCaseRegression[]
+}
+
+/** A regression that survives per-case multiple-comparison correction. */
+export interface ConfirmedCaseRegression {
+  caseId: string
+  adjustedP: number
+  requiredPairs: number
 }
 
 /** Optional resource budgets for a gate run. */
@@ -273,6 +282,11 @@ export function evaluateGate(
       ? {} : { maxLatencyIncrease: budgets.maxLatencyIncrease }),
     regressions: findRegressions(baseline, candidate, maxDrop)
       .filter(regression => suppressByMetric.get(regression.metric) !== true),
+    confirmedCaseRegressions: (pairedCaseSignificance(baseline, candidate) ?? [])
+      .filter(row => row.verdict === 'significantly-worse')
+      .map(row => ({
+        caseId: row.caseId, adjustedP: row.adjustedP, requiredPairs: row.requiredPairs,
+      })),
   }
 }
 
@@ -313,6 +327,7 @@ export function renderGateJson(result: GateResult): string {
     ...(result.maxLatencyIncrease === undefined ? {} : { maxLatencyIncrease: result.maxLatencyIncrease }),
     checks: result.checks,
     regressions: result.regressions ?? [],
+    confirmedCaseRegressions: result.confirmedCaseRegressions ?? [],
   })}\n`
 }
 
@@ -330,6 +345,10 @@ export function renderGate(result: GateResult): string {
     const after = `${(item.after * 100).toFixed(1)}%`
     return `  - ${caseId} #${item.trial}: ${item.metric} ${before} → ${after}`
   })
+  const confirmed = (result.confirmedCaseRegressions ?? []).slice(0, 5).map(item => {
+    const caseId = item.caseId.replace(/[\r\n|]/gu, ' ')
+    return `  - ${caseId}: adjusted p ${formatPValue(item.adjustedP)}, needs ${item.requiredPairs} discordant pairs for this family`
+  })
   return [
     `# Gate: ${result.passed ? 'PASS' : 'FAIL'}`,
     '',
@@ -344,7 +363,11 @@ export function renderGate(result: GateResult): string {
     ...(regressions.length === 0 ? [] : [
       `- case regressions: ${result.regressions!.length} paired trial(s) got worse (showing up to 5)`,
       ...regressions,
-      '',
     ]),
+    ...(confirmed.length === 0 ? [] : [
+      `- confirmed case regressions: ${result.confirmedCaseRegressions!.length} case(s) survived family correction`,
+      ...confirmed,
+    ]),
+    ...(regressions.length === 0 && confirmed.length === 0 ? [] : ['']),
   ].join('\n')
 }

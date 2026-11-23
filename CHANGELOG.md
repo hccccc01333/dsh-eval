@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Gate case evidence.** CI gate output lists family-corrected per-case
+  regressions in markdown and `--json`, pointing at the exact cases behind a
+  confirmed quality drop.
 - **Review follow-up (round 63).** Strict leaderboard ties with unequal trial
   counts are no longer mislabelled as regressions; atomic writes preserve
   symlinked parents and permission bits; p-values near alpha keep four
@@ -319,7 +322,7 @@
 - **`test:pack` now verifies wildcard exports.** `./src/*` is expanded to the
   source tree and every file must be packed; previously removing
   `src/**/*.ts` from `files` passed the smoke test unnoticed.
-- **Documentation matches the tree.** Both READMEs report 297 tests, and a
+- **Documentation matches the tree.** Both READMEs report 298 tests, and a
   session-log discovery test is renamed for the behavior it actually asserts.
 
 ### Fixed

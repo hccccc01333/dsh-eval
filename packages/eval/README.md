@@ -202,7 +202,9 @@ counts, then task success, tool selection accuracy, strict pass@1 and judge
 score. Rates and judge scores are all normalized to 0..1 (the score is divided
 by its run's `maxScore`), so one tolerance applies to every quality metric. The
 command prints a markdown PASS/FAIL table and exits 1 on any regression beyond
-the tolerance, making it suitable as a required CI step.
+the tolerance, making it suitable as a required CI step. It also lists
+**confirmed case regressions**: cases whose paired evidence survives the
+per-case Bonferroni family, so a CI log points at the specific cases to fix.
 
 Optional `--max-cost-increase 0.1` and `--max-latency-increase 0.2` add
 relative resource budgets, so a candidate that keeps quality but costs 2x more
