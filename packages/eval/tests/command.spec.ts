@@ -651,6 +651,20 @@ describe('dsh-eval command composition', () => {
     expect(mismatch.exits).toEqual([1])
     expect(JSON.parse(mismatch.out) as { status: string }).toMatchObject({ status: 'mismatch' })
     expect(mismatch.out).toContain('benchmarkSha256')
+
+    const localPath = join(dir, 'local.yml')
+    writeFileSync(localPath, [
+      'name: local', 'model: m', 'cases:', '  - id: a', '    prompt: p',
+      '    workspace: .', '',
+    ].join('\n'))
+    const local = await loadBenchmark(localPath, { excludeFromDigest: [runPath] })
+    await writeRunReport({
+      ...base,
+      ...(local.sourceSha256 !== undefined ? { benchmarkSha256: local.sourceSha256 } : {}),
+    }, runPath)
+    const localObserved = await bootEval(['provenance', runPath, localPath])
+    expect(localObserved.exits).toEqual([0])
+    expect(localObserved.out).toContain('Provenance: match')
   })
 
   it('fails loudly for a missing compare input', async () => {

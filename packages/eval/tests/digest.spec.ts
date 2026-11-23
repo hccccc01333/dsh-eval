@@ -1,6 +1,6 @@
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { hashBenchmarkInputs } from '../src/digest.ts'
 import type { Benchmark } from '../src/types.ts'
@@ -29,6 +29,7 @@ describe('dsh-eval benchmark input digest', () => {
     const dir = tempDir()
     const workspace = join(dir, 'workspace')
     mkdirSync(join(workspace, 'nested'), { recursive: true })
+    writeFileSync(join(workspace, 'z.txt'), 'z')
     writeFileSync(join(workspace, 'b.txt'), 'b')
     writeFileSync(join(workspace, 'a.txt'), 'a')
     writeFileSync(join(workspace, 'nested', 'c.txt'), 'c')
@@ -49,6 +50,44 @@ describe('dsh-eval benchmark input digest', () => {
     rmSync(join(workspace, 'link'), { recursive: true, force: true })
     writeFileSync(join(workspace, 'link'), 'plain file')
     expect(await hashBenchmarkInputs('yaml', benchmark(workspace))).not.toBe(withLink)
+  })
+
+  it('follows symlinks so fixture content changes change the digest', async () => {
+    const dir = tempDir()
+    const workspace = join(dir, 'workspace')
+    const target = join(dir, 'target')
+    mkdirSync(workspace)
+    mkdirSync(target)
+    writeFileSync(join(target, 'fixture.txt'), 'original')
+    symlinkSync(target, join(workspace, 'link'), 'junction')
+    const first = await hashBenchmarkInputs('yaml', benchmark(workspace))
+    writeFileSync(join(target, 'fixture.txt'), 'changed')
+    expect(await hashBenchmarkInputs('yaml', benchmark(workspace))).not.toBe(first)
+  })
+
+  it('excludes output artifacts from the digest', async () => {
+    const dir = tempDir()
+    const workspace = join(dir, 'workspace')
+    mkdirSync(workspace)
+    writeFileSync(join(workspace, 'input.txt'), 'input')
+    const output = join(workspace, 'run.json')
+    const digest = await hashBenchmarkInputs('yaml', benchmark(workspace), { excludePaths: [output] })
+    writeFileSync(output, '{"benchmarkSha256":"first"}')
+    expect(await hashBenchmarkInputs('yaml', benchmark(workspace), { excludePaths: [output] })).toBe(digest)
+    expect(await hashBenchmarkInputs('yaml', benchmark(workspace), {
+      excludePaths: [relative(process.cwd(), output)],
+    })).toBe(digest)
+    expect(await hashBenchmarkInputs('yaml', benchmark(workspace))).not.toBe(digest)
+  })
+
+  it('does not recurse forever through a symlink cycle', async () => {
+    const dir = tempDir()
+    const workspace = join(dir, 'workspace')
+    mkdirSync(workspace)
+    writeFileSync(join(workspace, 'a.txt'), 'a')
+    symlinkSync(workspace, join(workspace, 'loop'), 'junction')
+    const digest = await hashBenchmarkInputs('yaml', benchmark(workspace))
+    expect(digest).toMatch(/^[0-9a-f]{64}$/u)
   })
 
   it('hashes missing paths without failing validation', async () => {

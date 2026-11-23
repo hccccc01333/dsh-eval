@@ -13,7 +13,7 @@
 
 import { pairedCompare } from './compare.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
-import { signTestPower } from './stats.ts'
+import { signTest, signTestPower } from './stats.ts'
 import type { EvalRun } from './types.ts'
 
 /** Primary ranking metric for a leaderboard. */
@@ -21,7 +21,7 @@ export type LeaderboardMetric = 'taskSuccess' | 'strictPassAt1'
 
 /** Paired evidence that a row really trails the current leader. */
 export interface LeaderboardSignificance {
-  /** Adjusted p-value after both the compare family and leaderboard family. */
+  /** p-value adjusted for the leaderboard comparison family. */
   adjustedP: number
   /** Whether the smallest attainable p-value can reach alpha at this sample size. */
   detectable: boolean
@@ -71,6 +71,37 @@ function descending(a: number | null, b: number | null): number {
 /** Value used for ranking, gaps and ties. */
 function metricValue(entry: LeaderboardEntry, metric: LeaderboardMetric): number | null {
   return metric === 'strictPassAt1' ? entry.strictPassAt1 : entry.taskSuccess
+}
+
+/** Strict pass@1 outcome for one trial: errors and timeouts count as failures. */
+function strictOutcome(result: EvalRun['cases'][number]): boolean {
+  return result.status === 'completed' && result.grade?.taskSuccess === true
+}
+
+function trialKey(result: EvalRun['cases'][number]): string {
+  return `${result.caseId}\u0000${result.trial}`
+}
+
+/**
+ * Discordant strict-pass counts across every trial key in either run.
+ * Unlike pairedCompare(), incomplete trials stay in the denominator.
+ */
+function strictPairCounts(leader: EvalRun, row: EvalRun): { wins: number; losses: number; ties: number } {
+  const leaderTrials = new Map(leader.cases.map(result => [trialKey(result), result]))
+  const rowTrials = new Map(row.cases.map(result => [trialKey(result), result]))
+  let wins = 0
+  let losses = 0
+  let ties = 0
+  for (const key of new Set([...leaderTrials.keys(), ...rowTrials.keys()])) {
+    const a = leaderTrials.get(key)
+    const b = rowTrials.get(key)
+    const aPass = a === undefined ? false : strictOutcome(a)
+    const bPass = b === undefined ? false : strictOutcome(b)
+    if (bPass && !aPass) wins += 1
+    else if (aPass && !bPass) losses += 1
+    else ties += 1
+  }
+  return { wins, losses, ties }
 }
 
 /**
@@ -132,7 +163,27 @@ export function buildLeaderboard(
   if (leaderRun !== undefined) {
     for (const row of rows) {
       if (row === leader) continue
-      const paired = pairedCompare(leaderRun, runByEntry.get(row)!)
+      const rowRun = runByEntry.get(row)!
+      if (metric === 'strictPassAt1') {
+        // Strict ranking counts errors and timeouts, so the verdict must use
+        // the same denominator rather than survivor-only paired task success.
+        const counts = strictPairCounts(leaderRun, rowRun)
+        const test = signTest(counts.wins, counts.losses)
+        const adjustedP = Math.min(1, test.pValue * family)
+        const detectable = signTestPower(counts.wins + counts.losses, family).detectable
+        row.significance = {
+          adjustedP,
+          detectable,
+          worse: counts.losses > counts.wins,
+          primaryMetric: 'strict pass@1 (task)',
+          // A non-leader cannot have more strict wins than losses: that would
+          // give it a higher strict rate and make it the leader instead.
+          verdict: !detectable ? 'underpowered'
+            : adjustedP <= 0.05 ? 'significantly-behind' : 'behind-not-significant',
+        }
+        continue
+      }
+      const paired = pairedCompare(leaderRun, rowRun)
       if (paired === null) {
         row.significance = {
           adjustedP: 1, detectable: false, worse: false, primaryMetric: null,

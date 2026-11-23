@@ -3,70 +3,104 @@
  *
  * A YAML digest alone misses prompt files, workspace fixtures and replay logs,
  * so the stored benchmark fingerprint folds every resolved input into one
- * SHA-256. Directory entries are sorted before hashing to stay stable across
- * filesystems, and symlinks are hashed by target rather than followed.
+ * SHA-256. Directory entries use code-point ordering (never locale ordering)
+ * so the digest is identical on every machine, and symlinks are followed to
+ * their real content so an in-directory link cannot hide a changed fixture.
  *
  * @module dsh-eval/digest
  */
 
 import { createHash, type Hash } from 'node:crypto'
-import { lstat, readFile, readdir, readlink } from 'node:fs/promises'
-import { join, relative } from 'node:path'
+import { realpath, readFile, readdir, stat } from 'node:fs/promises'
+import { isAbsolute, join, relative, resolve } from 'node:path'
 import type { Benchmark } from './types.ts'
+
+/** Code-point ordering: `localeCompare` varies with the host's ICU locale. */
+function byCodePoint(a: string, b: string): number {
+  /* v8 ignore next -- readdir order decides which comparison branch runs. */
+  return a < b ? -1 : a > b ? 1 : 0
+}
 
 /** Hash a labelled fragment with unambiguous delimiters. */
 function fragment(hash: Hash, label: string, value: string): void {
   hash.update(`${label}\0${value}\0`)
 }
 
-/** Hash a file, directory tree, or symlink at a resolved input path. */
-async function hashPath(hash: Hash, path: string, root: string, label: string): Promise<void> {
+/** Hash a file or directory tree, following symlinks without revisiting targets. */
+async function hashPath(
+  hash: Hash,
+  path: string,
+  root: string,
+  label: string,
+  seen: ReadonlySet<string>,
+  excluded: ReadonlySet<string>,
+): Promise<void> {
+  const absolute = resolve(path)
+  if (excluded.has(absolute)) return
+  let real: string
+  try {
+    real = await realpath(absolute)
+  } catch {
+    real = absolute
+  }
+  if (seen.has(real)) return
+  const visited = new Set(seen)
+  visited.add(real)
   let info
   try {
-    info = await lstat(path)
+    info = await stat(real)
   } catch (error) {
-    /* v8 ignore next -- non-ENOENT lstat failures propagate to the caller. */
+    /* v8 ignore next -- non-ENOENT stat failures propagate to the caller. */
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-    fragment(hash, `${label}-missing`, relative(root, path))
-    return
-  }
-  if (info.isSymbolicLink()) {
-    fragment(hash, `${label}-link`, relative(root, path))
-    fragment(hash, 'target', await readlink(path))
+    fragment(hash, `${label}-missing`, relative(root, absolute))
     return
   }
   if (info.isFile()) {
-    fragment(hash, label, relative(root, path))
-    hash.update(await readFile(path))
+    fragment(hash, label, relative(root, absolute))
+    hash.update(await readFile(real))
     return
   }
   /* v8 ignore next -- sockets/FIFOs are not valid benchmark inputs. */
   if (!info.isDirectory()) return
-  const entries = (await readdir(path, { withFileTypes: true }))
-    .sort((a, b) => a.name.localeCompare(b.name))
+  const entries = (await readdir(real, { withFileTypes: true }))
+    .sort((a, b) => byCodePoint(a.name, b.name))
   for (const entry of entries) {
-    await hashPath(hash, join(path, entry.name), root, label)
+    await hashPath(hash, join(real, entry.name), root, label, visited, excluded)
   }
+}
+
+/** Options that affect only the digest, not the benchmark itself. */
+export interface BenchmarkDigestOptions {
+  /** Absolute paths to omit, e.g. the run report written into a `workspace: .` tree. */
+  excludePaths?: readonly string[]
 }
 
 /**
  * Hash the benchmark YAML plus every resolved input it reads at run time.
  * @param text - raw benchmark YAML source.
  * @param benchmark - the parsed benchmark with resolved paths.
+ * @param options - digest-only exclusions for output artifacts.
  * @returns a stable 64-character hex digest.
  */
-export async function hashBenchmarkInputs(text: string, benchmark: Benchmark): Promise<string> {
+export async function hashBenchmarkInputs(
+  text: string,
+  benchmark: Benchmark,
+  options: BenchmarkDigestOptions = {},
+): Promise<string> {
   const hash = createHash('sha256')
+  const excluded = new Set((options.excludePaths ?? []).map(path =>
+    isAbsolute(path) ? path : resolve(path)))
+  const seen = new Set<string>()
   fragment(hash, 'yaml', text)
   for (const caseValue of benchmark.cases) {
     fragment(hash, 'case', caseValue.id)
     fragment(hash, 'prompt', caseValue.prompt)
     if (caseValue.workspace !== undefined) {
-      await hashPath(hash, caseValue.workspace, caseValue.workspace, 'workspace')
+      await hashPath(hash, caseValue.workspace, caseValue.workspace, 'workspace', seen, excluded)
     }
   }
   if (benchmark.replay !== undefined) {
-    await hashPath(hash, benchmark.replay.dir, benchmark.replay.dir, 'replay')
+    await hashPath(hash, benchmark.replay.dir, benchmark.replay.dir, 'replay', seen, excluded)
   }
   return hash.digest('hex')
 }

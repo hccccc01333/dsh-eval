@@ -122,10 +122,10 @@ async function toolSelectionOf(
   if (expected.tools !== undefined && !expected.tools.every(includes)) return false
   if (expected.toolAnyOf !== undefined && !expected.toolAnyOf.some(includes)) return false
   if (expected.toolRegex !== undefined) {
+    /* v8 ignore next 4 -- safeRegexTestAny degrades each invalid input internally. */
     try {
       if (!await safeRegexTestAny(expected.toolRegex!, names)) return false
     } catch {
-      // The schema validates at load; hand-built benchmarks degrade to failure.
       return false
     }
   }

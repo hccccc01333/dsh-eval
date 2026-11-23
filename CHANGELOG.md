@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Follow-up review fixes.** Provenance digests use locale-independent sorting,
+  follow symlinked fixtures and exclude the run report from `workspace: .`
+  trees; strict-ranking verdicts use strict-pass paired evidence; and batched
+  regex checks keep per-input isolation.
 - **Strict leaderboard ranking.** `leaderboard --metric strictPassAt1` ranks by
   the error-inclusive pass rate so a run with many timeouts cannot top the board
   on graded-only successes; JSON output reports the chosen `rankedBy` metric.
@@ -17,8 +21,8 @@
   high concurrency; `allowExternalPaths` must come from the trusted CLI/API
   rather than the benchmark document; path containment follows symlinks; and
   `workspace: .` remains valid.
-- **Lower regex overhead.** Tool-name matching shares one worker across the
-  whole batch instead of spawning one per recorded tool call.
+- **Batched regex API.** `safeRegexTestAny` keeps a separate budget per input,
+  so one pathological tool name cannot consume another name's chance to match.
 - **Untrusted-input hardening.** Regex grading runs in a time-boxed worker so
   catastrophic patterns cannot hang the evaluator; benchmark file references are
   contained by default behind an explicit `allowExternalPaths` opt-in; and
@@ -293,7 +297,7 @@
 - **`test:pack` now verifies wildcard exports.** `./src/*` is expanded to the
   source tree and every file must be packed; previously removing
   `src/**/*.ts` from `files` passed the smoke test unnoticed.
-- **Documentation matches the tree.** Both READMEs report 279 tests, and a
+- **Documentation matches the tree.** Both READMEs report 285 tests, and a
   session-log discovery test is renamed for the behavior it actually asserts.
 
 ### Fixed

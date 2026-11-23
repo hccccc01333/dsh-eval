@@ -312,7 +312,7 @@ Examples:
         ...optionalOut(options),
       })
     })
-  const leaderboard = program.command('leaderboard').description('rank persisted runs by pooled task success')
+  const leaderboard = program.command('leaderboard').description('rank persisted runs by pooled task success or strict pass@1')
   leaderboard
     .argument('<run.json...>', 'paths to run reports')
     .option('--json', 'emit a machine-readable JSON leaderboard')

@@ -16,18 +16,17 @@ const WORKER_SOURCE = `
 const { parentPort, workerData } = require('node:worker_threads')
 try {
   const re = new RegExp(workerData.pattern, 'u')
-  parentPort.postMessage({ ok: true, value: workerData.inputs.some(input => re.test(input)) })
+  parentPort.postMessage({ ok: true, value: re.test(workerData.input) })
 } catch (error) {
   parentPort.postMessage({ ok: false, error: String(error) })
 }
 `
 
-/** Run one pattern against a batch of inputs within a shared worker budget. */
-function runRegex(pattern: string, inputs: readonly string[], timeoutMs: number): Promise<boolean> {
-  if (inputs.length === 0) return Promise.resolve(false)
+/** Run one pattern against one input within a shared worker budget. */
+function runRegex(pattern: string, input: string, timeoutMs: number): Promise<boolean> {
   const worker = new Worker(WORKER_SOURCE, {
     eval: true,
-    workerData: { pattern, inputs },
+    workerData: { pattern, input },
   })
   return new Promise<boolean>((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -53,20 +52,28 @@ function runRegex(pattern: string, inputs: readonly string[], timeoutMs: number)
  * @throws when the pattern is invalid or the budget is exceeded.
  */
 export function safeRegexTest(pattern: string, input: string, timeoutMs = 2000): Promise<boolean> {
-  return runRegex(pattern, [input], timeoutMs)
+  return runRegex(pattern, input, timeoutMs)
 }
 
 /**
- * Test a pattern against several inputs in a single worker.
- * Useful when grading tool-call names: one worker per name would multiply
- * startup overhead for no safety benefit.
+ * Test a pattern against several inputs, giving each its own worker and budget.
+ * A pathological early input must not consume the budget of later inputs that
+ * would otherwise match.
  *
- * @throws when the pattern is invalid or the budget is exceeded.
+ * @throws when the pattern is invalid for any input.
  */
-export function safeRegexTestAny(
+export async function safeRegexTestAny(
   pattern: string,
   inputs: readonly string[],
   timeoutMs = 2000,
 ): Promise<boolean> {
-  return runRegex(pattern, inputs, timeoutMs)
+  for (const input of inputs) {
+    try {
+      if (await safeRegexTest(pattern, input, timeoutMs)) return true
+    } catch {
+      // One pathological or invalid input must not consume the remaining
+      // inputs' chances to match; the caller still sees the aggregate result.
+    }
+  }
+  return false
 }

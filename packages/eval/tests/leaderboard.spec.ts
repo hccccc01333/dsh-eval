@@ -97,6 +97,81 @@ describe('dsh-eval leaderboard', () => {
       .toMatchObject({ rankedBy: 'strictPassAt1' })
   })
 
+  it('uses strict-pass evidence for the verdict when ranking strictly', () => {
+    const allPass = run({
+      model: 'leader', trials: 10,
+      grading: {
+        taskSuccessRate: 1, toolSelectionAccuracyRate: null,
+        finalAnswerScore: null, hallucinationRate: null,
+      },
+      cases: Array.from({ length: 10 }, (_, index) => ({
+        caseId: `c${index}`, trial: 1, status: 'completed' as const,
+        exitCode: 0, timedOut: false,
+        grade: { taskSuccess: true, toolSelectionAccuracy: null }, metrics: METRICS,
+      })),
+    })
+    const withError = run({
+      model: 'row', trials: 10,
+      grading: {
+        taskSuccessRate: 1, toolSelectionAccuracyRate: null,
+        finalAnswerScore: null, hallucinationRate: null,
+      },
+      cases: Array.from({ length: 10 }, (_, index) => index === 9
+        ? {
+          caseId: `c${index}`, trial: 1, status: 'error' as const,
+          error: 'boom', exitCode: 1, timedOut: false,
+        }
+        : {
+          caseId: `c${index}`, trial: 1, status: 'completed' as const,
+          exitCode: 0, timedOut: false,
+          grade: { taskSuccess: true, toolSelectionAccuracy: null }, metrics: METRICS,
+        }),
+    })
+    const rows = buildLeaderboard([
+      { label: 'leader', run: allPass }, { label: 'row', run: withError },
+    ], 'strictPassAt1')
+    expect(rows[1]!.significance).toMatchObject({
+      worse: true, primaryMetric: 'strict pass@1 (task)',
+    })
+  })
+
+  it('classifies strict verdicts with strict-pass evidence', () => {
+    const pass = (caseId: string): EvalRun['cases'][number] => ({
+      caseId, trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+      grade: { taskSuccess: true, toolSelectionAccuracy: null }, metrics: METRICS,
+    })
+    const fail = (caseId: string): EvalRun['cases'][number] => ({
+      caseId, trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+      grade: { taskSuccess: false, toolSelectionAccuracy: null }, metrics: METRICS,
+    })
+    const error = (caseId: string): EvalRun['cases'][number] => ({
+      caseId, trial: 1, status: 'error', exitCode: 1, timedOut: false, error: 'boom',
+    })
+    const grading = (rate: number | null) => ({
+      taskSuccessRate: rate, toolSelectionAccuracyRate: null,
+      finalAnswerScore: null, hallucinationRate: null,
+    })
+    const make = (model: string, cases: EvalRun['cases']): EvalRun => run({
+      model, trials: cases.length, grading: grading(null), cases,
+    })
+    const rows = buildLeaderboard([
+      { label: 'strong', run: make('strong', Array.from({ length: 7 }, (_, i) => pass(`s${i}`))) },
+      { label: 'weak', run: make('weak', Array.from({ length: 7 }, (_, i) => error(`s${i}`))) },
+      { label: 'mixed-leader', run: make('mixed-leader', [
+        ...Array.from({ length: 3 }, (_, i) => fail(`m${i}`)),
+        ...Array.from({ length: 4 }, (_, i) => pass(`m${i + 3}`)),
+      ]) },
+      { label: 'mixed-row', run: make('mixed-row', [
+        ...Array.from({ length: 3 }, (_, i) => pass(`m${i}`)),
+        ...Array.from({ length: 4 }, (_, i) => error(`m${i + 3}`)),
+      ]) },
+    ], 'strictPassAt1')
+    expect(rows.find(row => row.label === 'weak')?.significance?.verdict)
+      .toBe('significantly-behind')
+    expect(rows.find(row => row.label === 'mixed-row')?.significance?.verdict)
+      .toBe('behind-not-significant')
+  })
+
   it('shares a rank for ties and breaks ties deterministically', () => {
     const rows = buildLeaderboard([
       { label: 'z', run: graded(0.8, 'z') },

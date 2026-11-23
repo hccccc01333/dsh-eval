@@ -204,6 +204,8 @@ async function resolveCase(
 export interface BenchmarkLoadOptions {
   /** Permit referenced paths outside the benchmark directory. */
   allowExternalPaths?: boolean
+  /** Output artifacts to omit from the provenance digest. */
+  excludeFromDigest?: readonly string[]
 }
 
 export async function parseBenchmark(
@@ -246,7 +248,12 @@ export async function parseBenchmark(
       : {}),
     baseDir,
   }
-  return { ...benchmark, sourceSha256: await hashBenchmarkInputs(text, benchmark) }
+  return {
+    ...benchmark,
+    sourceSha256: await hashBenchmarkInputs(text, benchmark, {
+      ...(options.excludeFromDigest === undefined ? {} : { excludePaths: options.excludeFromDigest }),
+    }),
+  }
 }
 
 /**

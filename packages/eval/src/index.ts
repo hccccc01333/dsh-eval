@@ -171,6 +171,7 @@ export async function executeEval(
       const run = await loadRunReport(values.runPath)
       const benchmark = await loadBenchmark(values.benchmarkPath, {
         allowExternalPaths: values.allowExternalPaths === true,
+        excludeFromDigest: [values.runPath],
       })
       const runSha256 = run.benchmarkSha256 ?? null
       // loadBenchmark always computes this digest from the resolved inputs.
@@ -227,6 +228,7 @@ export async function executeEval(
     }
     const benchmark = await loadBenchmark(values.benchmarkPath, {
       allowExternalPaths: values.allowExternalPaths === true,
+      excludeFromDigest: [values.outPath],
     })
     const run = await runBenchmark(benchmark, {
       ...(values.trials !== undefined ? { trials: values.trials } : {}),

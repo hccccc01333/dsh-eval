@@ -13,6 +13,11 @@ describe('dsh-eval time-boxed regex', () => {
     expect(await safeRegexTestAny('^read_', [])).toBe(false)
   })
 
+  it('does not let a pathological input hide a later match', async () => {
+    const pattern = '^(a+)+b$|read_file'
+    expect(await safeRegexTestAny(pattern, [`${'a'.repeat(26)}!`, 'read_file'], 200)).toBe(true)
+  })
+
   it('does not time out benign patterns under high concurrency', async () => {
     const results = await Promise.all(Array.from({ length: 32 }, () =>
       safeRegexTestAny('^read_', ['list', 'read_file'])))
