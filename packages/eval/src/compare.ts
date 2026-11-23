@@ -256,16 +256,21 @@ export interface PairedCase {
  * {@link pairedCompare} so the case list explains its win/lose/tie counts.
  * @param a - the baseline run.
  * @param b - the candidate run.
- * @returns one row per completed pair, or null when there are no pairs.
+ * @returns one row per completed pair with a measured value, or null when
+ * there are no comparable pairs. Ungraded pairs must not inflate the per-case
+ * Bonferroni family.
  */
 export function pairedCases(a: EvalRun, b: EvalRun, metricOverride?: PairedMetric): PairedCase[] | null {
   const pairs = pairedTrials(a, b)
   if (pairs.length === 0) return null
   const metric = metricOverride ?? pickMetric(pairs)
   if (metric === null) return null
-  return pairs.map(pair => {
-    const aValue = metricOutcome(pair.a, metric)
-    const bValue = metricOutcome(pair.b, metric)
+  const measured = pairs.filter(pair =>
+    metricOutcome(pair.a, metric) !== null && metricOutcome(pair.b, metric) !== null)
+  if (measured.length === 0) return null
+  return measured.map(pair => {
+    const aValue = metricOutcome(pair.a, metric)!
+    const bValue = metricOutcome(pair.b, metric)!
     const sign = pairSign(aValue, bValue)
     return {
       caseId: pair.a.caseId,

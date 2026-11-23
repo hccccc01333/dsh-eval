@@ -87,7 +87,7 @@ describe('dsh-eval comparison', () => {
   function trial(
     caseId: string,
     trialNo: number,
-    taskSuccess: boolean,
+    taskSuccess: boolean | null,
     steps: number,
     totalTokens: number,
     score?: number,
@@ -194,6 +194,15 @@ describe('dsh-eval comparison', () => {
     expect(markdown).toContain('1 candidate wins · 1 candidate losses · 1 ties')
     expect(markdown).toContain('| c | 1 | fail | pass | B better |')
     expect(pairedCases(buildRun(), b)).toBeNull()
+    const ungraded = (pass: boolean | null) => buildRun({
+      cases: [
+        trial('graded', 1, pass, 2, 10, 5),
+        trial('ungraded', 1, null, 2, 10, 5),
+      ],
+    })
+    expect(pairedCases(ungraded(true), ungraded(false), 'task success')?.map(item => item.caseId))
+      .toEqual(['graded'])
+    expect(pairedCases(ungraded(null), ungraded(null), 'task success')).toBeNull()
     expect(renderPairedCases([])).toContain('0 candidate wins · 0 candidate losses · 0 ties')
 
     const manyA = buildRun({ cases: Array.from({ length: 21 }, (_, i) => trial(`m${i}`, 1, false, 2, 10, 5)) })

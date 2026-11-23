@@ -264,6 +264,9 @@ export function renderBriefReport(run: EvalRun): string {
   if (calibration !== null && calibration.separation !== null) {
     // Non-null separation implies scores on both sides, so ranking and Brier are present too.
     lines.push(`- judge separation: ${calibration.separation >= 0 ? '+' : ''}${(calibration.separation * 100).toFixed(1)}pp · ranking ${(calibration.rankingAccuracy! * 100).toFixed(1)}% · Brier ${calibration.brier!.toFixed(3)}`)
+  } else if (calibration !== null && calibration.brier !== null) {
+    // One-sided scores have no separation but still have a meaningful error.
+    lines.push(`- judge Brier: ${calibration.brier.toFixed(3)}`)
   }
   if (run.grading?.judgeFailures) lines.push(`- judge failures: ${run.grading.judgeFailures}`)
   return `${lines.join('\n')}\n`

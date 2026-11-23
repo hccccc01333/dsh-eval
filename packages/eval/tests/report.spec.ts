@@ -439,6 +439,20 @@ describe('dsh-eval report persistence and rendering', () => {
     expect(unpriced).toContain('2.0 / 10 / –')
   })
 
+  it('prints Brier in brief output even when a one-sided score has no separation', () => {
+    const brief = renderBriefReport(buildRun({
+      judge: { provider: 'p', model: 'j', maxScore: 5 },
+      cases: [5, 3, 1].map((score, index) => ({
+        caseId: 'c', trial: index + 1, status: 'completed' as const,
+        exitCode: 0, timedOut: false,
+        grade: { taskSuccess: true, toolSelectionAccuracy: null },
+        judge: { finalAnswerScore: score, hallucination: false },
+      })),
+    }))
+    expect(brief).not.toContain('judge separation')
+    expect(brief).toContain('judge Brier: 0.267')
+  })
+
   it('keeps the brief report short when data is missing', () => {
     const empty = renderBriefReport(buildRun())
     expect(empty).toBe('# b — m\n- trials: 0/0 completed\n')

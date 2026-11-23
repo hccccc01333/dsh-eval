@@ -11,7 +11,7 @@
  * @module dsh-eval/leaderboard
  */
 
-import { pairedCompare } from './compare.ts'
+import { formatPValue, pairedCompare } from './compare.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
 import { signTest, signTestPower } from './stats.ts'
 import type { EvalRun } from './types.ts'
@@ -241,7 +241,7 @@ function gap(value: number | null, rank: number): string {
 export function formatLeaderboardSignificance(value: LeaderboardSignificance | null): string {
   if (value === null) return 'leader'
   if (value.verdict === 'unpaired') return 'unpaired'
-  return `${value.verdict} (p=${value.adjustedP.toFixed(3)}, ${value.primaryMetric})`
+  return `${value.verdict} (p=${formatPValue(value.adjustedP)}, ${value.primaryMetric})`
 }
 
 /**

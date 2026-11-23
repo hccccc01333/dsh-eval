@@ -89,6 +89,8 @@ describe('dsh-eval HTML dashboard', () => {
     expect(html).toContain('+60.0pp')
     expect(html).toContain('<th scope="col">Brier</th>')
     expect(html).toContain('class="table-wrapper" role="region"')
+    expect(html).toContain('aria-label="Judge calibration"')
+    expect(html).toContain('aria-label="Trials"')
     expect(html).toContain('Trials</h2>')
     expect(html).toContain('<span class="pill completed">completed</span>')
     expect(html).toContain('<span class="pill error">error</span>')
@@ -257,6 +259,19 @@ describe('dsh-eval HTML dashboard', () => {
     expect(html).toContain('<td>significantly-better</td>')
     expect(html).toContain('2 cases · Bonferroni family = 2 · 1 confirmed')
     expect(html).toMatch(/1 underpowered cases need at least \d+ discordant pairs/u)
+  })
+
+  it('shows power notes even when no case is confirmed', () => {
+    const make = (pass: boolean): ReturnType<typeof buildRun> => buildRun({
+      cases: Array.from({ length: 3 }, (_, index) => ({
+        caseId: `weak${index}`, trial: 1, status: 'completed' as const,
+        exitCode: 0, timedOut: false,
+        grade: { taskSuccess: pass, toolSelectionAccuracy: true },
+      })),
+    })
+    const html = renderDashboard([make(true), make(false)])
+    expect(html).not.toContain('Confirmed case changes</h2>')
+    expect(html).toMatch(/3 underpowered cases need at least \d+ discordant pairs/u)
   })
 
   it('notes when the confirmed-case table is truncated', () => {

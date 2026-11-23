@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Audit follow-up (round 72).** Ungraded pairs no longer inflate per-case
+  Bonferroni families; leaderboards print boundary-aware p-values; HTML power
+  notes appear without confirmed cases; brief reports show Brier for one-sided
+  scores; every dashboard table has a distinct accessible name.
 - **Brier calibration.** Judge calibration reports Brier score against the
   scripted verdict in reports, `--brief` and the HTML dashboard; dashboard
   tables use scrollable, keyboard-reachable regions with sticky headers.
@@ -337,7 +341,7 @@
 - **`test:pack` now verifies wildcard exports.** `./src/*` is expanded to the
   source tree and every file must be packed; previously removing
   `src/**/*.ts` from `files` passed the smoke test unnoticed.
-- **Documentation matches the tree.** Both READMEs report 303 tests, and a
+- **Documentation matches the tree.** Both READMEs report 305 tests, and a
   session-log discovery test is renamed for the behavior it actually asserts.
 
 ### Fixed

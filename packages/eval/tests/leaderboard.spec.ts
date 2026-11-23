@@ -265,7 +265,7 @@ describe('dsh-eval leaderboard', () => {
     expect(rows[1]!.significance).toMatchObject({
       verdict: 'significantly-behind', worse: true, detectable: true,
     })
-    expect(renderLeaderboard(rows)).toContain('significantly-behind (p=0.008, task success)')
+    expect(renderLeaderboard(rows)).toContain('significantly-behind (p=0.0078, task success)')
 
     const mixed = pairedRun([true, true, true, true, true, false, false, false], 'mixed')
     const reverse = pairedRun([false, false, false, false, false, true, true, true], 'reverse')
