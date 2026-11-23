@@ -152,6 +152,12 @@ describe('dsh-eval command composition', () => {
       caseId: 'a\u001b[31mred\u001b[0m', trial: 1, status: 'error', exitCode: 1,
       timedOut: false, error: `\u001b]0;title\u0007${'x'.repeat(400)}`,
     }, 1, 1)).toBe(`[eval] 1/1 ared #1 ERROR ${'x'.repeat(200)}\n`)
+    expect(renderProgress(base, 1, 3, 1000, 11000))
+      .toBe('[eval] 1/3 c #2 task n/a, ? ms, eta 20s\n')
+    expect(renderProgress(base, 3, 3, 1000, 11000)).not.toContain('eta')
+    expect(renderProgress(base, 0, 3, 1000, 11000)).not.toContain('eta')
+    expect(renderProgress(base, 1, 3, 11000, 10000)).not.toContain('eta')
+    expect(renderProgress(base, 1, 3, Number.NaN, 10000)).not.toContain('eta')
   })
 
   it('includes judge score in the run summary through the chat seam', async () => {

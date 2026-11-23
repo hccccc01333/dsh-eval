@@ -63,8 +63,27 @@ export function resolveJudgeChat(ctx: Context): JudgeChat | undefined {
   return llm === undefined ? undefined : llmJudgeChat(llm.stream)
 }
 
+/** Rough seconds remaining from observed throughput; null until meaningful. */
+function estimateEta(
+  finished: number,
+  total: number,
+  startedAtMs: number | undefined,
+  nowMs: number,
+): number | null {
+  if (startedAtMs === undefined || finished <= 0 || finished >= total) return null
+  const elapsed = nowMs - startedAtMs
+  if (!Number.isFinite(elapsed) || elapsed <= 0) return null
+  return Math.max(0, Math.round((elapsed / finished) * (total - finished) / 1000))
+}
+
 /** One bounded progress line; agent-controlled text must not inject newlines or terminal control codes. */
-export function renderProgress(result: EvalTrialResult, finished: number, total: number): string {
+export function renderProgress(
+  result: EvalTrialResult,
+  finished: number,
+  total: number,
+  startedAtMs?: number,
+  nowMs: number = Date.now(),
+): string {
   const clean = (value: string): string => value
     // CSI / OSC sequences first, then every remaining C0/C1 control byte.
     .replace(/\u001b\[[0-?]*[ -/]*[@-~]/gu, '')
@@ -72,13 +91,15 @@ export function renderProgress(result: EvalTrialResult, finished: number, total:
     .replace(/[\u0000-\u001f\u007f-\u009f]/gu, ' ')
     .slice(0, 200)
   const label = `${clean(result.caseId)} #${result.trial}`
+  const eta = estimateEta(finished, total, startedAtMs, nowMs)
+  const suffix = eta === null ? '' : `, eta ${eta}s`
   if (result.status === 'error') {
-    return `[eval] ${finished}/${total} ${label} ERROR ${clean(result.error ?? 'unknown error')}\n`
+    return `[eval] ${finished}/${total} ${label} ERROR ${clean(result.error ?? 'unknown error')}${suffix}\n`
   }
   const task = result.grade?.taskSuccess === undefined || result.grade.taskSuccess === null
     ? 'n/a' : result.grade.taskSuccess ? 'pass' : 'fail'
   const latency = result.metrics?.latencyMs === undefined ? '?' : result.metrics.latencyMs.toFixed(0)
-  return `[eval] ${finished}/${total} ${label} task ${task}, ${latency} ms\n`
+  return `[eval] ${finished}/${total} ${label} task ${task}, ${latency} ms${suffix}\n`
 }
 
 /** Aggregate-success sentence for the run summary line. */
@@ -237,6 +258,7 @@ export async function executeEval(
       allowExternalPaths: values.allowExternalPaths === true,
       excludeFromDigest: [values.outPath],
     })
+    const startedAtMs = Date.now()
     const run = await runBenchmark(benchmark, {
       ...(values.trials !== undefined ? { trials: values.trials } : {}),
       ...(values.concurrency !== undefined ? { concurrency: values.concurrency } : {}),
@@ -245,7 +267,7 @@ export async function executeEval(
       ...(services.judgeChat !== undefined ? { judgeChat: services.judgeChat } : {}),
       ...(values.quiet === true ? {} : {
         onProgress: (result: EvalTrialResult, finished: number, total: number) => {
-          io.stderr.write(renderProgress(result, finished, total))
+          io.stderr.write(renderProgress(result, finished, total, startedAtMs))
         },
       }),
     })

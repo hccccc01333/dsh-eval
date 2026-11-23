@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Progress ETA.** Trial progress lines add a rough seconds-remaining estimate
+  once a run has finished at least one trial; it is omitted on the last trial
+  and when no usable timing is available.
 - **Brief strict rate.** `report --brief` shows error-inclusive strict pass@1
   beside the graded-only task rate.
 - **Gate evidence consistency.** Per-case evidence now uses the metric that
