@@ -89,6 +89,7 @@ export type EvalStartupValues =
     kind: 'dashboard'
     runPaths: readonly string[]
     outPath: string
+    metric?: 'taskSuccess' | 'strictPassAt1'
   }
   | {
     kind: 'rejudge'
@@ -365,8 +366,12 @@ Examples:
   dashboard
     .argument('<run.json...>', 'one run, two to compare, or three+ for a leaderboard')
     .option('--out <path>', 'output HTML path', 'eval-dashboard.html')
-    .action((runPaths: string[], options: { out: string }) => {
-      publish({ kind: 'dashboard', runPaths, outPath: options.out })
+    .option('--metric <name>', 'leaderboard metric: taskSuccess or strictPassAt1', leaderboardMetric(program, '--metric'))
+    .action((runPaths: string[], options: { out: string; metric?: 'taskSuccess' | 'strictPassAt1' }) => {
+      publish({
+        kind: 'dashboard', runPaths, outPath: options.out,
+        ...(options.metric === undefined ? {} : { metric: options.metric }),
+      })
     })
   const rejudge = program.command('rejudge').description('re-judge a stored run from its traces without re-running the agent')
   rejudge

@@ -412,6 +412,11 @@ describe('dsh-eval command composition', () => {
     const leaderboarded = await bootEval(['dashboard', runPath, runPath, runPath, '--out', outPath])
     expect(leaderboarded.exits).toEqual([0])
     expect(readFileSync(outPath, 'utf8')).toContain('<h1>Leaderboard</h1>')
+
+    const strict = await bootEval(['dashboard', runPath, runPath, runPath,
+      '--metric', 'strictPassAt1', '--out', outPath])
+    expect(strict.exits).toEqual([0])
+    expect(readFileSync(outPath, 'utf8')).toContain('ranked by strict pass@1')
   })
 
   it('parses judge override flags for rejudge', async () => {

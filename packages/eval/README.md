@@ -119,7 +119,8 @@ error message cannot inject markup into the page. Supplying a second run adds a
 comparison table built from the same rows as `dsh eval compare`, including
 signed `B − A` deltas and the Bonferroni-corrected paired inference rows. Three
 or more runs instead produce a leaderboard page using the same ranking as
-`dsh eval leaderboard`, with task/strict/tool/judge rates and gap to leader.
+`dsh eval leaderboard`, with task/strict/tool/judge rates and gap to leader;
+`--metric strictPassAt1` ranks that page by the error-inclusive rate too.
 All paths share one escaped, self-contained stylesheet.
 
 A **Precision** block follows Reliability in the full report. It bootstraps the observed task/tool rates over the graded trials with the run's `seed` (2000 seeded resamples by default), printing a 95% percentile interval beside each rate and a `n=` count. A single trial reports the rate without an interval, since no resample can create uncertainty from one observation. The block also prints latency `p50/p95` from the trial metrics. This makes a three-trial smoke run look like the weak evidence it is instead of a precise-looking percentage.

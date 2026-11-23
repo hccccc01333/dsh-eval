@@ -193,6 +193,16 @@ describe('dsh-eval HTML dashboard', () => {
     expect(html).not.toContain('<h2>Trials</h2>')
   })
 
+  it('ranks the leaderboard page by the requested metric', () => {
+    const html = renderDashboard([
+      buildRun({ benchmark: 'first' }),
+      buildRun({ benchmark: 'second' }),
+      buildRun({ benchmark: 'third' }),
+    ], 'strictPassAt1')
+    expect(html).toContain('ranked by strict pass@1')
+    expect(html).not.toContain('ranked by pooled task success')
+  })
+
   it('shows signed gaps in the leaderboard page', () => {
     const graded = (benchmark: string, rate: number): EvalRun => buildRun({
       benchmark,

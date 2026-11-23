@@ -4,6 +4,8 @@
 
 ### Added
 
+- **Dashboard metric flag.** `dashboard --metric strictPassAt1` ranks a 3+ run
+  leaderboard page by the error-inclusive rate, matching `leaderboard`.
 - **Review follow-up.** Per-case significance reports the family-aware pair
   requirement and true confirmed counts, flags truncated tables, and prints
   tiny p-values as `<0.001` instead of `0.0000`.
@@ -310,7 +312,7 @@
 - **`test:pack` now verifies wildcard exports.** `./src/*` is expanded to the
   source tree and every file must be packed; previously removing
   `src/**/*.ts` from `files` passed the smoke test unnoticed.
-- **Documentation matches the tree.** Both READMEs report 293 tests, and a
+- **Documentation matches the tree.** Both READMEs report 294 tests, and a
   session-log discovery test is renamed for the behavior it actually asserts.
 
 ### Fixed
