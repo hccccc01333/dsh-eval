@@ -366,7 +366,7 @@ Examples:
   dashboard
     .argument('<run.json...>', 'one run, two to compare, or three+ for a leaderboard')
     .option('--out <path>', 'output HTML path', 'eval-dashboard.html')
-    .option('--metric <name>', 'leaderboard metric: taskSuccess or strictPassAt1', leaderboardMetric(program, '--metric'))
+    .option('--metric <name>', 'leaderboard metric (3+ runs): taskSuccess or strictPassAt1', leaderboardMetric(program, '--metric'))
     .action((runPaths: string[], options: { out: string; metric?: 'taskSuccess' | 'strictPassAt1' }) => {
       publish({
         kind: 'dashboard', runPaths, outPath: options.out,

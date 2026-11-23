@@ -9,7 +9,7 @@
  */
 
 import { randomUUID } from 'node:crypto'
-import { mkdir, rename, unlink, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, realpath, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
 
 /**
@@ -19,12 +19,17 @@ import { basename, dirname, join, resolve } from 'node:path'
  */
 export async function writeTextAtomic(path: string, text: string): Promise<void> {
   const absolute = resolve(path)
-  const directory = dirname(absolute)
+  // Replace the real target, not the symlink: an `--out` alias must stay valid.
+  const destination = await realpath(absolute).catch(() => absolute)
+  const directory = dirname(destination)
   await mkdir(directory, { recursive: true })
-  const temp = join(directory, `.${basename(absolute)}.${process.pid}.${randomUUID()}.tmp`)
+  const temp = join(directory, `.${basename(destination)}.${process.pid}.${randomUUID()}.tmp`)
+  const existing = await stat(destination).catch(() => null)
   try {
     await writeFile(temp, text, 'utf8')
-    await rename(temp, absolute)
+    // Preserve an existing file's permission bits across the rename.
+    if (existing !== null) await chmod(temp, existing.mode)
+    await rename(temp, destination)
   } catch (error) {
     /* v8 ignore next -- cleanup of a failed staged write is best-effort. */
     await unlink(temp).catch(() => {})

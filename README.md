@@ -40,7 +40,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 
 ## Status
 
-`dsh-eval@0.4.0` · 294 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.4.0` · 297 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 
@@ -132,7 +132,7 @@ are recorded separately in the run's option fields.
 | `dsh eval report run.json --json` | Emit the run and all derived blocks as JSON |
 | `dsh eval report run.json [--out report.md]` | Write any report variant to a file instead of stdout |
 | `dsh eval export run.json [--out trials.csv]` | Flatten trials into a safely escaped CSV |
-| `dsh eval dashboard a.json [b.json ...] --out report.html` | Write a standalone HTML dashboard or multi-run leaderboard |
+| `dsh eval dashboard a.json [b.json ...] --out report.html [--metric strictPassAt1]` | Write a standalone HTML dashboard or multi-run leaderboard (`--metric` affects 3+ runs only) |
 | `dsh eval validate benchmark.yaml [--json] [--out file]` | Preflight a benchmark with evidence warnings |
 | `dsh eval provenance run.json benchmark.yaml [--json] [--out file]` | Verify the run's benchmark SHA-256 against the current inputs; mismatches exit 1 |
 | `dsh eval leaderboard a.json b.json ... [--metric taskSuccess\|strictPassAt1] [--json] [--out file]` | Rank runs by pooled or error-inclusive success |

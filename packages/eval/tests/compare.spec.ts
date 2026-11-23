@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  compareRuns, pairedCases, pairedCaseSignificance, pairedCompare, pairedSigns,
+  compareRuns, formatPValue, pairedCases, pairedCaseSignificance, pairedCompare, pairedSigns,
   renderCaseSignificance, renderCompareJson, renderCompareMarkdown, renderPairedCases,
 } from '../src/compare.ts'
 import type { EvalRun, EvalTrialResult } from '../src/types.ts'
@@ -228,7 +228,14 @@ describe('dsh-eval comparison', () => {
     expect(markdown).toContain('5 cases · Bonferroni family = 5 · 2 confirmed changes')
     expect(markdown).toContain('| better | 8 | 8 | 0 |')
     expect(pairedCaseSignificance(buildRun(), buildRun())).toBeNull()
-    expect(renderCaseSignificance([])).toContain('0 cases · Bonferroni family = 0')
+    expect(renderCaseSignificance([])).toContain('no paired case evidence')
+  })
+
+  it('keeps p-values near alpha distinguishable', () => {
+    expect(formatPValue(0.0496)).toBe('0.0496')
+    expect(formatPValue(0.005)).toBe('0.0050')
+    expect(formatPValue(0.094)).toBe('0.094')
+    expect(formatPValue(0.0005)).toBe('<0.001')
   })
 
   it('reports truncation and family-aware power requirements', () => {
@@ -405,7 +412,7 @@ describe('dsh-eval comparison', () => {
     expect(
       compareRuns(twelve, twelveWins)
         .find(row => row.metric === 'paired task success p (sign test, Bonferroni ×3)')?.inference,
-    ).toBe('0.001 (n=12)')
+    ).toBe('0.0015 (n=12)')
 
     // Twenty clean sweeps stay below the precision even after ×3.
     const twenty = buildRun({

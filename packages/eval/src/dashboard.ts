@@ -115,9 +115,12 @@ function renderComparison(a: EvalRun, b: EvalRun): string {
     .map(value => `<td>${esc(value)}</td>`).join(''))
   const truncation = shown.length < confirmed.length
     ? `<p class="sub">showing ${shown.length} of ${confirmed.length} confirmed changes</p>` : ''
+  const underpowered = significance.filter(row => row.verdict === 'underpowered')
+  const powerNote = underpowered.length === 0 ? ''
+    : `<p class="sub">${underpowered.length} underpowered cases need at least ${Math.max(...underpowered.map(row => row.requiredPairs))} discordant pairs for this family</p>`
   const significanceBlock = confirmed.length === 0 ? '' : `<h2>Confirmed case changes</h2>`
     + `<p class="sub">${significance.length} cases · Bonferroni family = ${significance.length} · ${confirmed.length} confirmed</p>`
-    + truncation
+    + powerNote + truncation
     + table(['Case', 'Pairs', 'B wins', 'A wins', 'Adjusted p', 'Result'], significanceRows)
   return `<h2>Run comparison</h2>${table(['Metric', 'A', 'B', 'B − A'], rows)}`
     + (inferenceRows.length === 0 ? '' : `<h2>Paired inference</h2>${table(['Test', 'Result'], inferenceRows)}`)

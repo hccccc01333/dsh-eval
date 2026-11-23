@@ -103,7 +103,9 @@ function formatPairedDelta(delta: PairedDelta, intervalConfidence: number): stri
 
 /** Render an exact p-value, collapsing anything below the print precision. */
 export function formatPValue(pValue: number): string {
-  return pValue < 0.001 ? '<0.001' : pValue.toFixed(3)
+  if (pValue < 0.001) return '<0.001'
+  // Four decimals near alpha keep a significant 0.0496 from printing 0.050.
+  return pValue < 0.06 ? pValue.toFixed(4) : pValue.toFixed(3)
 }
 
 /** A metric that can classify a paired winner. */
@@ -334,6 +336,9 @@ export function pairedCaseSignificance(a: EvalRun, b: EvalRun): CaseSignificance
 
 /** Render per-case paired significance as a markdown block. */
 export function renderCaseSignificance(rows: readonly CaseSignificance[]): string {
+  if (rows.length === 0) {
+    return '## Per-case paired significance\n\n- no paired case evidence\n'
+  }
   const confirmed = rows.filter(row =>
     row.verdict === 'significantly-better' || row.verdict === 'significantly-worse')
   const shown = confirmed.slice(0, 20)

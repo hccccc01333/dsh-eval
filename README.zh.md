@@ -29,7 +29,7 @@
 - 跨 harness 导入：`dsh eval import codex|claude-code <log> --out run.json`
 - `dsh eval report run.json` —— 带每个 trial 评分、合并比率、可靠性与精度区块的 Markdown 报告；`--brief` 输出紧凑终端摘要，`--json` 输出全部派生区块的结构化数据
 - `dsh eval export run.json [--out trials.csv]` —— 逐 trial 的扁平 CSV，便于表格与 notebook 分析，公式注入与引号均已安全转义
-- `dsh eval dashboard a.json [b.json ...] --out report.html` —— 独立 HTML 仪表盘：单个 run、双 run 对比，或三个及以上 run 的排行榜（含对领先者的配对判定），自动适配深色模式，无外部依赖
+- `dsh eval dashboard a.json [b.json ...] --out report.html [--metric strictPassAt1]` —— 独立 HTML 仪表盘：单个 run、双 run 对比，或三个及以上 run 的排行榜（`--metric` 仅用于排行榜，含对领先者的配对判定），自动适配深色模式，无外部依赖
 - `dsh eval validate benchmark.yaml [--json]` —— 运行前预检 benchmark，在花 token 前提示证据薄弱环节
 - `dsh eval provenance run.json benchmark.yaml [--json]` —— 校验 run 中保存的 benchmark 摘要与当前 YAML、提示词、工作区和回放输入是否一致；缺失或不一致时退出码为 1
 - `dsh eval leaderboard a.json b.json c.json` —— 按任务成功率给任意数量的 run 排名，显示与领先者的差距，并给出对领先者的 Bonferroni 校正配对判定；`--metric strictPassAt1` 改用含错误/超时的严格通过率排序，`--json` 便于自动化消费
@@ -39,7 +39,7 @@
 
 ## 状态
 
-`dsh-eval@0.4.0` · 294 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.4.0` · 297 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 `0.3.1` 起可安装：`0.3.0` 的 tarball 漏掉了入口 import 的运行时模块，导致每次安装都报 `ERR_MODULE_NOT_FOUND`。详见 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -130,7 +130,7 @@ HTML 仪表盘中展示,因此 fixture 改动不会悄悄改变结果含义。CL
 | `dsh eval report run.json --json` | 输出 run 与全部派生区块的 JSON |
 | `dsh eval report run.json [--out report.md]` | 把任意报告变体写入文件，而非输出到终端 |
 | `dsh eval export run.json [--out trials.csv]` | 把逐 trial 数据导出为安全转义的 CSV |
-| `dsh eval dashboard a.json [b.json ...] --out report.html` | 写出独立 HTML 仪表盘或多 run 排行榜 |
+| `dsh eval dashboard a.json [b.json ...] --out report.html [--metric strictPassAt1]` | 写出独立 HTML 仪表盘或多 run 排行榜（`--metric` 仅用于排行榜） |
 | `dsh eval validate benchmark.yaml [--json] [--out file]` | 预检 benchmark 并给出证据质量警告 |
 | `dsh eval provenance run.json benchmark.yaml [--json] [--out file]` | 校验 run 的 benchmark SHA-256；不一致时退出码为 1 |
 | `dsh eval leaderboard a.json b.json ... [--metric taskSuccess\|strictPassAt1] [--json] [--out file]` | 按池化成功率或含错误的严格通过率排名 |

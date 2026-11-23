@@ -97,6 +97,28 @@ describe('dsh-eval leaderboard', () => {
       .toMatchObject({ rankedBy: 'strictPassAt1' })
   })
 
+  it('does not call a strict-rate tie a regression when trial counts differ', () => {
+    const make = (model: string, extra: number): EvalRun => run({
+      model, trials: 10 + extra,
+      grading: {
+        taskSuccessRate: 0.5, toolSelectionAccuracyRate: null,
+        finalAnswerScore: null, hallucinationRate: null,
+      },
+      cases: Array.from({ length: 10 + extra }, (_, index) => ({
+        caseId: `c${index}`, trial: 1, status: 'completed' as const,
+        exitCode: 0, timedOut: false,
+        grade: { taskSuccess: index % 2 === 0, toolSelectionAccuracy: null }, metrics: METRICS,
+      })),
+    })
+    const rows = buildLeaderboard([
+      { label: 'leader', run: make('leader', 0) },
+      { label: 'row', run: make('row', 14) },
+    ], 'strictPassAt1')
+    expect(rows[1]!.significance).toMatchObject({
+      worse: false, verdict: 'ahead-or-tied',
+    })
+  })
+
   it('uses strict-pass evidence for the verdict when ranking strictly', () => {
     const allPass = run({
       model: 'leader', trials: 10,

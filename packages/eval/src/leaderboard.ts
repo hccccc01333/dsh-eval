@@ -176,10 +176,11 @@ export function buildLeaderboard(
           detectable,
           worse: counts.losses > counts.wins,
           primaryMetric: 'strict pass@1 (task)',
-          // A non-leader cannot have more strict wins than losses: that would
-          // give it a higher strict rate and make it the leader instead.
+          // Unequal trial counts can tie on rate while the extra trials are
+          // wins, so direction must be checked explicitly.
           verdict: !detectable ? 'underpowered'
-            : adjustedP <= 0.05 ? 'significantly-behind' : 'behind-not-significant',
+            : counts.losses > counts.wins && adjustedP <= 0.05 ? 'significantly-behind'
+              : counts.losses > counts.wins ? 'behind-not-significant' : 'ahead-or-tied',
         }
         continue
       }

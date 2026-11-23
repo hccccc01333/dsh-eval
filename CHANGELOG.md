@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Review follow-up (round 63).** Strict leaderboard ties with unequal trial
+  counts are no longer mislabelled as regressions; atomic writes preserve
+  symlinked parents and permission bits; p-values near alpha keep four
+  decimals; HTML and markdown report the same power notes.
 - **Shared atomic output.** Run JSON, Markdown/JSON reports, CSV and HTML
   dashboards all go through one staged-write helper; an interrupted write
   cannot leave a truncated artifact anywhere in the CLI.
@@ -315,7 +319,7 @@
 - **`test:pack` now verifies wildcard exports.** `./src/*` is expanded to the
   source tree and every file must be packed; previously removing
   `src/**/*.ts` from `files` passed the smoke test unnoticed.
-- **Documentation matches the tree.** Both READMEs report 294 tests, and a
+- **Documentation matches the tree.** Both READMEs report 297 tests, and a
   session-log discovery test is renamed for the behavior it actually asserts.
 
 ### Fixed

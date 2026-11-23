@@ -235,17 +235,26 @@ describe('dsh-eval HTML dashboard', () => {
 
   it('renders confirmed case changes in the two-run comparison', () => {
     const make = (pass: boolean): ReturnType<typeof buildRun> => buildRun({
-      cases: Array.from({ length: 8 }, (_, index) => ({
-        caseId: 'stable', trial: index + 1, status: 'completed' as const,
-        exitCode: 0, timedOut: false,
-        grade: { taskSuccess: pass, toolSelectionAccuracy: true },
-        judge: { finalAnswerScore: pass ? 5 : 2, hallucination: false },
-      })),
+      cases: [
+        ...Array.from({ length: 8 }, (_, index) => ({
+          caseId: 'stable', trial: index + 1, status: 'completed' as const,
+          exitCode: 0, timedOut: false,
+          grade: { taskSuccess: pass, toolSelectionAccuracy: true },
+          judge: { finalAnswerScore: pass ? 5 : 2, hallucination: false },
+        })),
+        {
+          caseId: 'weak', trial: 1, status: 'completed' as const,
+          exitCode: 0, timedOut: false,
+          grade: { taskSuccess: true, toolSelectionAccuracy: true },
+          judge: { finalAnswerScore: 5, hallucination: false },
+        },
+      ],
     })
     const html = renderDashboard([make(false), make(true)])
     expect(html).toContain('Confirmed case changes</h2>')
     expect(html).toContain('<td>significantly-better</td>')
-    expect(html).toContain('1 cases · Bonferroni family = 1')
+    expect(html).toContain('2 cases · Bonferroni family = 2 · 1 confirmed')
+    expect(html).toMatch(/1 underpowered cases need at least \d+ discordant pairs/u)
   })
 
   it('notes when the confirmed-case table is truncated', () => {

@@ -110,7 +110,7 @@ The markdown report appends a **Reliability** block for each graded dimension (t
 
 `dsh eval report run.json --brief` prints a compact terminal summary instead: trial coverage, per-trial tool/step/token/cost figures, the task rate with pass@k/pass^k, the bootstrap interval, and the judge-failure count. The per-trial table is omitted so a hundred-trial run still fits on one screen.
 
-`dsh eval dashboard a.json [b.json ...] --out report.html` writes a standalone HTML view:
+`dsh eval dashboard a.json [b.json ...] --out report.html [--metric strictPassAt1]` writes a standalone HTML view (the metric flag applies to the 3+ run leaderboard only):
 summary cards for coverage, pass@1/pass@k, latency p95 and cost, followed by
 reliability, precision, judge/script agreement and a per-trial table. It has no
 external CSS, fonts or scripts, respects the OS light/dark preference, and
