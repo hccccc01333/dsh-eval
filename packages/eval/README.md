@@ -166,8 +166,9 @@ Agreement and kappa answer "do the judge and the scripted check decide the
 same thing?"; calibration answers "is the judge's score actually useful for
 ranking?" `computeCalibration` (rendered in full reports and the HTML
 dashboard, and summarized in `--brief`) reports the mean normalized judge score
-on scripted passes and failures, their separation, and a ranking-accuracy score
-equivalent to AUC (ties count as half). It also lists up to five cases where the
+on scripted passes and failures, their separation, a ranking-accuracy score
+equivalent to AUC (ties count as half), and a Brier score (mean squared error
+against the scripted verdict, lower is better). It also lists up to five cases where the
 two views disagree, so a rubric can be corrected from concrete examples instead
 of a single aggregate number. Trials with a null score still contribute via
 their hallucination flag; trials with neither signal are counted as ungraded

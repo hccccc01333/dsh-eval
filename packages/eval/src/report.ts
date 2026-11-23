@@ -262,8 +262,8 @@ export function renderBriefReport(run: EvalRun): string {
   }
   const calibration = computeCalibration(run)
   if (calibration !== null && calibration.separation !== null) {
-    // A non-null separation implies scores on both sides, so ranking is present too.
-    lines.push(`- judge separation: ${calibration.separation >= 0 ? '+' : ''}${(calibration.separation * 100).toFixed(1)}pp · ranking ${(calibration.rankingAccuracy! * 100).toFixed(1)}%`)
+    // Non-null separation implies scores on both sides, so ranking and Brier are present too.
+    lines.push(`- judge separation: ${calibration.separation >= 0 ? '+' : ''}${(calibration.separation * 100).toFixed(1)}pp · ranking ${(calibration.rankingAccuracy! * 100).toFixed(1)}% · Brier ${calibration.brier!.toFixed(3)}`)
   }
   if (run.grading?.judgeFailures) lines.push(`- judge failures: ${run.grading.judgeFailures}`)
   return `${lines.join('\n')}\n`
@@ -284,6 +284,7 @@ function renderCalibration(summary: CalibrationSummary): string[] {
     `- mean normalized score: passed ${summary.passedMean === null ? 'n/a' : `${(summary.passedMean * 100).toFixed(1)}%`} · failed ${summary.failedMean === null ? 'n/a' : `${(summary.failedMean * 100).toFixed(1)}%`}`,
     `- separation (passed − failed): ${summary.separation === null ? 'n/a' : `${summary.separation >= 0 ? '+' : ''}${(summary.separation * 100).toFixed(1)}pp`}`,
     `- ranking accuracy: ${summary.rankingAccuracy === null ? 'n/a' : `${(summary.rankingAccuracy * 100).toFixed(1)}% (ties count as half)`}`,
+    `- Brier score: ${summary.brier === null ? 'n/a' : summary.brier.toFixed(3)} (lower is better)`,
   ]
   if (summary.disagreements.length > 0) {
     lines.push('- disagreements to review:',

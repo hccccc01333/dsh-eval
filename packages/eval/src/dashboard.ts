@@ -33,6 +33,8 @@ th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);font-
 tr:last-child td{border-bottom:0}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.pill{border-radius:999px;padding:2px 8px;font-size:12px}
 .pill.completed{background:rgba(6,118,71,.12);color:var(--good)}.pill.error{background:rgba(180,35,24,.12);color:var(--bad)}
 .detail{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.table-wrapper{overflow:auto;max-inline-size:100%;max-block-size:min(500px,80vh);container-type:inline-size;border-radius:12px}
+.table-wrapper table{border-radius:0}.table-wrapper thead{position:sticky;inset-block-start:0;z-index:1;background:var(--card)}
 footer{margin-top:32px;color:var(--muted);font-size:12px}
 `
 
@@ -80,13 +82,14 @@ function interval(value: RateInterval): string {
 }
 
 /** Render a table from a header and already-escaped row fragments. */
-function table(headers: readonly string[], rows: readonly string[]): string {
+function table(headers: readonly string[], rows: readonly string[], label = 'Evaluation data'): string {
   return [
+    `<div class="table-wrapper" role="region" tabindex="0" aria-label="${esc(label)}">`,
     '<table><thead><tr>',
-    ...headers.map(header => `<th>${esc(header)}</th>`),
+    ...headers.map(header => `<th scope="col">${esc(header)}</th>`),
     '</tr></thead><tbody>',
     ...rows.map(row => `<tr>${row}</tr>`),
-    '</tbody></table>',
+    '</tbody></table></div>',
   ].join('')
 }
 
@@ -228,10 +231,11 @@ export function renderDashboard(runs: readonly EvalRun[], metric: LeaderboardMet
 
   const calibrationBlock = calibration === null ? '' : `
     <h2>Judge calibration</h2>
-    ${table(['Passed mean', 'Failed mean', 'Separation', 'Ranking accuracy'], [[
+    ${table(['Passed mean', 'Failed mean', 'Separation', 'Ranking accuracy', 'Brier'], [[
       rate(calibration.passedMean), rate(calibration.failedMean),
       calibration.separation === null ? '–' : `${calibration.separation >= 0 ? '+' : ''}${(calibration.separation * 100).toFixed(1)}pp`,
       rate(calibration.rankingAccuracy),
+      calibration.brier === null ? '–' : calibration.brier.toFixed(3),
     ].map(value => `<td>${esc(value)}</td>`).join('')])}
     ${calibration.disagreements.length === 0 ? '' : `<p class="note">Review: ${calibration.disagreements
       .map(item => `${esc(item.caseId)} #${item.trial} (script ${item.scriptPassed ? 'pass' : 'fail'}, score ${item.score ?? 'n/a'})`)

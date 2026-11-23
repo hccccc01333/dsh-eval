@@ -35,6 +35,8 @@ export interface CalibrationSummary {
   separation: number | null
   /** P(random pass scores above random fail), ties count as half. Null when one side is empty. */
   rankingAccuracy: number | null
+  /** Mean squared error of normalized score against the scripted verdict; lower is better. */
+  brier: number | null
   /** Up to five disagreements, ordered by case id and trial. */
   disagreements: readonly CalibrationDisagreement[]
 }
@@ -57,6 +59,8 @@ export function computeCalibration(run: EvalRun): CalibrationSummary | null {
   const failed: number[] = []
   const disagreements: CalibrationDisagreement[] = []
   let withBoth = 0
+  let brierSum = 0
+  let brierCount = 0
   for (const result of run.cases) {
     const script = result.grade?.taskSuccess
     const judge = result.judge
@@ -69,6 +73,9 @@ export function computeCalibration(run: EvalRun): CalibrationSummary | null {
     if (score !== null) {
       if (script) passed.push(score)
       else failed.push(score)
+      const error = score - (script ? 1 : 0)
+      brierSum += error * error
+      brierCount += 1
     }
     // The score drives calibration; the hallucination flag is a fallback.
     const judgePass = score !== null ? score >= 0.5 : !hallucination
@@ -100,6 +107,7 @@ export function computeCalibration(run: EvalRun): CalibrationSummary | null {
     failedMean,
     separation: passedMean === null || failedMean === null ? null : passedMean - failedMean,
     rankingAccuracy,
+    brier: brierCount === 0 ? null : brierSum / brierCount,
     disagreements,
   }
 }

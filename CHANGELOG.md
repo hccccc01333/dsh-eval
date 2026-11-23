@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Brier calibration.** Judge calibration reports Brier score against the
+  scripted verdict in reports, `--brief` and the HTML dashboard; dashboard
+  tables use scrollable, keyboard-reachable regions with sticky headers.
 - **Seed override.** `run --seed N` changes the base seed passed to each trial
   and is recorded in `benchmarkOverrides` and `benchmarkSha256`. The seed
   fragment is versioned so reports written before this override still verify;

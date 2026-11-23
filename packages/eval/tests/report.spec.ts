@@ -293,7 +293,7 @@ describe('dsh-eval report persistence and rendering', () => {
     expect(markdown).toContain('## Judge calibration')
     expect(markdown).toContain('- separation (passed − failed): +60.0pp')
     expect(markdown).toContain('- ranking accuracy: 100.0% (ties count as half)')
-    expect(renderBriefReport(run)).toContain('- judge separation: +60.0pp · ranking 100.0%')
+    expect(renderBriefReport(run)).toContain('- judge separation: +60.0pp · ranking 100.0% · Brier')
   })
 
   it('renders judge dashes when verdicts are missing', () => {
@@ -370,7 +370,7 @@ describe('dsh-eval report persistence and rendering', () => {
     expect(markdown).toContain('  - high-fail trial 1: script fail · judge score 8')
     expect(markdown).toContain('  - low-pass trial 1: script pass · judge score 2')
     expect(markdown).toContain('  - unscored trial 1: script pass · judge score n/a · hallucination')
-    expect(renderBriefReport(reversed)).toContain('- judge separation: -60.0pp · ranking 0.0%')
+    expect(renderBriefReport(reversed)).toContain('- judge separation: -60.0pp · ranking 0.0% · Brier')
 
     const noScores = buildRun({
       judge,

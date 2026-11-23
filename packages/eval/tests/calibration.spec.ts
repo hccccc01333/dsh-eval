@@ -38,6 +38,7 @@ describe('dsh-eval judge calibration', () => {
     expect(result!.separation).toBeCloseTo(0.4)
     // 2 passes x 1 fail, both pairs rank correctly.
     expect(result!.rankingAccuracy).toBe(1)
+    expect(result!.brier).toBeCloseTo(0.18)
     expect(result!.disagreements).toEqual([{
       caseId: 'wrong-penalized', trial: 1, scriptPassed: true, score: 3, hallucination: false,
     }])
@@ -76,6 +77,7 @@ describe('dsh-eval judge calibration', () => {
       provider: 'p', model: 'j', maxScore: 0,
     }))!
     expect(noMax.passedMean).toBeNull()
+    expect(noMax.brier).toBeNull()
     expect(noMax.pairs).toBe(1)
   })
 
