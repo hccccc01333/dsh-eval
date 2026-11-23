@@ -485,6 +485,35 @@ describe('dsh-eval command composition', () => {
     expect(existsSync(outPath)).toBe(true)
   })
 
+  it('runs with a seed override and records it in provenance', async () => {
+    const dir = tempDir()
+    const benchmarkPath = benchmarkYaml(dir)
+    const outPath = join(dir, 'seeded.json')
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const observed = await bootEval([
+      'run', benchmarkPath, '--out', outPath,
+      '--dsh', `${process.execPath} ${FAKE_SCRIPT}`,
+      '--trials', '1', '--seed', '-7',
+    ])
+    expect(observed.exits).toEqual([0])
+    const report = JSON.parse(readFileSync(outPath, 'utf8')) as {
+      seed: number
+      benchmarkOverrides: { seed: number }
+    }
+    expect(report.seed).toBe(-7)
+    expect(report.benchmarkOverrides.seed).toBe(-7)
+    const provenance = await bootEval(['provenance', outPath, benchmarkPath])
+    expect(provenance.out).toContain('Provenance: match')
+  })
+
+  it('rejects an invalid seed override', async () => {
+    const benchmarkPath = benchmarkYaml(tempDir())
+    const observed = await bootEval(['run', benchmarkPath, '--seed', '1.5'])
+    expect(observed.exits).toEqual([1])
+    expect(observed.err).toContain('--seed must be an integer')
+  })
+
   it('rejects an invalid concurrency override', async () => {
     const benchmarkPath = benchmarkYaml(tempDir())
     const observed = await bootEval(['run', benchmarkPath, '--concurrency', '1.5'])

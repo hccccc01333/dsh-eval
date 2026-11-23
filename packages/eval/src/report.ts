@@ -109,6 +109,7 @@ const runReportSchema = z.object({
   benchmarkOverrides: z.object({
     trials: z.number().int().positive().optional(),
     concurrency: z.number().int().positive().optional(),
+    seed: z.number().int().optional(),
     profile: z.string().min(1).optional(),
     dshCommand: z.array(z.string().min(1)).optional(),
   }).strict().optional(),

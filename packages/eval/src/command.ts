@@ -23,6 +23,7 @@ export type EvalStartupValues =
     outPath: string
     trials?: number
     concurrency?: number
+    seed?: number
     dshCommand?: readonly string[]
     profile?: string
     quiet?: boolean
@@ -111,6 +112,7 @@ interface RunCommandOptions {
   out: string
   trials?: number
   concurrency?: number
+  seed?: number
   dsh?: string
   profile?: string
   quiet?: boolean
@@ -162,6 +164,15 @@ function positiveInteger(program: Command, flag: string): (value: string) => num
   return (value) => {
     const parsed = Number(value)
     if (!Number.isInteger(parsed) || parsed <= 0) program.error(`error: ${flag} must be a positive integer`)
+    return parsed
+  }
+}
+
+/** Build a parser for an integer flag such as a reproducibility seed. */
+function integer(program: Command, flag: string): (value: string) => number {
+  return (value) => {
+    const parsed = Number(value)
+    if (!Number.isInteger(parsed)) program.error(`error: ${flag} must be an integer`)
     return parsed
   }
 }
@@ -222,6 +233,7 @@ Examples:
     .option('--out <path>', 'output run JSON path', 'eval-run.json')
     .option('--trials <n>', 'override the benchmark trials count', positiveInteger(program, '--trials'))
     .option('--concurrency <n>', 'override the in-flight trial limit', positiveInteger(program, '--concurrency'))
+    .option('--seed <n>', 'override the benchmark base seed', integer(program, '--seed'))
     .option('--dsh <cmd>', 'override the dsh launcher command, space-separated')
     .option('--profile <name>', 'override the spawned dsh profile')
     .option('--quiet', 'suppress per-trial progress lines')
@@ -247,6 +259,7 @@ Examples:
         outPath: options.out,
         ...(options.trials !== undefined ? { trials: options.trials } : {}),
         ...(options.concurrency !== undefined ? { concurrency: options.concurrency } : {}),
+        ...(options.seed !== undefined ? { seed: options.seed } : {}),
         ...(dshCommand !== undefined ? { dshCommand } : {}),
         ...(options.profile !== undefined ? { profile: options.profile } : {}),
         quiet: options.quiet === true,

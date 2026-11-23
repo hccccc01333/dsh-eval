@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Seed override.** `run --seed N` changes the base seed passed to each trial
+  and is folded into `benchmarkSha256`, so provenance detects a run whose
+  reproducibility seed differed from the benchmark file.
 - **Progress ETA.** Trial progress lines add a rough seconds-remaining estimate
   once a run has finished at least one trial; it is omitted on the last trial
   and when no usable timing is available.
@@ -330,7 +333,7 @@
 - **`test:pack` now verifies wildcard exports.** `./src/*` is expanded to the
   source tree and every file must be packed; previously removing
   `src/**/*.ts` from `files` passed the smoke test unnoticed.
-- **Documentation matches the tree.** Both READMEs report 300 tests, and a
+- **Documentation matches the tree.** Both READMEs report 302 tests, and a
   session-log discovery test is renamed for the behavior it actually asserts.
 
 ### Fixed

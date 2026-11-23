@@ -262,6 +262,7 @@ export async function executeEval(
     const run = await runBenchmark(benchmark, {
       ...(values.trials !== undefined ? { trials: values.trials } : {}),
       ...(values.concurrency !== undefined ? { concurrency: values.concurrency } : {}),
+      ...(values.seed !== undefined ? { seed: values.seed } : {}),
       ...(values.dshCommand !== undefined ? { command: values.dshCommand } : {}),
       ...(values.profile !== undefined ? { profile: values.profile } : {}),
       ...(services.judgeChat !== undefined ? { judgeChat: services.judgeChat } : {}),

@@ -103,6 +103,8 @@ describe('dsh-eval benchmark input digest', () => {
     expect(first).toBe(hashBenchmarkOverrides(base, { trials: 2, concurrency: 2, profile: 'headless' }))
     expect(hashBenchmarkOverrides(base, { trials: 3, concurrency: 2, profile: 'headless' })).not.toBe(first)
     expect(hashBenchmarkOverrides(base, { dshCommand: ['dsh'] })).not.toBe(first)
+    expect(hashBenchmarkOverrides(base, { seed: 7 })).not.toBe(first)
+    expect(hashBenchmarkOverrides(base, { seed: 7 })).toBe(hashBenchmarkOverrides(base, { seed: 7 }))
     expect(hashBenchmarkOverrides(base, {})).not.toBe(first)
   })
 

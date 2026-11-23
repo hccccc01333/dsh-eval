@@ -41,6 +41,8 @@ export interface RunOptions {
   trials?: number
   /** Override the benchmark's in-flight trial limit. */
   concurrency?: number
+  /** Override the benchmark's base seed. */
+  seed?: number
   /** Root for trial directories; defaults to the platform temp dir. */
   tempRoot?: string
   /** LLM-judge chat seam; required when the benchmark configures a judge. */
@@ -481,11 +483,13 @@ export async function runBenchmark(benchmark: Benchmark, options: RunOptions = {
     ...benchmark,
     ...(options.profile !== undefined ? { profile: options.profile } : {}),
     ...(options.command !== undefined ? { command: options.command } : {}),
+    ...(options.seed === undefined ? {} : { seed: options.seed }),
     concurrency,
   }
   const overrides: BenchmarkOverrides = {
     ...(options.trials === undefined ? {} : { trials }),
     ...(options.concurrency === undefined ? {} : { concurrency }),
+    ...(options.seed === undefined ? {} : { seed: options.seed }),
     ...(options.profile === undefined ? {} : { profile: options.profile }),
     ...(options.command === undefined ? {} : { dshCommand: [...options.command] }),
   }
@@ -538,7 +542,7 @@ export async function runBenchmark(benchmark: Benchmark, options: RunOptions = {
     ...(hasOverrides ? { benchmarkOverrides: overrides } : {}),
     createdAt: Date.now(),
     trials,
-    seed: benchmark.seed,
+    seed: effective.seed,
     pricing: benchmark.pricing?.[benchmark.model] ?? null,
     ...(benchmark.judge !== undefined ? { judge: benchmark.judge } : {}),
     tempRoot: root,

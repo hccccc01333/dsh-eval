@@ -260,6 +260,7 @@ export interface EvalRun {
   benchmarkOverrides?: {
     trials?: number
     concurrency?: number
+    seed?: number
     profile?: string
     dshCommand?: readonly string[]
   }

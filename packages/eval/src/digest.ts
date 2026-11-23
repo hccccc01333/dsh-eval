@@ -73,6 +73,7 @@ async function hashPath(
 export interface BenchmarkOverrides {
   trials?: number
   concurrency?: number
+  seed?: number
   profile?: string
   dshCommand?: readonly string[]
 }
@@ -86,6 +87,7 @@ export function hashBenchmarkOverrides(baseSha256: string, overrides: BenchmarkO
   fragment(hash, 'benchmark-sha256', baseSha256)
   fragment(hash, 'trials', overrides.trials === undefined ? '' : String(overrides.trials))
   fragment(hash, 'concurrency', overrides.concurrency === undefined ? '' : String(overrides.concurrency))
+  fragment(hash, 'seed', overrides.seed === undefined ? '' : String(overrides.seed))
   fragment(hash, 'profile', overrides.profile ?? '')
   fragment(hash, 'dshCommand', (overrides.dshCommand ?? []).join('\u0000'))
   return hash.digest('hex')
