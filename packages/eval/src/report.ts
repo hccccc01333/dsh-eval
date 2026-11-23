@@ -251,6 +251,7 @@ export function renderBriefReport(run: EvalRun): string {
   if (reliability !== null) {
     const graded = run.cases.filter(result => typeof result.grade?.taskSuccess === 'boolean').length
     lines.push(`- task success: ${(reliability.passAt1 * 100).toFixed(1)}% · pass@k (${graded} graded): ${(reliability.passAtK * 100).toFixed(1)}% · pass^k: ${(reliability.passAllK * 100).toFixed(1)}%`)
+    lines.push(`- strict pass@1 (all ${coverage.total} trials): ${(reliability.strictPassAt1 * 100).toFixed(1)}%`)
   }
   if (interval !== null && interval.lower !== null && interval.upper !== null) {
     lines.push(`- task precision: ${(interval.rate * 100).toFixed(1)}% [95% CI ${(interval.lower * 100).toFixed(1)}%, ${(interval.upper * 100).toFixed(1)}%]`)

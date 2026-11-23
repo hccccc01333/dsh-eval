@@ -4,6 +4,8 @@
 
 ### Added
 
+- **Brief strict rate.** `report --brief` shows error-inclusive strict pass@1
+  beside the graded-only task rate.
 - **Gate evidence consistency.** Per-case evidence now uses the metric that
   actually regressed; in significance mode a confirmed case regression also
   fails the gate, so a PASS report cannot advertise one.

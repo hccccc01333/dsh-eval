@@ -429,6 +429,7 @@ describe('dsh-eval report persistence and rendering', () => {
     expect(brief).toContain('- tool success: 100.0%')
     expect(brief).toContain('- steps / tokens / cost per trial: 2.0 / 10 / $0.000001')
     expect(brief).toContain('- task success: 66.7%')
+    expect(brief).toContain('- strict pass@1 (all 4 trials): 50.0%')
     expect(brief).toMatch(/- task precision: 66\.7% \[95% CI .*\]/u)
     expect(brief).toContain('- judge failures: 2')
     expect(brief.split('\n').length).toBeLessThan(12)
