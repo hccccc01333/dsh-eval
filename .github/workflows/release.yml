@@ -47,14 +47,30 @@ jobs:
             echo "could not mint a GitHub OIDC token" >&2
             exit 1
           fi
+          # Print the non-sensitive claims npm matches against, so a mismatch
+          # can be diagnosed by comparing them with the package settings page.
+          oidc_payload="$(printf '%s' "${oidc}" | cut -d. -f2 | tr '_-' '/+' | base64 -di 2>/dev/null)"
+          if [ -n "${oidc_payload}" ]; then
+            echo "OIDC identity presented to npm:"
+            printf '%s' "${oidc_payload}" \
+              | jq '{repository, repository_owner, workflow, job_workflow_ref, ref, event_name}' 2>/dev/null || true
+          fi
           status="$(curl -s -o exchange.json -w '%{http_code}' -X POST \
             -H "Authorization: Bearer ${oidc}" \
             https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/dsh-eval)"
           echo "exchange HTTP ${status}"
           if [ "${status}" != "200" ]; then
-            echo "npm rejected this workflow's identity: no trusted publisher matches it" >&2
+            echo "npm rejected this workflow's identity (HTTP ${status})." >&2
             # Only print the body on failure; a 200 body carries a publish token.
             cat exchange.json >&2
+            echo >&2
+            echo "A 'package not found' body means the package has no Trusted Publisher entry yet." >&2
+            echo "Configure it once at https://www.npmjs.com/package/dsh-eval/access :" >&2
+            echo "  Trusted Publisher -> GitHub Actions" >&2
+            echo "  Organization or user: hccccc01333" >&2
+            echo "  Repository:           dsh-eval" >&2
+            echo "  Workflow filename:    release.yml" >&2
+            echo "  Environment:          (leave empty)" >&2
             exit 1
           fi
           echo "trusted publisher is wired: a publish from this workflow would authenticate"
