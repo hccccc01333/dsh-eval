@@ -59,9 +59,11 @@ jobs:
             -H "Authorization: Bearer ${oidc}" \
             https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/dsh-eval)"
           echo "exchange HTTP ${status}"
-          if [ "${status}" != "200" ]; then
+          # npm answers 201 when it creates a fresh exchange token, 200 on a
+          # cached one; both mean the identity authenticated successfully.
+          if [ "${status:0:1}" != "2" ]; then
             echo "npm rejected this workflow's identity (HTTP ${status})." >&2
-            # Only print the body on failure; a 200 body carries a publish token.
+            # Only print the body on failure; a 2xx body carries a publish token.
             cat exchange.json >&2
             echo >&2
             echo "A 'package not found' body means the package has no Trusted Publisher entry yet." >&2
