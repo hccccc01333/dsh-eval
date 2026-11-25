@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.1 — 2026-11-25
+
+### Changed
+
+- **npm landing page.** The package README that npm displays is now at
+  feature parity with the repository homepage: badges, hero, a value table,
+  status line and screenshot gallery. npm selected the Chinese README from the
+  tarball, so both bundled READMEs were brought to the same standard.
+
 ## 0.5.0 — 2026-11-25
 
 ### Added
