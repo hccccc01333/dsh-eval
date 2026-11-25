@@ -2,16 +2,26 @@
 
 [English](README.md) | 中文
 
+[![npm version](https://img.shields.io/npm/v/dsh-eval)](https://www.npmjs.com/package/dsh-eval)
+[![CI](https://github.com/hccccc01333/dsh-eval/actions/workflows/ci.yml/badge.svg)](https://github.com/hccccc01333/dsh-eval/actions/workflows/ci.yml)
+[![license](https://img.shields.io/github/license/hccccc01333/dsh-eval)](LICENSE)
+
 ![dsh-eval —— 有证据的 Agent 评测](https://raw.githubusercontent.com/hccccc01333/dsh-eval/master/assets/hero.png)
 
 **面向 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) 的有证据 Agent 评测。** 一份 `benchmark.yaml` 进，可审计的 JSON、Markdown、CSV 与自包含 HTML 出。
 
-- **诚实的比率**：严格 pass@1 把超时和错误留在分母里
-- **真正的推断**：配对符号检验、功效下限、bootstrap 区间、Bonferroni 校正
-- **可审计的 run**：YAML、提示词、工作区与 CLI 覆盖项折叠成一个摘要
-- **判官质检**：一致率、kappa、区分度、排序准确率、Brier
-- **面向 CI**：`--require-significance` 门禁 + 硬成本/延迟预算
-- **零外部资源报告**：自包含深色模式 HTML 仪表盘
+> 没有不确定性、配对证据与来源摘要的准确率数字，只是猜测。dsh-eval 让报告里的每个结论都能追溯到 trial、提示词与 benchmark 文件哈希。
+
+| | |
+|---|---|
+| **诚实的比率** | 严格 pass@1 把超时和错误留在分母里 |
+| **真正的推断** | 配对符号检验、功效下限、bootstrap 区间、Bonferroni 校正 |
+| **可审计的 run** | YAML、提示词、工作区与 CLI 覆盖项折叠成一个摘要 |
+| **判官质检** | 一致率、kappa、区分度、排序准确率、Brier |
+| **面向 CI** | `--require-significance` 门禁 + 硬成本/延迟预算 |
+| **零外部资源报告** | 自包含、适配深色模式的 HTML 仪表盘 |
+
+`dsh-eval@0.5.1` · 305 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 本包同时是一个 bundle 和一个命令行应用。装进 profile 后即可运行评测：
 
