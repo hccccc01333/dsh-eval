@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  compareRuns, formatPValue, pairedCases, pairedCaseSignificance, pairedCompare, pairedSigns,
+  compareRuns, formatPValue, pairedCases, pairedCaseSignificance, pairedCompare, pairedSignals, pairedSigns,
   renderCaseSignificance, renderCompareJson, renderCompareMarkdown, renderPairedCases,
 } from '../src/compare.ts'
 import type { EvalRun, EvalTrialResult } from '../src/types.ts'
@@ -609,5 +609,23 @@ describe('dsh-eval comparison', () => {
     })
     expect(pairedCompare(bare('a'), bare('b'))).toBeNull()
     expect(pairedCases(bare('a'), bare('b'))).toBeNull()
+    expect(pairedSignals(bare('a'), bare('b'))).toBeNull()
+  })
+
+  it('computes a lightweight paired verdict without bootstrap intervals', () => {
+    const a = buildRun({ model: 'a', cases: [flexibleTrial('c', 1, { taskSuccess: false }), flexibleTrial('c', 2, { taskSuccess: true })] })
+    const b = buildRun({ model: 'b', cases: [flexibleTrial('c', 1, { taskSuccess: true }), flexibleTrial('c', 2, { taskSuccess: true })] })
+    const full = pairedCompare(a, b)
+    const signals = pairedSignals(a, b)
+    expect(signals).toMatchObject({
+      pairs: full?.pairs,
+      wins: full?.wins,
+      losses: full?.losses,
+      ties: full?.ties,
+      primaryMetric: full?.primaryMetric,
+      pValue: full?.test.pValue,
+      alpha: 0.05,
+    })
+    expect(signals).not.toHaveProperty('stepsDelta')
   })
 })

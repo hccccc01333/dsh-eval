@@ -19,6 +19,14 @@ afterEach(() => {
 })
 
 describe('dsh-eval benchmark loading', () => {
+  it('loads the documented minimal example without any fixture files', async () => {
+    const benchmark = await loadBenchmark(join(import.meta.dirname, '..', '..', '..', 'examples', 'minimal-benchmark.yaml'))
+    expect(benchmark.name).toBe('quickstart')
+    expect(benchmark.cases).toHaveLength(1)
+    expect(benchmark.cases[0]?.expected?.answerRegex).toBe('^pong$')
+    expect(benchmark.cases[0]?.workspace).toBeUndefined()
+  })
+
   it('loads a document with defaults and resolves relative paths', async () => {
     const dir = tempDir()
     writeFileSync(join(dir, 'prompt.md'), 'Fix the tests.')

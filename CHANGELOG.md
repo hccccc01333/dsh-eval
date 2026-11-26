@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.5.3 — 2026-11-27
+
+### Fixed
+
+- **Quickstart commands were copy-paste broken.** All four READMEs compared
+  `eval-v1.json`/`eval-v2.json`, files no command ever produced. They now run
+  the benchmark twice with explicit `--out` paths and compare those, and
+  `validate` the benchmark first. The inline `benchmark.yaml` referenced a
+  `fixtures/` directory and `check.sh` that do not exist in the repository;
+  it is replaced by a self-contained `answerRegex` example. A copyable
+  `examples/minimal-benchmark.yaml` is checked into the repo and verified by a
+  test, so the documented quickstart actually runs.
+- **Leaderboards wasted three bootstrap resamples per row.** `buildLeaderboard`
+  called `pairedCompare`, which unconditionally computes step/token/score
+  intervals it never displays — ~3 × 2000 × pairs wasted iterations per row.
+  A new lightweight `pairedSignals` derives the same verdict without intervals;
+  `pairedCompare` shares the same sign-test core, so full reports are unchanged.
+- **`toolRegex` started one regex worker per tool call, including duplicates.**
+  Set predicates (some/every/any regex match) do not need repeated names, so
+  the names are deduplicated before matching — a trial with 100 calls to 5
+  tools now starts 5 workers rather than 100.
+
+### Added
+
+- **`rejudge --allowed-root <dir>`.** The re-judge trace boundary can now be
+  explicitly authorized on the command line instead of relying on the default
+  cwd / `dsh-eval-*` temp-tree boundary. Fully backward compatible: omitting
+  the option keeps the existing safe default.
+
 ## 0.5.2 — 2026-11-27
 
 ### Fixed

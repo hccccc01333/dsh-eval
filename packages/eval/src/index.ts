@@ -256,7 +256,9 @@ export async function executeEval(
     if (values.kind === 'rejudge') {
       if (services.judgeChat === undefined) throw new Error('rejudge: no LLM chat seam is available — configure the eval profile\'s LLM provider, or use replay runs with --judge-model')
       const run = await loadRunReport(values.runPath)
-      const rejudged = await rejudgeRun(run, services.judgeChat, values.judge)
+      const rejudged = await rejudgeRun(run, services.judgeChat, values.judge, {
+        ...(values.allowedRoot === undefined ? {} : { allowedRoot: values.allowedRoot }),
+      })
       await writeRunReport(rejudged, values.outPath)
       const judgedCount = rejudged.cases.filter(result =>
         result.judge?.finalAnswerScore !== null && result.judge?.finalAnswerScore !== undefined,

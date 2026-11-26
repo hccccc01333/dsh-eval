@@ -1,0 +1,9 @@
+# A self-contained benchmark you can copy and run without any fixture files.
+# Grading uses answerRegex, so no workspace or check script is needed.
+name: quickstart
+model: deepseek-v4
+cases:
+  - id: hello
+    prompt: Reply with exactly "pong".
+    expected:
+      answerRegex: '^pong$'

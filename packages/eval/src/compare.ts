@@ -209,7 +209,21 @@ function pairedTrials(a: EvalRun, b: EvalRun): { a: EvalTrialResult; b: EvalTria
  * @returns paired statistics, or null when no trial is completed in both runs
  * or no primary metric is measured on any pair.
  */
-export function pairedCompare(a: EvalRun, b: EvalRun): PairedStats | null {
+/**
+ * The sign-test part of a paired comparison, shared by the full comparison
+ * (which adds bootstrap intervals) and the lightweight leaderboard path.
+ */
+interface PairedCore {
+  pairs: { a: EvalTrialResult; b: EvalTrialResult }[]
+  primaryMetric: PairedMetric
+  measuredPairs: number
+  wins: number
+  losses: number
+  ties: number
+  test: SignTestOutcome
+}
+
+function pairedCore(a: EvalRun, b: EvalRun): PairedCore | null {
   const pairs = pairedTrials(a, b)
   if (pairs.length === 0) return null
   const primaryMetric = pickMetric(pairs)
@@ -218,9 +232,6 @@ export function pairedCompare(a: EvalRun, b: EvalRun): PairedStats | null {
   let losses = 0
   let ties = 0
   let measuredPairs = 0
-  const stepDeltas: number[] = []
-  const tokenDeltas: number[] = []
-  const scoreDeltas: number[] = []
   for (const pair of pairs) {
     const aOutcome = metricOutcome(pair.a, primaryMetric)
     const bOutcome = metricOutcome(pair.b, primaryMetric)
@@ -231,6 +242,49 @@ export function pairedCompare(a: EvalRun, b: EvalRun): PairedStats | null {
       else if (sign < 0) losses += 1
       else ties += 1
     }
+  }
+  return { pairs, primaryMetric, measuredPairs, wins, losses, ties, test: signTest(wins, losses) }
+}
+
+/**
+ * Lightweight paired verdict for leaderboards: sign counts, p-value and the
+ * single-comparison alpha, without the three bootstrap intervals that
+ * {@link pairedCompare} computes but a leaderboard never displays. Skipping
+ * those resamples avoids ~3 × 2000 × pairs wasted iterations per board row.
+ */
+export interface PairedSignals {
+  pairs: number
+  wins: number
+  losses: number
+  ties: number
+  primaryMetric: PairedMetric
+  pValue: number
+  /** Matches the default alpha of the Bonferroni correction in `pairedCompare`. */
+  alpha: number
+}
+
+export function pairedSignals(a: EvalRun, b: EvalRun): PairedSignals | null {
+  const core = pairedCore(a, b)
+  if (core === null) return null
+  return {
+    pairs: core.measuredPairs,
+    wins: core.wins,
+    losses: core.losses,
+    ties: core.ties,
+    primaryMetric: core.primaryMetric,
+    pValue: core.test.pValue,
+    alpha: 0.05,
+  }
+}
+
+export function pairedCompare(a: EvalRun, b: EvalRun): PairedStats | null {
+  const core = pairedCore(a, b)
+  if (core === null) return null
+  const { pairs, primaryMetric, measuredPairs, wins, losses, ties, test } = core
+  const stepDeltas: number[] = []
+  const tokenDeltas: number[] = []
+  const scoreDeltas: number[] = []
+  for (const pair of pairs) {
     const aMetrics = pair.a.metrics
     const bMetrics = pair.b.metrics
     if (aMetrics !== undefined && bMetrics !== undefined) {
@@ -243,7 +297,6 @@ export function pairedCompare(a: EvalRun, b: EvalRun): PairedStats | null {
       scoreDeltas.push(bScore - aScore)
     }
   }
-  const test = signTest(wins, losses)
   // The printed p-value and each non-null interval are tested as one family.
   const comparisons = 1 + [stepDeltas, tokenDeltas, scoreDeltas].filter(deltas => deltas.length > 0).length
   const correction = bonferroni(test.pValue, comparisons)

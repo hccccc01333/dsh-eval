@@ -97,4 +97,5 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
 - ✅ **npm Trusted Publishing** (done). `dsh-eval` is configured for GitHub
   Actions OIDC at <https://www.npmjs.com/package/dsh-eval/access> — owner
   `hccccc01333`, repo `dsh-eval`, workflow `release.yml`, no environment.
-  Tag pushes publish with SLSA provenance; `0.5.0` and `0.5.1` shipped this way.
+  Tag pushes publish with SLSA provenance; every release from `0.5.0` onward
+  has shipped this way.

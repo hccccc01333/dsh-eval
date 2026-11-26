@@ -98,6 +98,8 @@ export type EvalStartupValues =
     outPath: string
     /** Optional judge configuration overriding the one stored in the run. */
     judge?: BenchmarkJudge
+    /** Explicitly authorized trace root, forwarded to the rejudge directory boundary. */
+    allowedRoot?: string
   }
   | {
     kind: 'import'
@@ -133,6 +135,7 @@ interface RejudgeCommandOptions {
   judgeProvider?: string
   judgeRubric?: string
   judgeMaxScore?: number
+  allowedRoot?: string
 }
 
 /** Options accepted by `eval import`. */
@@ -391,6 +394,7 @@ Examples:
   rejudge
     .argument('<run.json>', 'path to a run report with persisted traces and case inputs; pass --judge-model when the run has no judge config (e.g. replay runs)')
     .option('--out <path>', 'output run JSON path; must differ from the input', 'rejudged-run.json')
+    .option('--allowed-root <dir>', 'explicitly authorize this directory (and its subdirectories) as the trace root instead of the default cwd/temp run boundary')
     .option('--judge-model <id>', 'judge model id; also enables overriding the stored judge config')
     .option('--judge-provider <name>', 'judge provider route, default deepseek')
     .option('--judge-rubric <text>', 'rubric appended to the judge prompt')
@@ -404,6 +408,7 @@ Examples:
         kind: 'rejudge',
         runPath,
         outPath: options.out,
+        ...(options.allowedRoot === undefined ? {} : { allowedRoot: options.allowedRoot }),
         ...(options.judgeModel === undefined ? {} : {
           judge: {
             provider: options.judgeProvider ?? 'deepseek',

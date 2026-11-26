@@ -266,6 +266,13 @@ describe('dsh-eval command composition', () => {
     expect(rejudged.cases[0]?.judge?.finalAnswerScore).toBe(7)
     expect(rejudged.grading?.finalAnswerScore).toBe(7)
 
+    // An explicitly authorized trace root is forwarded through the CLI too.
+    const explicitCode = await executeEval(
+      { kind: 'rejudge', runPath, outPath, allowedRoot: dirname(FIXTURE_LOG) }, io,
+      { judgeChat: async () => '{"finalAnswerScore": 7, "hallucination": false}' },
+    )
+    expect(explicitCode).toBe(0)
+
     const noSeam = await executeEval({ kind: 'rejudge', runPath, outPath }, io)
     expect(noSeam).toBe(1)
     expect(existsSync(outPath)).toBe(true)
@@ -445,6 +452,16 @@ describe('dsh-eval command composition', () => {
       judge: { model: 'judge-v3', provider: 'deepseek', maxScore: 10 },
     })
     expect((published[1] as { judge?: { rubric?: string } }).judge?.rubric).toBeUndefined()
+  })
+
+  it('parses --allowed-root for rejudge and omits it when absent', async () => {
+    const published: EvalStartupValues[] = []
+    const program = evalCommand(value => published.push(value))
+    await program.parseAsync(['node', 'dsh', 'rejudge', 'run.json', '--allowed-root', '/trusted/traces'])
+    expect(published[0]).toMatchObject({ kind: 'rejudge', allowedRoot: '/trusted/traces' })
+
+    await program.parseAsync(['node', 'dsh', 'rejudge', 'run.json'])
+    expect((published[1] as { allowedRoot?: string }).allowedRoot).toBeUndefined()
   })
 
   it('prints help and exits 0 without running', async () => {

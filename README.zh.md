@@ -73,7 +73,7 @@
 
 ## 状态
 
-`dsh-eval@0.5.2` · 332 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.5.3` · 335 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 `0.3.1` 起可安装：`0.3.0` 的 tarball 漏掉了入口 import 的运行时模块，导致每次安装都报 `ERR_MODULE_NOT_FOUND`。详见 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -100,30 +100,25 @@ pnpm --filter dsh-eval test
 
 ```sh
 dsh plugin --profile eval add dsh-eval
-dsh eval run benchmark.yaml --out eval-run.json
-dsh eval report eval-run.json
-dsh eval compare eval-v1.json eval-v2.json
+cp examples/minimal-benchmark.yaml benchmark.yaml  # 自包含，无需夹具文件
+dsh eval validate benchmark.yaml
+dsh eval run benchmark.yaml --out run-v1.json
+dsh eval report run-v1.json --brief
+dsh eval run benchmark.yaml --out run-v2.json
+dsh eval compare run-v1.json run-v2.json
 dsh eval import codex ~/.codex/sessions/.../session.jsonl --out codex-run.json
 ```
 
 ## Benchmark 文档
 
 ```yaml
-name: skill-regression
+name: quickstart
 model: deepseek-v4
-profile: headless
-command: [dsh]
-trials: 3
-timeoutMs: 600000
-seed: 42
 cases:
-  - id: fix-tests-001
-    prompt: Fix the failing tests in this workspace.
-    timeoutMs: 120000  # 可选的 case 级超时覆盖
-    workspace: ./fixtures/fix-tests
+  - id: hello
+    prompt: Reply with exactly "pong".
     expected:
-      tool: bash
-      check: ./check.sh
+      answerRegex: '^pong$'
 pricing:
   deepseek-v4:
     inputUsdPerMTokens: 0.27
@@ -132,7 +127,7 @@ pricing:
     outputUsdPerMTokens: 1.10
 ```
 
-每个 trial 在独立的临时工作区、隔离的 `DSH_HOME` 与非交互权限下运行。主 session 日志即该 trial 的 trace；脚本化评分把 `taskSuccess` 与 `toolSelectionAccuracy` 合并为 run 级比率。完整字段参考见 [packages/eval/README.zh.md](packages/eval/README.zh.md)。
+该示例自包含：`answerRegex` 直接评分最终回复，不需要工作区或 check 脚本。可直接复制的文件见 [examples/minimal-benchmark.yaml](examples/minimal-benchmark.yaml)。每个 trial 在独立的临时工作区、隔离的 `DSH_HOME` 与非交互权限下运行，主 session 日志即该 trial 的 trace。脚本化评分（`checkArgv`/`checkShell`、工具匹配）、`workspace`、`trials`、`seed` 等字段见 [packages/eval/README.zh.md](packages/eval/README.zh.md)。
 
 ## 指标
 
@@ -200,10 +195,10 @@ scripts/          harness-closure.mjs —— 可选的本地 harness workspace �
 改 `packages/eval/package.json` 的 `version` 并在 CHANGELOG 里加一节，然后推同名 tag：
 
 ```sh
-git tag v0.5.2 && git push origin v0.5.2
+git tag v0.5.3 && git push origin v0.5.3
 ```
 
-`.github/workflows/release.yml` 会重跑各道闸门，再通过 **trusted publishing（OIDC）** 带 provenance 发布到 npm，任何机器上都不需要存 token。npm 的 Trusted Publisher 登记（GitHub Actions，workflow 填 `release.yml`）已完成，`0.5.0` 与 `0.5.1` 均由此发布。账号的第二因子是安全密钥，因此既不存储也不依赖长期 token。
+`.github/workflows/release.yml` 会重跑各道闸门，再通过 **trusted publishing（OIDC）** 带 provenance 发布到 npm，任何机器上都不需要存 token。npm 的 Trusted Publisher 登记（GitHub Actions，workflow 填 `release.yml`）已完成，自 `0.5.0` 起的所有版本均由此发布。账号的第二因子是安全密钥，因此既不存储也不依赖长期 token。
 
 完整发布清单、Trusted Publisher 的精确字段（仅在换发布账号或仓库时需要重配）
 与手动 OIDC 身份检查见 [RELEASE.md](RELEASE.md)。

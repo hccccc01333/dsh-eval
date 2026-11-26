@@ -155,7 +155,10 @@ async function gradeTrial(
 ): Promise<EvalGrade> {
   const expected = caseValue.expected
   if (expected === undefined) return { taskSuccess: null, toolSelectionAccuracy: null }
-  const names = trace.events.flatMap(event => event.type === 'tool/call' ? [event.data.name] : [])
+  // Every configured check is a set predicate (some/every/any regex match), so
+  // repeated calls are redundant. A trial with 100 calls to 5 tools would
+  // otherwise start 100 regex workers instead of 5.
+  const names = [...new Set(trace.events.flatMap(event => event.type === 'tool/call' ? [event.data.name] : []))]
   const toolSelectionAccuracy = await toolSelectionOf(expected, names)
   let taskSuccess: boolean | null = null
   const shell = expected.checkShell !== undefined

@@ -21,15 +21,16 @@
 | **面向 CI** | `--require-significance` 门禁 + 硬成本/延迟预算 |
 | **零外部资源报告** | 自包含、适配深色模式的 HTML 仪表盘 |
 
-`dsh-eval@0.5.2` · 332 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.5.3` · 335 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 本包同时是一个 bundle 和一个命令行应用。装进 profile 后即可运行评测：
 
 ```sh
 dsh plugin --profile eval add dsh-eval
-dsh eval run benchmark.yaml
-dsh eval report eval-run.json
-dsh eval compare eval-v1.json eval-v2.json
+dsh eval run benchmark.yaml --out run-v1.json
+dsh eval report run-v1.json --brief
+dsh eval run benchmark.yaml --out run-v2.json
+dsh eval compare run-v1.json run-v2.json
 ```
 
 `dsh eval` 是 `--profile eval` 的启动器别名，eval profile 由 `dsh-base` 加本 bundle 组成。每个 trial 以 benchmark 配置的 `dsh` 命令（默认 `dsh`）和配置的 profile（默认 `headless`）启动，带有独立的临时工作区、隔离的 `DSH_HOME`，以及一层强制纯 JSONL 持久化和非交互 workspace-write/never-approval 权限的补丁。收获的主 session 日志即该 trial 的 trace；该 trial `DSH_HOME` 下的子 agent 日志会在指标折叠前合并进来。
@@ -55,20 +56,13 @@ run 进行中时，每个完成的 trial 会向 stderr 写一行有长度上限�
 ## Benchmark 文档
 
 ```yaml
-name: skill-regression
+name: quickstart
 model: deepseek-v4
-profile: headless
-command: [dsh]
-trials: 3
-timeoutMs: 600000
-seed: 42
 cases:
-  - id: fix-tests-001
-    prompt: Fix the failing tests in this workspace.
-    workspace: ./fixtures/fix-tests
+  - id: hello
+    prompt: Reply with exactly "pong".
     expected:
-      tool: bash
-      check: ./check.sh
+      answerRegex: '^pong$'
 pricing:
   deepseek-v4:
     inputUsdPerMTokens: 0.27
@@ -76,6 +70,8 @@ pricing:
     cacheWriteUsdPerMTokens: 0.27
     outputUsdPerMTokens: 1.10
 ```
+
+该自包含示例用 `answerRegex` 评分最终回复，不需要工作区或 check 脚本。脚本化评分（`checkArgv`/`checkShell`、工具匹配）与其他字段见下表。
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|

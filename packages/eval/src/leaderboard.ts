@@ -11,7 +11,7 @@
  * @module dsh-eval/leaderboard
  */
 
-import { formatPValue, pairedCompare } from './compare.ts'
+import { formatPValue, pairedSignals } from './compare.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
 import { signTest, signTestPower } from './stats.ts'
 import type { EvalRun } from './types.ts'
@@ -184,7 +184,7 @@ export function buildLeaderboard(
         }
         continue
       }
-      const paired = pairedCompare(leaderRun, rowRun)
+      const paired = pairedSignals(leaderRun, rowRun)
       if (paired === null) {
         row.significance = {
           adjustedP: 1, detectable: false, worse: false, primaryMetric: null,
@@ -195,17 +195,17 @@ export function buildLeaderboard(
       const worse = paired.losses > paired.wins
       // The verdict concerns the one primary metric only, so the board's
       // comparison family is the only correction that applies here. Comparing
-      // every metric (as `paired.correction` does) would double-count.
-      const adjustedP = Math.min(1, paired.test.pValue * family)
+      // every metric (as `pairedCompare` does) would double-count.
+      const adjustedP = Math.min(1, paired.pValue * family)
       const detectable = signTestPower(paired.losses + paired.wins,
-        family, paired.correction.alpha).detectable
+        family, paired.alpha).detectable
       row.significance = {
         adjustedP,
         detectable,
         worse,
         primaryMetric: paired.primaryMetric,
         verdict: !detectable ? 'underpowered'
-          : worse && adjustedP <= paired.correction.alpha ? 'significantly-behind'
+          : worse && adjustedP <= paired.alpha ? 'significantly-behind'
             : worse ? 'behind-not-significant' : 'ahead-or-tied',
       }
     }

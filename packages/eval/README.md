@@ -23,10 +23,11 @@ The package is a bundle and a command-line app. Install it into a profile and ru
 
 ```sh
 dsh plugin --profile eval add dsh-eval
-dsh eval run benchmark.yaml
-dsh eval report eval-run.json
-dsh eval compare eval-v1.json eval-v2.json
-dsh eval provenance eval-run.json benchmark.yaml
+dsh eval run benchmark.yaml --out run-v1.json
+dsh eval report run-v1.json --brief
+dsh eval run benchmark.yaml --out run-v2.json
+dsh eval compare run-v1.json run-v2.json
+dsh eval provenance run-v1.json benchmark.yaml
 ```
 
 `dsh eval provenance <run.json> <benchmark.yaml>` re-hashes the benchmark YAML, its prompt files, workspace trees and replay logs and compares the result with the run's `benchmarkSha256`. It prints `match`, `missing` or `mismatch`, supports `--json`, and exits 1 unless the digests match, so CI can reject reports whose inputs changed after the run. Effective CLI overrides (`--trials`, `--concurrency`, `--profile`, `--dsh`) are persisted as `benchmarkOverrides` and folded into that digest, so a run with altered settings cannot verify against the unchanged YAML.
@@ -54,20 +55,13 @@ While a run is in flight, each finished trial writes one bounded line to stderr,
 ## Benchmark document
 
 ```yaml
-name: skill-regression
+name: quickstart
 model: deepseek-v4
-profile: headless
-command: [dsh]
-trials: 3
-timeoutMs: 600000
-seed: 42
 cases:
-  - id: fix-tests-001
-    prompt: Fix the failing tests in this workspace.
-    workspace: ./fixtures/fix-tests
+  - id: hello
+    prompt: Reply with exactly "pong".
     expected:
-      tool: bash
-      check: ./check.sh
+      answerRegex: '^pong$'
 pricing:
   deepseek-v4:
     inputUsdPerMTokens: 0.27
@@ -75,6 +69,10 @@ pricing:
     cacheWriteUsdPerMTokens: 0.27
     outputUsdPerMTokens: 1.10
 ```
+
+This self-contained example grades the final answer with `answerRegex`, so no
+workspace or check script is needed. Scripted grading (`checkArgv`/`checkShell`,
+tool matching) and the other fields are below.
 
 | Field | Default | Meaning |
 |---|---|---|

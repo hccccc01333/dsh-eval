@@ -8,7 +8,8 @@ publishing `dsh-eval@X.Y.Z` to npm with provenance.
 
 The publishing account uses a security key for 2FA, so the npm CLI cannot
 complete a publish and no long-lived token is stored. This package is already
-enrolled for OIDC trusted publishing; `0.5.0` and `0.5.1` shipped through it.
+enrolled for OIDC trusted publishing; every release from `0.5.0` onward has
+shipped through it.
 The entry lives at <https://www.npmjs.com/package/dsh-eval/access> with these
 fields, which only need re-entering if the publishing account or repository
 changes:

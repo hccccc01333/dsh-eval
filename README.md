@@ -76,7 +76,7 @@ Progress lines are bounded and control-character safe, and `dsh eval gate` turns
 
 ## Status
 
-`dsh-eval@0.5.2` · 332 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.5.3` · 335 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 
@@ -103,30 +103,25 @@ Running benchmarks needs a `dsh` launcher; `pnpm test` does not (the suite is ke
 
 ```sh
 dsh plugin --profile eval add dsh-eval
-dsh eval run benchmark.yaml --out eval-run.json
-dsh eval report eval-run.json
-dsh eval compare eval-v1.json eval-v2.json
+cp examples/minimal-benchmark.yaml benchmark.yaml  # self-contained, no fixtures needed
+dsh eval validate benchmark.yaml
+dsh eval run benchmark.yaml --out run-v1.json
+dsh eval report run-v1.json --brief
+dsh eval run benchmark.yaml --out run-v2.json
+dsh eval compare run-v1.json run-v2.json
 dsh eval import codex ~/.codex/sessions/.../session.jsonl --out codex-run.json
 ```
 
 ## Benchmark document
 
 ```yaml
-name: skill-regression
+name: quickstart
 model: deepseek-v4
-profile: headless
-command: [dsh]
-trials: 3
-timeoutMs: 600000
-seed: 42
 cases:
-  - id: fix-tests-001
-    prompt: Fix the failing tests in this workspace.
-    timeoutMs: 120000  # optional per-case override
-    workspace: ./fixtures/fix-tests
+  - id: hello
+    prompt: Reply with exactly "pong".
     expected:
-      tool: bash
-      check: ./check.sh
+      answerRegex: '^pong$'
 pricing:
   deepseek-v4:
     inputUsdPerMTokens: 0.27
@@ -135,7 +130,13 @@ pricing:
     outputUsdPerMTokens: 1.10
 ```
 
-Each trial runs in a private temp workspace with an isolated `DSH_HOME` and non-interactive permissions. The primary session log becomes the trial's trace; scripted grading pools `taskSuccess` and `toolSelectionAccuracy` into run-level rates. See [packages/eval/README.md](packages/eval/README.md) for the full field reference.
+This example is self-contained: `answerRegex` grades the final answer without a
+workspace or check script. The copyable file is
+[examples/minimal-benchmark.yaml](examples/minimal-benchmark.yaml). Each trial
+runs in a private temp workspace with an isolated `DSH_HOME` and non-interactive
+permissions; the primary session log becomes the trial's trace. For scripted
+grading (`checkArgv`/`checkShell`, tool matching), `workspace`, `trials`, `seed`
+and other fields, see [packages/eval/README.md](packages/eval/README.md).
 
 ## Metrics
 
@@ -203,10 +204,10 @@ scripts/          harness-closure.mjs — optional local-harness workspace closu
 Bump `version` in `packages/eval/package.json` and add a CHANGELOG section, then push a matching tag:
 
 ```sh
-git tag v0.5.2 && git push origin v0.5.2
+git tag v0.5.3 && git push origin v0.5.3
 ```
 
-`.github/workflows/release.yml` re-runs the gates and publishes to npm through **trusted publishing (OIDC)** with a provenance statement — no token on any machine. The npm Trusted Publisher entry (GitHub Actions, workflow `release.yml`) is already configured; `0.5.0` and `0.5.1` shipped this way. The account's second factor is a security key, so a long-lived token is neither stored nor needed.
+`.github/workflows/release.yml` re-runs the gates and publishes to npm through **trusted publishing (OIDC)** with a provenance statement — no token on any machine. The npm Trusted Publisher entry (GitHub Actions, workflow `release.yml`) is already configured; every release from `0.5.0` onward has shipped this way. The account's second factor is a security key, so a long-lived token is neither stored nor needed.
 
 See [RELEASE.md](RELEASE.md) for the full release checklist, the exact Trusted
 Publisher fields (needed again only if the publishing account or repository
