@@ -90,7 +90,9 @@ export function computeCoverage(run: EvalRun): RunCoverage {
   let unscored = 0
   for (const result of run.cases) {
     if (result.status === 'completed') completed += 1
-    else errors += 1
+    // Timeouts are their own category: counting a timed-out trial here as well
+    // would double-count it and make the report look like two unscored trials.
+    else if (!result.timedOut) errors += 1
     if (result.timedOut) timeouts += 1
     // A completed trial without a task grade is just as absent from quality
     // rates as an error; keep this identical to computeReliability().unscored.

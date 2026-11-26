@@ -167,6 +167,18 @@ function formatScore(value: number | null, maxScore: number): string {
   return value === null ? '–' : `${value.toFixed(1)}/${maxScore}`
 }
 
+/**
+ * Neutralize markdown-significant characters in identifiers that come from
+ * benchmark files or model config before they land in a table cell, heading,
+ * or detail list. A literal `|` would split a cell, a newline would forge a
+ * row or heading, and a backtick could close an inline code span to smuggle in
+ * fake markdown. Normal identifiers contain none of these, so output is
+ * unchanged for them.
+ */
+function escapeMarkdown(value: string): string {
+  return value.replace(/[\r\n|`]/gu, ' ')
+}
+
 /** Render one reliability block; callers pass only a non-null summary. */
 function renderReliability(summary: ReliabilitySummary, graded: number): string[] {
   const label = summary.dimension === 'task' ? 'task success' : 'tool selection accuracy'
@@ -178,10 +190,10 @@ function renderReliability(summary: ReliabilitySummary, graded: number): string[
     ...(summary.unscored === 0 ? [] : [
       `- strict pass@1: ${(summary.strictPassAt1 * 100).toFixed(1)}% over all ${summary.total} trials (${summary.unscored} unscored)`,
     ]),
-    `- hardest cases: ${summary.hardest.map(item => `\`${item.caseId}\` ${item.passes}/${item.trials}`).join(' · ')}`,
+    `- hardest cases: ${summary.hardest.map(item => `\`${escapeMarkdown(item.caseId)}\` ${item.passes}/${item.trials}`).join(' · ')}`,
   ]
   if (summary.flaky.length > 0) {
-    lines.push(`- flaky cases (${summary.flaky.length}): ${summary.flaky.map(item => `\`${item.caseId}\` ${item.passes}/${item.trials}`).join(' · ')}`)
+    lines.push(`- flaky cases (${summary.flaky.length}): ${summary.flaky.map(item => `\`${escapeMarkdown(item.caseId)}\` ${item.passes}/${item.trials}`).join(' · ')}`)
   }
   return [...lines, '']
 }
@@ -236,7 +248,7 @@ export function renderBriefReport(run: EvalRun): string {
   const interval = computePrecision(run).task
   const agreement = computeAgreement(run)
   const lines = [
-    `# ${run.benchmark} — ${run.model}`,
+    `# ${escapeMarkdown(run.benchmark)} — ${escapeMarkdown(run.model)}`,
     ...(run.benchmarkSha256 === undefined ? [] :
       [`- source: ${run.benchmarkSha256.slice(0, 12)}`]),
     `- trials: ${coverage.completed}/${coverage.total} completed${coverage.unscored === 0
@@ -291,7 +303,7 @@ function renderCalibration(summary: CalibrationSummary): string[] {
   ]
   if (summary.disagreements.length > 0) {
     lines.push('- disagreements to review:',
-      ...summary.disagreements.map(item => `  - ${item.caseId} trial ${item.trial}: script ${item.scriptPassed ? 'pass' : 'fail'} · judge score ${item.score ?? 'n/a'}${item.hallucination === true ? ' · hallucination' : ''}`))
+      ...summary.disagreements.map(item => `  - ${escapeMarkdown(item.caseId)} trial ${item.trial}: script ${item.scriptPassed ? 'pass' : 'fail'} · judge score ${item.score ?? 'n/a'}${item.hallucination === true ? ' · hallucination' : ''}`))
   }
   lines.push('')
   return lines
@@ -364,7 +376,7 @@ export function renderMarkdownReport(run: EvalRun): string {
         formatGrade(result.judge?.hallucination ?? null),
       ]
       : []
-    return `| ${result.caseId} | ${result.trial} | ${result.status} | ${[...base, ...judgeCells].join(' | ')} |`
+    return `| ${escapeMarkdown(result.caseId)} | ${result.trial} | ${result.status} | ${[...base, ...judgeCells].join(' | ')} |`
   })
   const aggregate = run.aggregate
   const aggregateJudgeCells = judged
@@ -401,11 +413,11 @@ export function renderMarkdownReport(run: EvalRun): string {
     ? `- trials: ${coverage.completed}/${coverage.total} completed`
     : `- trials: ${coverage.completed}/${coverage.total} completed · ${coverage.unscored} unscored (${coverage.timeouts} timeouts, ${coverage.errors} errors)`
   return [
-    `# Eval: ${run.benchmark}`,
+    `# Eval: ${escapeMarkdown(run.benchmark)}`,
     '',
-    `- model: ${run.model}`,
+    `- model: ${escapeMarkdown(run.model)}`,
     ...(run.benchmarkSha256 === undefined ? [] : [`- benchmark sha256: ${run.benchmarkSha256}`]),
-    ...(judged ? [`- judge: ${judge.model}`] : []),
+    ...(judged ? [`- judge: ${escapeMarkdown(judge.model)}`] : []),
     ...(run.grading?.judgeFailures ? [`- judge failures: ${run.grading.judgeFailures}`] : []),
     `- trials per case: ${run.trials}`,
     `- created: ${new Date(run.createdAt).toISOString()}`,

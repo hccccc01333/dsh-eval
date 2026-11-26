@@ -118,18 +118,31 @@ function metricOutcome(result: EvalTrialResult, metric: PairedMetric): boolean |
   return result.judge?.finalAnswerScore ?? null
 }
 
-/** Pick the first metric with data in every paired trial of a run. */
+/**
+ * Pick the metric with the most usable pairs, preferring earlier metrics on a
+ * tie. Requiring a metric in *every* pair silently discarded paired inference
+ * as soon as one trial was ungraded, even when many other pairs carried the
+ * metric. pairedCases and pairedSigns skip missing pairs; do the same here.
+ * Return null only when no metric has a single usable pair.
+ */
 function pickMetric(
   pairs: readonly { a: EvalTrialResult; b: EvalTrialResult }[],
 ): PairedMetric | null {
+  let best: PairedMetric | null = null
+  let bestCount = 0
   for (const metric of ['task success', 'tool selection accuracy', 'final answer score'] as const) {
-    if (pairs.every(pair => metricOutcome(pair.a, metric) !== null && metricOutcome(pair.b, metric) !== null)) {
-      return metric
+    let count = 0
+    for (const pair of pairs) {
+      if (metricOutcome(pair.a, metric) !== null && metricOutcome(pair.b, metric) !== null) {
+        count += 1
+      }
+    }
+    if (count > bestCount) {
+      best = metric
+      bestCount = count
     }
   }
-  // Counting absent outcomes as ties would manufacture a fake "no change"
-  // result. pairedCases and pairedSigns skip them; do the same here.
-  return null
+  return best
 }
 
 /** Classify one pair: 1 for a B win, -1 for an A win, 0 for a tie. */
@@ -193,7 +206,8 @@ function pairedTrials(a: EvalRun, b: EvalRun): { a: EvalTrialResult; b: EvalTria
  * provenance for the pairing, not a guarantee of identical model output.
  * @param a - the baseline run.
  * @param b - the candidate run.
- * @returns paired statistics, or null when no trial is completed in both runs.
+ * @returns paired statistics, or null when no trial is completed in both runs
+ * or no primary metric is measured on any pair.
  */
 export function pairedCompare(a: EvalRun, b: EvalRun): PairedStats | null {
   const pairs = pairedTrials(a, b)
@@ -203,14 +217,20 @@ export function pairedCompare(a: EvalRun, b: EvalRun): PairedStats | null {
   let wins = 0
   let losses = 0
   let ties = 0
+  let measuredPairs = 0
   const stepDeltas: number[] = []
   const tokenDeltas: number[] = []
   const scoreDeltas: number[] = []
   for (const pair of pairs) {
-    const sign = pairSign(metricOutcome(pair.a, primaryMetric), metricOutcome(pair.b, primaryMetric))
-    if (sign > 0) wins += 1
-    else if (sign < 0) losses += 1
-    else ties += 1
+    const aOutcome = metricOutcome(pair.a, primaryMetric)
+    const bOutcome = metricOutcome(pair.b, primaryMetric)
+    if (aOutcome !== null && bOutcome !== null) {
+      measuredPairs += 1
+      const sign = pairSign(aOutcome, bOutcome)
+      if (sign > 0) wins += 1
+      else if (sign < 0) losses += 1
+      else ties += 1
+    }
     const aMetrics = pair.a.metrics
     const bMetrics = pair.b.metrics
     if (aMetrics !== undefined && bMetrics !== undefined) {
@@ -228,7 +248,7 @@ export function pairedCompare(a: EvalRun, b: EvalRun): PairedStats | null {
   const comparisons = 1 + [stepDeltas, tokenDeltas, scoreDeltas].filter(deltas => deltas.length > 0).length
   const correction = bonferroni(test.pValue, comparisons)
   return {
-    pairs: pairs.length,
+    pairs: measuredPairs,
     wins,
     losses,
     ties,

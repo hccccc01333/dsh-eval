@@ -372,6 +372,32 @@ describe('dsh-eval benchmark runner', () => {
     expect(malformed.cases[0]?.grade).toEqual({ taskSuccess: false, toolSelectionAccuracy: null })
   })
 
+  it('matches an end-anchored answerRegex past the first 4096 characters', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    // The marker lands beyond the old truncation point, so `DONE$` only matches
+    // when the regex sees the complete final assistant answer.
+    const longAnswer = `${'x'.repeat(4200)}DONE`
+    const log = join(tempDir(), 'session.jsonl')
+    writeFileSync(log, readFileSync(FIXTURE_LOG, 'utf8').trim().split('\n').map(line => {
+      const record = JSON.parse(line) as {
+        type?: string
+        data?: { message?: { content?: { type: string; text?: string }[] } }
+      }
+      if (record.type === 'assistant/message' && record.data?.message?.content !== undefined) {
+        record.data.message.content = [{ type: 'text', text: longAnswer }]
+        return JSON.stringify(record)
+      }
+      return line
+    }).join('\n') + '\n')
+    process.env.FAKE_DASH_LOG = log
+    const run = await runBenchmark(buildBenchmark({
+      trials: 1,
+      cases: [{ id: 'regex', prompt: 'p', expected: { answerRegex: 'DONE$' } }],
+    }), { tempRoot: tempDir() })
+    expect(run.cases[0]?.grade).toEqual({ taskSuccess: true, toolSelectionAccuracy: null })
+    expect(run.grading?.taskSuccessRate).toBe(1)
+  })
+
   it('matches every configured tool expectation', async () => {
     process.env.FAKE_DASH_MODE = 'log'
     process.env.FAKE_DASH_LOG = FIXTURE_LOG

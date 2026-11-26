@@ -508,7 +508,58 @@ describe('dsh-eval report persistence and rendering', () => {
         { caseId: 'a', trial: 3, status: 'error', error: 'timeout', exitCode: null, timedOut: true },
       ],
     }))
-    expect(markdown).toContain('- trials: 2/3 completed · 1 unscored (1 timeouts, 1 errors)')
+    expect(markdown).toContain('- trials: 2/3 completed · 1 unscored (1 timeouts, 0 errors)')
     expect(markdown).toContain('- strict pass@1: 33.3% over all 3 trials (1 unscored)')
+  })
+
+  it('escapes untrusted case ids and headers before they enter markdown', () => {
+    const caseId = 'a|b\nc`d'
+    const markdown = renderMarkdownReport(buildRun({
+      benchmark: 'bench|mark\nx`y',
+      model: 'mod|el\nz`w',
+      cases: [{
+        caseId, trial: 1, status: 'error', error: 'boom', exitCode: 1, timedOut: false,
+      }],
+    }))
+    const rows = markdown.split('\n').filter(line => line.startsWith('|'))
+    // header + separator + case row + aggregate row: no row was forged by a
+    // newline and no cell was split by a pipe from the raw identifier.
+    expect(rows).toHaveLength(4)
+    expect(rows.every(line => (line.match(/\|/gu) ?? []).length === 14)).toBe(true)
+    expect(markdown).toContain('| a b c d | 1 | error |')
+    expect(markdown).toContain('# Eval: bench mark x y')
+    expect(markdown).toContain('- model: mod el z w')
+    expect(markdown).not.toContain(caseId)
+    expect(markdown).not.toContain('bench|mark')
+    expect(markdown).not.toContain('mod|el')
+    expect(renderBriefReport(buildRun({
+      benchmark: 'bench|mark\nx`y', model: 'mod|el\nz`w',
+    }))).toContain('# bench mark x y — mod el z w')
+  })
+
+  it('escapes case ids in reliability and calibration detail lists', () => {
+    const caseId = 'fl|aky\nq`case'
+    const markdown = renderMarkdownReport(buildRun({
+      judge: { provider: 'p', model: 'ju|dge`m', maxScore: 10 },
+      cases: [
+        {
+          caseId, trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          grade: { taskSuccess: true, toolSelectionAccuracy: null },
+          judge: { finalAnswerScore: 2, hallucination: false },
+        },
+        {
+          caseId, trial: 2, status: 'completed', exitCode: 0, timedOut: false,
+          grade: { taskSuccess: false, toolSelectionAccuracy: null },
+          judge: { finalAnswerScore: 8, hallucination: false },
+        },
+      ],
+    }))
+    expect(markdown).toContain('- judge: ju dge m')
+    expect(markdown).toContain('- hardest cases: `fl aky q case` 1/2')
+    expect(markdown).toContain('- flaky cases (1): `fl aky q case` 1/2')
+    expect(markdown).toContain('  - fl aky q case trial 1: script pass · judge score 2')
+    expect(markdown).toContain('  - fl aky q case trial 2: script fail · judge score 8')
+    expect(markdown).not.toContain('fl|aky')
+    expect(markdown).not.toContain('ju|dge')
   })
 })

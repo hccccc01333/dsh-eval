@@ -21,7 +21,7 @@
 | **面向 CI** | `--require-significance` 门禁 + 硬成本/延迟预算 |
 | **零外部资源报告** | 自包含、适配深色模式的 HTML 仪表盘 |
 
-`dsh-eval@0.5.1` · 305 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.5.2` · 332 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 本包同时是一个 bundle 和一个命令行应用。装进 profile 后即可运行评测：
 
@@ -90,7 +90,7 @@ pricing:
 | `cases[].id` | 必填 | 稳定的 case id。 |
 | `cases[].prompt` / `cases[].promptFile` | 二选一 | 任务文本，内联或相对 benchmark 文件解析。 |
 | `cases[].workspace` | 缺省 | 复制进每个 trial 的工作区树，相对或绝对路径。 |
-| `cases[].expected` | 缺省 | 脚本化评分：对记录到的工具调用名匹配 —— `tool`（旧子串）、`tools`（全部列出的子串）、`toolAnyOf`（至少一个）、`toolRegex`（加载时校验）、`toolNot`（都不出现），所有配置同时成立才算命中；`checkArgv`（推荐）、`check`（旧字符串形式，支持引号）或 `checkShell`（显式启用，支持管道/重定向）是 agent 退出后在 trial 工作区运行的命令（退出码 0 = 任务成功）；`answer` 是交给 judge 的金标答案；`answerRegex`（加载时校验）匹配最终 assistant 回复，在没有配置 check 命令时决定 `taskSuccess`，从而无需 judge 也能做确定性评分。只匹配最终回答的前 4096 个字符；同时配置 check 命令与 `answerRegex` 会被 `validate` 警告，因为此时正则会被忽略。填了就必须至少给一个，且最多一种 check 模式。check 进程以独立进程组运行，超时整组终止。 |
+| `cases[].expected` | 缺省 | 脚本化评分：对记录到的工具调用名匹配 —— `tool`（旧子串）、`tools`（全部列出的子串）、`toolAnyOf`（至少一个）、`toolRegex`（加载时校验）、`toolNot`（都不出现），所有配置同时成立才算命中；`checkArgv`（推荐）、`check`（旧字符串形式，支持引号）或 `checkShell`（显式启用，支持管道/重定向）是 agent 退出后在 trial 工作区运行的命令（退出码 0 = 任务成功）；`answer` 是交给 judge 的金标答案；`answerRegex`（加载时校验）匹配完整的最终 assistant 回复，在没有配置 check 命令时决定 `taskSuccess`，从而无需 judge 也能做确定性评分。正则在带超时的 worker 里运行，因此灾难性正则不会拖垮评测器；同时配置 check 命令与 `answerRegex` 会被 `validate` 警告，因为此时正则会被忽略。填了就必须至少给一个，且最多一种 check 模式。check 进程以独立进程组运行，超时整组终止。 |
 | `pricing` | 缺省 | 以模型 id 为键的每百万 token 美元价；未配置的模型报 `costUsd: null`。 |
 
 ### Judge
@@ -226,4 +226,4 @@ dsh eval rejudge recorded-run.json --out judged.json \
 - **导入的 trace 没有 token 用量** —— Codex 与 Claude Code 日志不记录 provider 用量，导入的 run 报零 token 且无成本。
 - **超时只杀直接子进程** —— 超时的 trial 只杀直接 dsh 进程；在 Windows 上它的后代进程可能存活。
 - **Windows 启动器命令** —— 启动的子进程不经过 shell，`.cmd`/`.bat` shim 需要直接可执行文件或 `node <path>` 覆盖（`--dsh "node C:/.../apps/cli/lib/bin.js"`）。
-- **报告写入非原子** —— run JSON 原地写入，写入中途崩溃可能截断报告。
+- **报告写入已原子化** —— run JSON 先写临时文件再原子替换，写入中途崩溃不会截断既有报告。

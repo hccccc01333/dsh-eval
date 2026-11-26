@@ -104,6 +104,35 @@ describe('dsh-eval comparison', () => {
     }
   }
 
+  /** Trial builder that can leave each primary metric independently unmeasured. */
+  function flexibleTrial(
+    caseId: string,
+    trialNo: number,
+    spec: {
+      taskSuccess?: boolean | null
+      toolSelectionAccuracy?: boolean | null
+      finalAnswerScore?: number | null
+      steps?: number
+      totalTokens?: number
+    } = {},
+  ): EvalTrialResult {
+    return {
+      caseId,
+      trial: trialNo,
+      status: 'completed',
+      exitCode: 0,
+      timedOut: false,
+      grade: {
+        taskSuccess: spec.taskSuccess ?? null,
+        toolSelectionAccuracy: spec.toolSelectionAccuracy ?? null,
+      },
+      ...(spec.finalAnswerScore !== undefined
+        ? { judge: { finalAnswerScore: spec.finalAnswerScore, hallucination: false } }
+        : {}),
+      metrics: { ...METRICS, steps: spec.steps ?? 2, totalTokens: spec.totalTokens ?? 10 },
+    }
+  }
+
   it('computes paired win/lose/tie statistics and mean deltas', () => {
     const a = buildRun({
       cases: [
@@ -506,5 +535,79 @@ describe('dsh-eval comparison', () => {
     expect(rows.find(row => row.metric === 'judge failures')).toEqual({
       metric: 'judge failures', a: '2.0', b: '0.0', delta: '-2.0',
     })
+  })
+
+  it('keeps a partial metric and skips its missing pairs instead of counting ties', () => {
+    // Only two of four pairs carry task success: one a-null, one b-null.
+    const a = buildRun({
+      cases: [
+        flexibleTrial('c', 1, { taskSuccess: false, steps: 2, totalTokens: 10 }),
+        flexibleTrial('c', 2, { taskSuccess: true, steps: 4, totalTokens: 20 }),
+        flexibleTrial('c', 3, { taskSuccess: null, steps: 10, totalTokens: 30 }),
+        flexibleTrial('c', 4, { taskSuccess: true, steps: 8, totalTokens: 40 }),
+      ],
+    })
+    const b = buildRun({
+      cases: [
+        flexibleTrial('c', 1, { taskSuccess: true, steps: 3, totalTokens: 15 }),
+        flexibleTrial('c', 2, { taskSuccess: true, steps: 4, totalTokens: 20 }),
+        flexibleTrial('c', 3, { taskSuccess: true, steps: 13, totalTokens: 36 }),
+        flexibleTrial('c', 4, { taskSuccess: null, steps: 14, totalTokens: 48 }),
+      ],
+    })
+    const paired = pairedCompare(a, b)!
+    expect(paired.primaryMetric).toBe('task success')
+    expect(paired.pairs).toBe(2)
+    expect(paired.wins).toBe(1)
+    expect(paired.losses).toBe(0)
+    expect(paired.ties).toBe(1)
+    // Unmeasured pairs never enter the sign-test family, but their automatic
+    // metrics still feed the independent step/token delta collections.
+    expect(paired.stepsDelta?.mean).toBeCloseTo(10 / 4, 10)
+    expect(paired.tokensDelta?.mean).toBeCloseTo(19 / 4, 10)
+    expect(paired.scoreDelta).toBeNull()
+    expect(pairedSigns(a, b, 'task success')).toEqual({ pairs: 2, wins: 1, losses: 0, ties: 1 })
+    expect(pairedCases(a, b)?.map(item => item.outcome)).toEqual(['B better', 'tie'])
+    const rows = compareRuns(a, b)
+    expect(rows.find(row => row.metric === 'paired trials')?.a).toBe('2')
+    expect(rows.find(row => row.metric === 'paired task success (B/A/ties)')?.a).toBe('1/0/1')
+  })
+
+  it('prefers the metric with the most usable pairs when several carry data', () => {
+    const a = buildRun({
+      cases: [
+        flexibleTrial('c', 1, { taskSuccess: false, finalAnswerScore: 2 }),
+        flexibleTrial('c', 2, { taskSuccess: true, finalAnswerScore: 5 }),
+        flexibleTrial('c', 3, { taskSuccess: null, finalAnswerScore: 1 }),
+        flexibleTrial('c', 4, { taskSuccess: true, finalAnswerScore: 3 }),
+      ],
+    })
+    const b = buildRun({
+      cases: [
+        flexibleTrial('c', 1, { taskSuccess: true, finalAnswerScore: 3 }),
+        flexibleTrial('c', 2, { taskSuccess: true, finalAnswerScore: 5 }),
+        flexibleTrial('c', 3, { taskSuccess: true, finalAnswerScore: 4 }),
+        flexibleTrial('c', 4, { taskSuccess: null, finalAnswerScore: 2 }),
+      ],
+    })
+    const paired = pairedCompare(a, b)!
+    // Task success has only two usable pairs while final-answer score has four.
+    expect(paired.primaryMetric).toBe('final answer score')
+    expect(paired.pairs).toBe(4)
+    expect(paired.wins).toBe(2)
+    expect(paired.losses).toBe(1)
+    expect(paired.ties).toBe(1)
+    expect(pairedCases(a, b)?.map(item => [item.caseId, item.outcome])).toEqual([
+      ['c', 'B better'], ['c', 'tie'], ['c', 'B better'], ['c', 'A better'],
+    ])
+  })
+
+  it('still returns null when no metric has a usable pair', () => {
+    const bare = (label: string): EvalRun => buildRun({
+      model: label,
+      cases: Array.from({ length: 3 }, (_, index) => flexibleTrial('c', index + 1)),
+    })
+    expect(pairedCompare(bare('a'), bare('b'))).toBeNull()
+    expect(pairedCases(bare('a'), bare('b'))).toBeNull()
   })
 })

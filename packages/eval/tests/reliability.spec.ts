@@ -40,7 +40,7 @@ describe('dsh-eval reliability', () => {
     expect(computeReliability(run([trial('c', 1, null, null)]))).toBeNull()
     expect(computeCoverage(run([
       { caseId: 'c', trial: 1, status: 'error', error: 'timeout', exitCode: null, timedOut: true },
-    ]))).toEqual({ total: 1, completed: 0, errors: 1, timeouts: 1, unscored: 1 })
+    ]))).toEqual({ total: 1, completed: 0, errors: 0, timeouts: 1, unscored: 1 })
   })
 
   it('keeps errors and timeouts in the strict denominator', () => {
@@ -58,8 +58,10 @@ describe('dsh-eval reliability', () => {
     expect(summary.hardest[0]).toMatchObject({ caseId: 'a', trials: 2, total: 3 })
     // The error-only case is unscored but still belongs in the denominator.
     expect(summary.hardest.map(item => item.caseId)).toEqual(['a'])
+    // A timeout is not also an error, so the two categories stay disjoint and
+    // add up to the two trials that never produced a grade.
     expect(computeCoverage(withFailures)).toEqual({
-      total: 4, completed: 2, errors: 2, timeouts: 1, unscored: 2,
+      total: 4, completed: 2, errors: 1, timeouts: 1, unscored: 2,
     })
     expect(computeCoverage(run([trial('a', 1, true, null)]))).toEqual({
       total: 1, completed: 1, errors: 0, timeouts: 0, unscored: 0,

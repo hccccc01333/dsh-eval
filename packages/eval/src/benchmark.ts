@@ -143,7 +143,7 @@ async function resolveInputPath(
   if (allowExternal) return resolved
   const rel = relative(baseDir, resolved)
   if (isAbsolute(value) || rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
-    throw new Error(`${field} "${value}" escapes the benchmark directory`)
+    throw new Error(`${field} "${value}" escapes the benchmark directory; trusted files can be allowed with --allow-external-paths`)
   }
   // Compare real paths so a symlink inside the directory cannot point at a
   // file outside it. A missing path is left for readFile() to report.
@@ -156,7 +156,7 @@ async function resolveInputPath(
   const realRoot = await realpath(baseDir)
   const realRel = relative(realRoot, real)
   if (realRel === '..' || realRel.startsWith(`..${sep}`) || isAbsolute(realRel)) {
-    throw new Error(`${field} "${value}" escapes the benchmark directory`)
+    throw new Error(`${field} "${value}" escapes the benchmark directory; trusted files can be allowed with --allow-external-paths`)
   }
   return resolved
 }

@@ -73,7 +73,7 @@
 
 ## 状态
 
-`dsh-eval@0.5.1` · 305 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.5.2` · 332 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 `0.3.1` 起可安装：`0.3.0` 的 tarball 漏掉了入口 import 的运行时模块，导致每次安装都报 `ERR_MODULE_NOT_FOUND`。详见 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -168,7 +168,7 @@ HTML 仪表盘中展示,因此 fixture 改动不会悄悄改变结果含义。CL
 | `dsh eval validate benchmark.yaml [--json] [--out file]` | 预检 benchmark 并给出证据质量警告 |
 | `dsh eval provenance run.json benchmark.yaml [--json] [--out file]` | 校验 run 的 benchmark SHA-256；不一致时退出码为 1 |
 | `dsh eval leaderboard a.json b.json ... [--metric taskSuccess\|strictPassAt1] [--json] [--out file]` | 按池化成功率或含错误的严格通过率排名 |
-| `dsh eval gate candidate.json --baseline base.json [--json] [--out file]` | 回退或超限时让 CI 失败；`--json` 输出机器可读判定 |
+| `dsh eval gate candidate.json --baseline base.json [--max-drop 0.05] [--json] [--out file]` | 回退或超限时让 CI 失败；`--max-drop` 是容许的回退比例（默认 `0` = 任何回退都失败），`--json` 输出机器可读判定 |
 | `dsh eval compare base.json candidate.json [--json] [--out file]` | 对比两个 run，给出差值与配对推断 |
 | `dsh eval rejudge run.json --out rejudged.json` | 离线重评分已保存的 trace，写入新报告 |
 | `dsh eval import codex\|claude-code log.jsonl --out run.json` | 把外部 session 日志导入为单 trial run |
@@ -182,6 +182,9 @@ HTML 仪表盘中展示,因此 fixture 改动不会悄悄改变结果含义。CL
 
 - 按实验组（arm）的配对排行榜
 - run 报告与对比的 Web UI
+
+以上均为待办想法；已完成的工作见 [CHANGELOG.md](CHANGELOG.md)，按价值排序的
+缺口清单见 [ROADMAP.md](ROADMAP.md)。
 
 ## 仓库结构
 
@@ -197,20 +200,13 @@ scripts/          harness-closure.mjs —— 可选的本地 harness workspace �
 改 `packages/eval/package.json` 的 `version` 并在 CHANGELOG 里加一节，然后推同名 tag：
 
 ```sh
-git tag v0.5.1 && git push origin v0.5.1
+git tag v0.5.2 && git push origin v0.5.2
 ```
 
-`.github/workflows/release.yml` 会重跑各道闸门，再通过 **trusted publishing（OIDC）** 带 provenance 发布到 npm，任何机器上都不需要存 token。该路径需要在 npm 包设置里做一次性登记（Trusted Publisher → GitHub Actions，workflow 填 `release.yml`），具体字段见 workflow 文件头部。
+`.github/workflows/release.yml` 会重跑各道闸门，再通过 **trusted publishing（OIDC）** 带 provenance 发布到 npm，任何机器上都不需要存 token。npm 的 Trusted Publisher 登记（GitHub Actions，workflow 填 `release.yml`）已完成，`0.5.0` 与 `0.5.1` 均由此发布。账号的第二因子是安全密钥，因此既不存储也不依赖长期 token。
 
-没做这个登记时，就走暂存 + 网页批准——当账号的第二因子是安全密钥时这是唯一的路（npm CLI 没法给出它生成不出来的 OTP）：
-
-```sh
-cd packages/eval && npx npm@11 stage publish
-# 然后在 npmjs.com -> Staged Packages 里批准
-```
-
-完整发布清单(包括一次性的 Trusted Publisher 配置与手动 OIDC 身份检查)
-见 [RELEASE.md](RELEASE.md)。
+完整发布清单、Trusted Publisher 的精确字段（仅在换发布账号或仓库时需要重配）
+与手动 OIDC 身份检查见 [RELEASE.md](RELEASE.md)。
 
 ## 许可
 

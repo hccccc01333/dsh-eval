@@ -180,9 +180,9 @@ async function gradeTrial(
     try {
       // The pattern runs in a time-boxed worker: a catastrophic benchmark regex
       // must not hang the evaluator on agent-controlled final-answer text.
-      taskSuccess = await safeRegexTest(
-        expected.answerRegex, finalAnswerOf(trace).slice(0, 4096),
-      )
+      // Match the whole answer: truncating it would break end-anchored patterns
+      // on long replies, and the worker budget already bounds the work.
+      taskSuccess = await safeRegexTest(expected.answerRegex, finalAnswerOf(trace))
     } catch {
       taskSuccess = false
     }

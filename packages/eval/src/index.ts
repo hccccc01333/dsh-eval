@@ -76,6 +76,22 @@ function estimateEta(
   return Math.max(0, Math.round((elapsed / finished) * (total - finished) / 1000))
 }
 
+/**
+ * Normalize agent/benchmark-controlled text into one bounded, terminal-safe
+ * fragment: strip CSI/OSC escape sequences, turn every remaining C0/C1
+ * control byte (notably newlines) into a space, and cap the length. Shared by
+ * the progress renderer and the stderr failure summary so neither can be
+ * abused to clear the screen, move the cursor, or forge extra log rows.
+ */
+function sanitizeTerminal(value: string): string {
+  return value
+    // CSI / OSC sequences first, then every remaining C0/C1 control byte.
+    .replace(/\u001b\[[0-?]*[ -/]*[@-~]/gu, '')
+    .replace(/\u001b\][^\u0007]*(?:\u0007|\u001b\\)/gu, '')
+    .replace(/[\u0000-\u001f\u007f-\u009f]/gu, ' ')
+    .slice(0, 200)
+}
+
 /** One bounded progress line; agent-controlled text must not inject newlines or terminal control codes. */
 export function renderProgress(
   result: EvalTrialResult,
@@ -84,17 +100,11 @@ export function renderProgress(
   startedAtMs?: number,
   nowMs: number = Date.now(),
 ): string {
-  const clean = (value: string): string => value
-    // CSI / OSC sequences first, then every remaining C0/C1 control byte.
-    .replace(/\u001b\[[0-?]*[ -/]*[@-~]/gu, '')
-    .replace(/\u001b\][^\u0007]*(?:\u0007|\u001b\\)/gu, '')
-    .replace(/[\u0000-\u001f\u007f-\u009f]/gu, ' ')
-    .slice(0, 200)
-  const label = `${clean(result.caseId)} #${result.trial}`
+  const label = `${sanitizeTerminal(result.caseId)} #${result.trial}`
   const eta = estimateEta(finished, total, startedAtMs, nowMs)
   const suffix = eta === null ? '' : `, eta ${eta}s`
   if (result.status === 'error') {
-    return `[eval] ${finished}/${total} ${label} ERROR ${clean(result.error ?? 'unknown error')}${suffix}\n`
+    return `[eval] ${finished}/${total} ${label} ERROR ${sanitizeTerminal(result.error ?? 'unknown error')}${suffix}\n`
   }
   const task = result.grade?.taskSuccess === undefined || result.grade.taskSuccess === null
     ? 'n/a' : result.grade.taskSuccess ? 'pass' : 'fail'
@@ -244,7 +254,7 @@ export async function executeEval(
       return 0
     }
     if (values.kind === 'rejudge') {
-      if (services.judgeChat === undefined) throw new Error('rejudge: no LLM chat seam is available')
+      if (services.judgeChat === undefined) throw new Error('rejudge: no LLM chat seam is available — configure the eval profile\'s LLM provider, or use replay runs with --judge-model')
       const run = await loadRunReport(values.runPath)
       const rejudged = await rejudgeRun(run, services.judgeChat, values.judge)
       await writeRunReport(rejudged, values.outPath)
@@ -282,7 +292,7 @@ export async function executeEval(
       const sample = failed.slice(0, 3).map((result) => {
         /* v8 ignore next 2 -- runner always sets `error` on error trials; the fallback guards hand-edited reports. */
         const detail = result.error ?? 'unknown error'
-        return `${result.caseId}#${result.trial}: ${detail}`
+        return `${sanitizeTerminal(result.caseId)}#${result.trial}: ${sanitizeTerminal(detail)}`
       }).join('\n')
       io.stderr.write(`dsh eval: ${failed.length} trial(s) failed:\n${sample}\n`)
     }

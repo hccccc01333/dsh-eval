@@ -4,11 +4,14 @@ Releases are tag-driven. Pushing `vX.Y.Z` runs the `Release` workflow, which
 verifies typechecking, 100% coverage and the packed-tarball smoke test before
 publishing `dsh-eval@X.Y.Z` to npm with provenance.
 
-## One-time setup: npm Trusted Publisher
+## npm Trusted Publisher
 
 The publishing account uses a security key for 2FA, so the npm CLI cannot
-complete a publish and no long-lived token is stored. Configure OIDC once at
-<https://www.npmjs.com/package/dsh-eval/access>:
+complete a publish and no long-lived token is stored. This package is already
+enrolled for OIDC trusted publishing; `0.5.0` and `0.5.1` shipped through it.
+The entry lives at <https://www.npmjs.com/package/dsh-eval/access> with these
+fields, which only need re-entering if the publishing account or repository
+changes:
 
 | Field | Value |
 |---|---|
@@ -18,11 +21,11 @@ complete a publish and no long-lived token is stored. Configure OIDC once at
 | Workflow filename | `release.yml` |
 | Environment | leave empty |
 
-Then run the `Release` workflow manually with **Run workflow**. Its `check` job
-exchanges this workflow's OIDC identity for npm publish rights without
-uploading anything. A green `trusted publisher is wired` line means the next tag
-will authenticate. The check must live in `release.yml` because npm matches the
-GitHub `job_workflow_ref` against the configured filename.
+To verify the wiring, run the `Release` workflow manually with **Run workflow**.
+Its `check` job exchanges this workflow's OIDC identity for npm publish rights
+without uploading anything; a green `trusted publisher is wired` line means the
+next tag will authenticate. The check must live in `release.yml` because npm
+matches the GitHub `job_workflow_ref` against the configured filename.
 
 ## Cutting a release
 

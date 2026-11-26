@@ -389,7 +389,7 @@ Examples:
     })
   const rejudge = program.command('rejudge').description('re-judge a stored run from its traces without re-running the agent')
   rejudge
-    .argument('<run.json>', 'path to a run report with judge config and case inputs')
+    .argument('<run.json>', 'path to a run report with persisted traces and case inputs; pass --judge-model when the run has no judge config (e.g. replay runs)')
     .option('--out <path>', 'output run JSON path; must differ from the input', 'rejudged-run.json')
     .option('--judge-model <id>', 'judge model id; also enables overriding the stored judge config')
     .option('--judge-provider <name>', 'judge provider route, default deepseek')

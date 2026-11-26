@@ -76,7 +76,7 @@ Progress lines are bounded and control-character safe, and `dsh eval gate` turns
 
 ## Status
 
-`dsh-eval@0.5.1` · 305 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.5.2` · 332 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 
@@ -172,7 +172,7 @@ are recorded separately in the run's option fields.
 | `dsh eval validate benchmark.yaml [--json] [--out file]` | Preflight a benchmark with evidence warnings |
 | `dsh eval provenance run.json benchmark.yaml [--json] [--out file]` | Verify the run's benchmark SHA-256 against the current inputs; mismatches exit 1 |
 | `dsh eval leaderboard a.json b.json ... [--metric taskSuccess\|strictPassAt1] [--json] [--out file]` | Rank runs by pooled or error-inclusive success |
-| `dsh eval gate candidate.json --baseline base.json [--json] [--out file]` | Fail CI on regressions; `--json` emits a machine-readable verdict |
+| `dsh eval gate candidate.json --baseline base.json [--max-drop 0.05] [--json] [--out file]` | Fail CI on regressions; `--max-drop` is the tolerated fractional drop (default `0` = any drop fails), `--json` emits a machine-readable verdict |
 | `dsh eval compare base.json candidate.json [--json] [--out file]` | Compare two runs with deltas and paired inference |
 | `dsh eval rejudge run.json --out rejudged.json` | Re-judge stored traces offline and write a new report |
 | `dsh eval import codex\|claude-code log.jsonl --out run.json` | Import an external session log as a one-trial run |
@@ -185,6 +185,9 @@ output goes to stdout.
 
 - Per-arm leaderboards over paired trials
 - Web UI dashboard for run reports and comparisons
+
+Both are open ideas; completed work is in [CHANGELOG.md](CHANGELOG.md) and the
+prioritized gap list is in [ROADMAP.md](ROADMAP.md).
 
 ## Repository layout
 
@@ -200,20 +203,14 @@ scripts/          harness-closure.mjs — optional local-harness workspace closu
 Bump `version` in `packages/eval/package.json` and add a CHANGELOG section, then push a matching tag:
 
 ```sh
-git tag v0.5.1 && git push origin v0.5.1
+git tag v0.5.2 && git push origin v0.5.2
 ```
 
-`.github/workflows/release.yml` re-runs the gates and publishes to npm through **trusted publishing (OIDC)** with a provenance statement — no token on any machine. That path needs a one-time entry in the npm package settings (Trusted Publisher → GitHub Actions, workflow `release.yml`); the file's header has the exact fields.
+`.github/workflows/release.yml` re-runs the gates and publishes to npm through **trusted publishing (OIDC)** with a provenance statement — no token on any machine. The npm Trusted Publisher entry (GitHub Actions, workflow `release.yml`) is already configured; `0.5.0` and `0.5.1` shipped this way. The account's second factor is a security key, so a long-lived token is neither stored nor needed.
 
-Without that entry, publish by staging and approving in the browser, which is the only route when the account's second factor is a security key (the npm CLI has no way to answer an OTP it cannot generate):
-
-```sh
-cd packages/eval && npx npm@11 stage publish
-# then approve the staged package at npmjs.com -> Staged Packages
-```
-
-See [RELEASE.md](RELEASE.md) for the full release checklist, including the
-one-time Trusted Publisher setup and the manual OIDC identity check.
+See [RELEASE.md](RELEASE.md) for the full release checklist, the exact Trusted
+Publisher fields (needed again only if the publishing account or repository
+changes), and the manual OIDC identity check.
 
 ## License
 

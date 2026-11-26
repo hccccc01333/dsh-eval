@@ -1,5 +1,52 @@
 # Changelog
 
+## 0.5.2 — 2026-11-27
+
+### Fixed
+
+- **Paired inference no longer disappears on partially graded runs.**
+  `pickMetric` used to require a metric on *every* paired trial, so a single
+  ungraded pair discarded the whole comparison. It now picks the metric with
+  the most usable pairs (priority order breaks ties), and `pairedCompare`
+  skips missing pairs instead of counting them as ties — matching
+  `pairedSigns`/`pairedCases` and the stale "skip them" comment. 332 tests.
+- **Exact sign test is now O(n) instead of O(n²)/O(n³).** `signTestPower`
+  recomputed binomial tails from scratch for every candidate; it now builds all
+  lower tails in one pass. Results are bit-for-bit identical; `signTestPower`
+  at n=3000 drops from ~4.5 s to ~2 ms, so large benchmarks no longer stall
+  `compare`/`gate`/`validate`.
+- **Timeout trials were double-counted** in reliability summaries (once as an
+  error, once as a timeout). `errors` now excludes timed-out trials, so the two
+  categories are mutually exclusive and sum to the unscored count.
+- **`answerRegex` matched only the first 4096 characters**, breaking `$`-anchored
+  patterns on long answers. It now grades the full answer; the time-boxed
+  worker still bounds catastrophic regexes.
+- **Markdown reports escaped identifier injection.** `caseId`, `benchmark`,
+  `model` and judge model are sanitized before insertion into tables/headings,
+  matching the existing compare/gate/leaderboard treatment.
+- **Terminal and report strings are sanitized.** The ANSI/control-character
+  cleanup used for progress lines now also covers the final failure summary, so
+  a judged agent cannot forge terminal output via case ids or stderr text.
+
+### Security
+
+- **Judge prompt injection hardened.** Task, reference and every trace-derived
+  value are wrapped in explicit data-only fences; the system instruction
+  declares them untrusted and forbids scoring instructions found inside them.
+  Fence tokens appearing in data are escaped so a reply cannot close a fence.
+- **Re-judging trusts caller-authorized directories, not the report's own
+  `tempRoot`.** A hand-edited run JSON can no longer promote an arbitrary local
+  directory to the allowed trace root. The default allows the cwd and the
+  `dsh-eval-*` mkdtemp trees a real run produces, so legitimate CLI rejudging
+  still works; reports without trace digests now carry an explicit warning.
+- **Benchmark path errors now point at `--allow-external-paths`** as the remedy.
+
+### Changed
+
+- Documentation: refreshed roadmap/release status (Trusted Publishing is
+  configured), removed stale limits, clarified `--max-drop` default and the
+  rejudge help text.
+
 ## 0.5.1 — 2026-11-25
 
 ### Changed

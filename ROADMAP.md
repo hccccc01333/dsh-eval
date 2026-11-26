@@ -3,6 +3,12 @@
 Prioritized gaps from the reproducibility and scripted-grading audits. Items are
 ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
 
+## Open
+
+- Per-arm leaderboards over paired trials.
+- Web UI dashboard for run reports and comparisons (the standalone HTML
+  dashboard is the current, dependency-free answer).
+
 ## P0 — reproducibility
 
 - ✅ **Make `seed` reach each trial** (done). Trial n now receives
@@ -88,7 +94,7 @@ ordered by value / effort; completed work lives in [CHANGELOG.md](CHANGELOG.md).
   `dsh eval dashboard a.json [b.json ...]` writes a standalone, escaped,
   theme-aware page with summary cards, all report blocks, and either a
   comparison table reusing `dsh eval compare` rows or a leaderboard page.
-- Release: configure npm Trusted Publisher for `dsh-eval` at
-  <https://www.npmjs.com/package/dsh-eval/access> — GitHub Actions, owner
+- ✅ **npm Trusted Publishing** (done). `dsh-eval` is configured for GitHub
+  Actions OIDC at <https://www.npmjs.com/package/dsh-eval/access> — owner
   `hccccc01333`, repo `dsh-eval`, workflow `release.yml`, no environment.
-  Until then the OIDC publish step in `release.yml` cannot succeed.
+  Tag pushes publish with SLSA provenance; `0.5.0` and `0.5.1` shipped this way.

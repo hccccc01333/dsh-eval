@@ -58,6 +58,39 @@ export interface SignTestPower {
 }
 
 /**
+ * Coerce a paired-comparison tally to a non-negative integer. Wins and losses
+ * come from counting cases, so negatives, fractions, NaN and infinities are
+ * invalid; treating them as zero keeps the binomial sum well-defined instead
+ * of feeding a negative or fractional index into the pmf.
+ */
+function countOf(value: number): number {
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0
+}
+
+/**
+ * Lower binomial tails `sum_{i=0}^{k} C(n,i) / 2^n` for every `k` in `0..limit`,
+ * built in one O(limit) pass.
+ *
+ * The log coefficient accumulates the same `ln(n-i) - ln(i+1)` term, in the same
+ * order, that the old per-index `logChoose` recomputation used, and the running
+ * sums add the same pmf values in the same order. Every entry is therefore
+ * bit-for-bit identical to the previous implementation, without the old O(n²)
+ * (signTest) and O(n³) (signTestPower) recomputation.
+ */
+function lowerTailSums(n: number, limit: number): number[] {
+  const halfPow = n * Math.log(2)
+  const sums: number[] = []
+  let logCoeff = 0
+  let cumulative = 0
+  for (let index = 0; index <= limit; index++) {
+    if (index > 0) logCoeff += Math.log(n - (index - 1)) - Math.log(index)
+    cumulative += Math.exp(logCoeff - halfPow)
+    sums.push(cumulative)
+  }
+  return sums
+}
+
+/**
  * Report how much a finite paired sample can ever say under an exact sign test.
  *
  * With `n` discordant pairs the strongest evidence is a clean sweep, whose
@@ -77,11 +110,17 @@ export function signTestPower(
   const floor = (n: number): number => n === 0 ? 1 : Math.min(1, 2 ** (1 - n))
   const bestRawP = floor(discordant)
   const bestAdjustedP = Math.min(1, bestRawP * comparisons)
+  // Compute every candidate tail in one pass instead of re-deriving each
+  // cumulative pmf from scratch; 2 ** (1 - n) underflows to 0 for large n, and
+  // Math.min already caps the floor at 1, so no extra overflow handling is
+  // needed here.
+  const limit = Math.floor(discordant / 2)
+  const tails = lowerTailSums(discordant, limit)
   // Walk from the largest significant tail down, so the reported win count is
   // the minimum that still reaches alpha rather than a clean sweep.
   let minimumWins: number | null = null
-  for (let tail = Math.floor(discordant / 2); tail >= 0; tail--) {
-    const adjusted = Math.min(1, signTest(tail, discordant - tail).pValue * comparisons)
+  for (let tail = limit; tail >= 0; tail--) {
+    const adjusted = Math.min(1, Math.min(1, 2 * tails[tail]!) * comparisons)
     if (adjusted <= alpha) {
       minimumWins = discordant - tail
       break
@@ -152,37 +191,22 @@ export interface BootstrapOptions {
 }
 
 /**
- * Log of the binomial coefficient, accumulated rather than factorized so large
- * pair counts stay finite.
- * @param n - trials.
- * @param k - successes, at most n.
- * @returns `ln C(n, k)`.
- */
-function logChoose(n: number, k: number): number {
-  let value = 0
-  for (let index = 0; index < k; index++) {
-    value += Math.log(n - index) - Math.log(index + 1)
-  }
-  return value
-}
-
-/**
  * Exact two-sided sign test. Under the null hypothesis a discordant pair is a
  * win or a loss with equal probability, so the win count is Binomial(n, 1/2)
- * and the p-value doubles the smaller tail.
+ * and the p-value doubles the smaller tail. Invalid tallies (negative,
+ * fractional, non-finite) are treated as zero so the binomial indices stay
+ * well-defined.
  * @param wins - pairs where B beat A.
  * @param losses - pairs where A beat B.
  * @returns the discordant count and the exact p-value in `[0, 1]`.
  */
 export function signTest(wins: number, losses: number): SignTestOutcome {
-  const discordant = wins + losses
+  const positiveWins = countOf(wins)
+  const positiveLosses = countOf(losses)
+  const discordant = positiveWins + positiveLosses
   if (discordant === 0) return { discordant, pValue: 1 }
-  const tail = Math.min(wins, losses)
-  const halfPow = discordant * Math.log(2)
-  let cumulative = 0
-  for (let index = 0; index <= tail; index++) {
-    cumulative += Math.exp(logChoose(discordant, index) - halfPow)
-  }
+  const tail = Math.min(positiveWins, positiveLosses)
+  const cumulative = lowerTailSums(discordant, tail)[tail]!
   return { discordant, pValue: Math.min(1, 2 * cumulative) }
 }
 

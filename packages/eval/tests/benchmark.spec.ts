@@ -191,6 +191,7 @@ describe('dsh-eval benchmark loading', () => {
       '    prompt: p',
       '',
     ].join('\n'), dir)).rejects.toThrow('escapes the benchmark directory')
+    await expect(parseBenchmark(base, dir)).rejects.toThrow('--allow-external-paths')
   })
 
   it('ignores an external-path opt-in embedded in the benchmark document', async () => {
