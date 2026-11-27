@@ -33,6 +33,12 @@ export interface RejudgeOptions {
    * command line) to rejudge runs whose temp tree lives elsewhere.
    */
   allowedRoot?: string
+  /**
+   * Keep trials that already carry a judge verdict and only call the judge for
+   * missing ones. Use with the run's original judge config: pairing this with a
+   * different rubric would mark old verdicts as if they used the new one.
+   */
+  onlyMissing?: boolean
 }
 
 /** Whether `candidate` is `parent` itself or one of its descendants (both already realpath'd). */
@@ -117,6 +123,10 @@ export async function rejudgeRun(
   let unverified = 0
   for (const result of run.cases) {
     if (result.status !== 'completed') {
+      cases.push(result)
+      continue
+    }
+    if (options.onlyMissing === true && result.judge !== undefined) {
       cases.push(result)
       continue
     }

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.37 — 2026-11-27
+
+### Added
+
+- `rejudge --only-missing` skips trials that already have a judge verdict and
+  only calls the judge for missing ones, avoiding duplicate LLM cost on partial
+  runs. Combining it with a judge override is rejected so old verdicts cannot
+  be mislabeled with a new rubric.
+
 ## 0.5.36 — 2026-11-27
 
 ### Security

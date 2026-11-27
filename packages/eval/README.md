@@ -317,7 +317,10 @@ grading summary. Metrics, scripted grades, trial outcomes, and error details are
 untouched; only `judge` verdicts and `grading` change. The input report is never
 overwritten (`--out` must differ). Reports written before `caseInputs` existed
 are rejected with a field-specific diagnostic rather than silently judged with
-an empty prompt.
+an empty prompt. `--only-missing` keeps trials that already carry a verdict and
+calls the judge only for the rest, so a partially judged run can be completed
+without paying for a full re-judge; it cannot be combined with a judge override,
+which would relabel old verdicts with a new rubric.
 
 A judge can be supplied or replaced at re-judge time, which is what makes the
 replay workflow usable (a replay run has no stored judge config):

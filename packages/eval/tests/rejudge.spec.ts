@@ -71,6 +71,30 @@ function withCase(run: EvalRun, index: number, result: EvalTrialResult): EvalRun
 }
 
 describe('dsh-eval offline re-judging', () => {
+  it('only judges missing verdicts with onlyMissing', async () => {
+    const judged: EvalTrialResult = {
+      ...buildRun().cases[0]!, trial: 1,
+      judge: { finalAnswerScore: 3, hallucination: false },
+    }
+    const unjudged = omit({ ...buildRun().cases[0]!, trial: 2 }, 'judge')
+    const run = buildRun({ cases: [judged, unjudged, buildRun().cases[1]!] })
+    let calls = 0
+    const chat = async (): Promise<string> => {
+      calls += 1
+      return '{"finalAnswerScore": 8, "hallucination": false}'
+    }
+    const partial = await rejudgeRun(run, chat, undefined, { allowedRoot: root, onlyMissing: true })
+    expect(calls).toBe(1)
+    expect(partial.cases[0]!.judge?.finalAnswerScore).toBe(3)
+    expect(partial.cases[1]!.judge?.finalAnswerScore).toBe(8)
+    expect(partial.grading?.finalAnswerScore).toBe(5.5)
+
+    calls = 0
+    const full = await rejudgeRun(run, chat, undefined, { allowedRoot: root })
+    expect(calls).toBe(2)
+    expect(full.cases[0]!.judge?.finalAnswerScore).toBe(8)
+  })
+
   it('accepts a matching recorded trace digest and rejects a tampered trace', async () => {
     const loaded = await Promise.all([earlyLog, lateLog].map(path => loadTrace(path)))
     loaded.sort((a, b) => a.createdAt - b.createdAt)

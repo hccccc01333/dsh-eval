@@ -268,6 +268,17 @@ describe('dsh-eval command composition', () => {
     expect(rejudged.cases[0]?.judge?.finalAnswerScore).toBe(7)
     expect(rejudged.grading?.finalAnswerScore).toBe(7)
 
+    // onlyMissing skips a trial that already has a verdict end-to-end.
+    const againPath = join(dir, 'rejudged-again.json')
+    let judgedCalls = 0
+    const skipCode = await executeEval(
+      { kind: 'rejudge', runPath: outPath, outPath: againPath, onlyMissing: true }, io,
+      { judgeChat: async () => { judgedCalls += 1; return '{"finalAnswerScore": 1, "hallucination": true}' } },
+    )
+    expect(skipCode).toBe(0)
+    expect(judgedCalls).toBe(0)
+    expect((await loadRunReport(againPath)).cases[0]?.judge?.finalAnswerScore).toBe(7)
+
     // An explicitly authorized trace root is forwarded through the CLI too.
     const explicitCode = await executeEval(
       { kind: 'rejudge', runPath, outPath, allowedRoot: dirname(FIXTURE_LOG) }, io,
@@ -479,6 +490,22 @@ describe('dsh-eval command composition', () => {
       judge: { model: 'judge-v3', provider: 'deepseek', maxScore: 10 },
     })
     expect((published[1] as { judge?: { rubric?: string } }).judge?.rubric).toBeUndefined()
+  })
+
+  it('parses --only-missing for rejudge and rejects it with a judge override', async () => {
+    const published: EvalStartupValues[] = []
+    const program = evalCommand(value => published.push(value))
+    await program.parseAsync(['node', 'dsh', 'rejudge', 'run.json', '--only-missing'])
+    expect(published[0]).toMatchObject({ kind: 'rejudge', onlyMissing: true })
+
+    const err: string[] = []
+    const guard = evalCommand(() => {})
+    guard.exitOverride()
+    guard.configureOutput({ writeErr: chunk => err.push(chunk) })
+    await expect(guard.parseAsync([
+      'node', 'dsh', 'rejudge', 'run.json', '--only-missing', '--judge-model', 'v2',
+    ])).rejects.toThrow('cannot be combined with a judge override')
+    expect(err.join('')).toContain('--only-missing cannot be combined')
   })
 
   it('parses --allowed-root for rejudge and omits it when absent', async () => {

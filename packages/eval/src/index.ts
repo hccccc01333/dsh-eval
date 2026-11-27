@@ -313,6 +313,7 @@ export async function executeEval(
       const run = await loadRunReport(values.runPath)
       const rejudged = await rejudgeRun(run, services.judgeChat, values.judge, {
         ...(values.allowedRoot === undefined ? {} : { allowedRoot: values.allowedRoot }),
+        ...(values.onlyMissing === true ? { onlyMissing: true } : {}),
       })
       await writeRunReport(rejudged, values.outPath)
       const judgedCount = rejudged.cases.filter(result =>
