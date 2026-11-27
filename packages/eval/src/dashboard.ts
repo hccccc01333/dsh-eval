@@ -60,7 +60,9 @@ export async function writeDashboard(
 
 /** Escape text for interpolation into HTML. */
 function esc(value: string): string {
-  return value.replace(/[&<>"']/gu, (char) => ({
+  // The HTML file may be opened in a terminal-rendered viewer or copy/pasted
+  // into one, so control bytes must not survive the HTML escaping either.
+  return value.replace(/[\u0000-\u001f\u007f-\u009f]+/gu, ' ').replace(/[&<>"']/gu, (char) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   })[char]!)
 }

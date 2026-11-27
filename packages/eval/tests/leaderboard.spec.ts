@@ -205,7 +205,7 @@ describe('dsh-eval leaderboard', () => {
 
   it('pushes ungraded runs to the bottom without inventing numbers', () => {
     const rows = buildLeaderboard([
-      { label: 'x|bad\nname', run: run() },
+      { label: 'x|bad\u001b[2J\nname', run: run() },
       { label: 'graded', run: graded(0.6, 'g') },
       { label: 'also-ungraded', run: run({ model: 'other' }) },
     ])
@@ -215,7 +215,7 @@ describe('dsh-eval leaderboard', () => {
     expect(rows[1]!.gapFromBest).toBeNull()
     expect(rows[2]!.taskSuccess).toBeNull()
     const markdown = renderLeaderboard(rows)
-    expect(markdown).toContain('| 3 | x bad name | 1/1 | – | 100.0% | – | – | – | – | – | underpowered (p=1.000, task success) |')
+    expect(markdown).toContain('| 3 | x bad [2J name | 1/1 | – | 100.0% | – | – | – | – | – | underpowered (p=1.000, task success) |')
   })
 
   it('still ranks judge-only runs whose task success is null', () => {

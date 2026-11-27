@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.17 — 2026-11-27
+
+### Fixed
+
+- Completed the terminal-safety sweep: `leaderboard` labels and `dashboard`
+  HTML now strip control bytes before markdown/HTML escaping. This closes the
+  last paths where a benchmark- or agent-controlled string could carry an ESC
+  byte into rendered output.
+
 ## 0.5.16 — 2026-11-27
 
 ### Added

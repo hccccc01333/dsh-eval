@@ -132,7 +132,7 @@ describe('dsh-eval HTML dashboard', () => {
 
   it('escapes benchmark, case and error strings', () => {
     const html = renderDashboard([buildRun({
-      benchmark: '<img src=x onerror=alert(1)>',
+      benchmark: '<img src=x onerror=alert(1)>\u001b[2J',
       cases: [{
         caseId: '</code><b>x</b>', trial: 1, status: 'error', error: '&<>"\'',
         exitCode: 1, timedOut: false,
@@ -140,7 +140,8 @@ describe('dsh-eval HTML dashboard', () => {
     })])
     expect(html).not.toContain('<img')
     expect(html).not.toContain('<b>x</b>')
-    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;')
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt; [2J')
+    expect(html).not.toContain('\u001b')
     expect(html).toContain('&lt;/code&gt;&lt;b&gt;x&lt;/b&gt;')
     expect(html).toContain('&amp;&lt;&gt;&quot;&#39;')
   })
