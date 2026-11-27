@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.39 — 2026-11-27
+
+### Added
+
+- Trial CSV export appends `failureClusterLabel` after the existing columns, so
+  spreadsheet users can see the human-readable primary cause (including the
+  normalized judge error text) instead of only the stable pattern id.
+
 ## 0.5.38 — 2026-11-27
 
 ### Changed

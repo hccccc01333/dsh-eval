@@ -352,7 +352,8 @@ they start with a spreadsheet formula marker, so a hostile case id cannot
 execute on export or inject escape sequences into a terminal. The `tags` column holds a JSON array of the case's
 dimensions, so segment membership survives spreadsheet round-trips. The
 `anomalies` column holds outlier findings as JSON and `failureCluster` holds
-the trial's primary-cause id.
+the trial's primary-cause id, with `failureClusterLabel` appended after it for
+the human-readable cause (for example the actual judge error text).
 
 ## Replaying a run
 

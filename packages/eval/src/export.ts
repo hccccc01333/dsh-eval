@@ -22,6 +22,7 @@ const COLUMNS = [
   'llmMs', 'toolMs', 'ttftMs', 'traceSha256', 'tags', 'anomalies', 'failureCluster',
   // Appended rather than inserted so positional consumers keep their indices.
   'turns', 'toolSuccessRate', 'cacheReadTokens', 'contextTokens',
+  'failureClusterLabel',
 ] as const
 
 type CellValue = string | number | boolean | null | undefined
@@ -45,6 +46,7 @@ function row(
   result: EvalTrialResult,
   anomalies: readonly string[] | undefined,
   failureCluster: string | undefined,
+  failureClusterLabel: string | undefined,
 ): CellValue[] {
   const metrics = result.metrics
   return [
@@ -62,6 +64,7 @@ function row(
     failureCluster ?? null,
     metrics?.turns, metrics?.toolSuccessRate,
     metrics?.tokens.cacheReadTokens, metrics?.contextTokens,
+    failureClusterLabel ?? null,
   ]
 }
 
@@ -84,16 +87,19 @@ export function renderTrialsCsv(run: EvalRun): string {
     if (existing === undefined) anomalyMap.set(key, [detail])
     else existing.push(detail)
   }
-  const clusterMap = new Map<string, string>()
+  const clusterMap = new Map<string, { pattern: string; label: string }>()
   // Each failing trial has exactly one primary cause, so a key appears once.
   for (const cluster of clusterFailures(run)) {
     for (const ref of cluster.cases) {
-      clusterMap.set(trialKey(ref.caseId, ref.trial), cluster.pattern)
+      clusterMap.set(trialKey(ref.caseId, ref.trial), {
+        pattern: cluster.pattern, label: cluster.label,
+      })
     }
   }
   const lines = [COLUMNS.join(','), ...run.cases.map(result => {
     const key = trialKey(result.caseId, result.trial)
-    return row(result, anomalyMap.get(key), clusterMap.get(key)).map(cell).join(',')
+    const cluster = clusterMap.get(key)
+    return row(result, anomalyMap.get(key), cluster?.pattern, cluster?.label).map(cell).join(',')
   })]
   return `${lines.join('\r\n')}\r\n`
 }
