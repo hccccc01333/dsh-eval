@@ -102,6 +102,39 @@ describe('reproduceRun', () => {
     expect(replay.trials).toBe(1)
   })
 
+  it('refuses to replay a judged run without a judge seam', async () => {
+    const benchmark = buildBenchmark({
+      judge: { provider: 'deepseek', model: 'judge', maxScore: 10 },
+    })
+    const baseline = buildRun({
+      grading: {
+        taskSuccessRate: null, toolSelectionAccuracyRate: null,
+        finalAnswerScore: 8, hallucinationRate: null,
+      },
+    })
+    await expect(reproduceRun(baseline, benchmark)).rejects.toThrow('no LLM chat seam is available')
+  })
+
+  it('replays a judged baseline when a judge seam is supplied', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const benchmark = buildBenchmark({
+      judge: { provider: 'deepseek', model: 'judge', maxScore: 10 },
+    })
+    const baseline = buildRun({
+      grading: {
+        taskSuccessRate: null, toolSelectionAccuracyRate: null,
+        finalAnswerScore: null, hallucinationRate: null,
+      },
+      cases: [{
+        caseId: 'a', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        judge: { finalAnswerScore: 8, hallucination: false },
+      }],
+    })
+    const replay = await reproduceRun(baseline, benchmark, { judgeChat: async () => '{}' })
+    expect(replay.cases).toHaveLength(1)
+  })
+
   it('forwards the judge seam and progress observer', async () => {
     process.env.FAKE_DASH_MODE = 'log'
     process.env.FAKE_DASH_LOG = FIXTURE_LOG

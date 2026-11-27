@@ -475,11 +475,15 @@ describe('dsh-eval command composition', () => {
     await program.parseAsync(['node', 'dsh', 'reproduce', runPath, benchmarkPath])
     expect(published[0]).toEqual({
       kind: 'reproduce', runPath, benchmarkPath, outPath: 'reproduced-run.json',
+      allowExternalPaths: false, quiet: false,
     })
 
     const outPath = join(dir, 'replay.json')
     await program.parseAsync(['node', 'dsh', 'reproduce', runPath, benchmarkPath, '--out', outPath])
-    expect(published[1]).toEqual({ kind: 'reproduce', runPath, benchmarkPath, outPath })
+    expect(published[1]).toEqual({
+      kind: 'reproduce', runPath, benchmarkPath, outPath,
+      allowExternalPaths: false, quiet: false,
+    })
 
     // Like rejudge, the comparison resolves both paths and ignores case, so a
     // case-only difference cannot silently overwrite the baseline report.
@@ -489,6 +493,15 @@ describe('dsh-eval command composition', () => {
     const sameName = await bootEval(['reproduce', runPath, benchmarkPath, '--out', runPath.toUpperCase()])
     expect(sameName.exits).toEqual([1])
     expect(sameName.err).toContain('--out must differ')
+  })
+
+  it('parses reproduce external-path and quiet flags', async () => {
+    const dir = tempDir()
+    const published: EvalStartupValues[] = []
+    const program = evalCommand(value => published.push(value))
+    await program.parseAsync(['node', 'dsh', 'reproduce', join(dir, 'run.json'),
+      benchmarkYaml(dir), '--allow-external-paths', '--quiet'])
+    expect(published[0]).toMatchObject({ kind: 'reproduce', allowExternalPaths: true, quiet: true })
   })
 
   it('prints help and exits 0 without running', async () => {

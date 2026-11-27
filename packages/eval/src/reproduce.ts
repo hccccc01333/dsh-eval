@@ -71,6 +71,19 @@ export async function reproduceRun(
       )
     }
   }
+  // A run whose judge was configured in the benchmark must not silently
+  // become an unjudged replay just because this process has no LLM seam: the
+  // comparison would then claim to reproduce a score it never recomputed.
+  const baselineScore = baseline.grading?.finalAnswerScore
+  const baselineJudged = (baselineScore !== null && baselineScore !== undefined)
+    || baseline.cases.some(result => result.judge !== undefined)
+  if (baselineJudged && benchmark.judge !== undefined && options.judgeChat === undefined) {
+    throw new Error(
+      'reproduce: the baseline run used an LLM judge but no LLM chat seam is available — ' +
+      'configure the eval profile\'s LLM provider before reproducing',
+    )
+  }
+
   // Pass exactly the recorded overrides: adding a "harmless" default here
   // would change the replay's digest and make every reproduction look like a
   // mismatch. The benchmark file itself supplies whatever was not overridden.

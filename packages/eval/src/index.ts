@@ -277,13 +277,16 @@ export async function executeEval(
       const baseline = await loadRunReport(values.runPath)
       const benchmark = await loadBenchmark(values.benchmarkPath, {
         excludeFromDigest: [values.outPath],
+        allowExternalPaths: values.allowExternalPaths === true,
       })
       const startedAtMs = Date.now()
       const replay = await reproduceRun(baseline, benchmark, {
         ...(services.judgeChat === undefined ? {} : { judgeChat: services.judgeChat }),
-        onProgress: (result: EvalTrialResult, finished: number, total: number) => {
-          io.stderr.write(renderProgress(result, finished, total, startedAtMs))
-        },
+        ...(values.quiet === true ? {} : {
+          onProgress: (result: EvalTrialResult, finished: number, total: number) => {
+            io.stderr.write(renderProgress(result, finished, total, startedAtMs))
+          },
+        }),
       })
       await writeRunReport(replay, values.outPath)
       const comparison = compareReproduce(baseline, replay)

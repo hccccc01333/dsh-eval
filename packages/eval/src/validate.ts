@@ -31,6 +31,8 @@ export interface BenchmarkSummary {
   toolConstraints: number
   /** Cases with a per-case timeout override. */
   caseTimeouts: number
+  /** Distinct case tags used for segment analysis. */
+  tags: string[]
   judge: { provider: string; model: string; maxScore: number } | null
   replay: string | null
   pricing: boolean
@@ -52,7 +54,9 @@ export function summarizeBenchmark(benchmark: Benchmark): BenchmarkSummary {
   const warnings: string[] = []
   const caseIds = new Set<string>()
   const duplicateIds = new Set<string>()
+  const tags = new Set<string>()
   for (const item of benchmark.cases) {
+    for (const tag of item.tags ?? []) tags.add(tag)
     if (item.timeoutMs !== undefined) caseTimeouts += 1
     if (caseIds.has(item.id)) duplicateIds.add(item.id)
     caseIds.add(item.id)
@@ -125,6 +129,7 @@ export function summarizeBenchmark(benchmark: Benchmark): BenchmarkSummary {
     checks,
     toolConstraints,
     caseTimeouts,
+    tags: [...tags].sort((a, b) => Number(a > b) - Number(a < b)),
     judge: judge === undefined ? null : {
       provider: judge.provider, model: judge.model, maxScore: judge.maxScore,
     },
@@ -153,6 +158,9 @@ export function renderBenchmarkSummary(benchmark: Benchmark): string {
     `- timeout: ${summary.timeoutMs} ms${summary.caseTimeouts === 0 ? '' : ` (${summary.caseTimeouts} per-case override(s))`}`,
     `- seed: ${summary.seed} (trial n receives DSH_EVAL_SEED = ${summary.seed} + n - 1)`,
     `- cases: ${summary.cases} (${summary.gradedCases} graded, ${summary.goldAnswers} with gold answers)`,
+    ...(summary.tags.length === 0 ? [] : [
+      `- tags: ${summary.tags.map(tag => tag.replace(/[\u0000-\u001f\u007f-\u009f]+/gu, ' ')).join(', ')}`,
+    ]),
     `- expectations: ${summary.checks} check(s), ${summary.toolConstraints} tool constraint(s)`,
     `- judge: ${summary.judge === null ? 'none' : `${summary.judge.model} on ${summary.judge.provider} (max ${summary.judge.maxScore})`}`,
     `- replay: ${summary.replay ?? 'live'}`,

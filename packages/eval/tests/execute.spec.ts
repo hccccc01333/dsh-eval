@@ -209,6 +209,38 @@ describe('dsh-eval reproduce execution', () => {
     expect(existsSync(outPath)).toBe(true)
   })
 
+  it('suppresses progress lines in quiet mode', async () => {
+    const dir = tempDir()
+    const benchmarkPath = benchmarkYaml(dir)
+    const runPath = join(dir, 'baseline.json')
+    const outPath = join(dir, 'replay.json')
+    const benchmark = await loadBenchmark(benchmarkPath, { excludeFromDigest: [outPath] })
+    await writeRunReport({
+      benchmark: 'n', model: 'm', createdAt: 1, trials: 1, seed: 0, pricing: null,
+      ...(benchmark.sourceSha256 === undefined ? {} : { benchmarkSha256: benchmark.sourceSha256 }),
+      tempRoot: dir,
+      cases: [{ caseId: 'a', trial: 1, status: 'completed', exitCode: 0, timedOut: false }],
+      aggregate: null, grading: grading(0.5),
+    }, runPath)
+    vi.mocked(runBenchmark).mockImplementation(async () => ({
+      benchmark: 'n', model: 'm', createdAt: 2, trials: 1, seed: 0, pricing: null,
+      tempRoot: dir,
+      cases: [{ caseId: 'a', trial: 1, status: 'completed', exitCode: 0, timedOut: false }],
+      aggregate: completedAggregate(), grading: grading(0.75),
+    }))
+    const stderr: string[] = []
+    const code = await executeEval(
+      { kind: 'reproduce', runPath, benchmarkPath, outPath, quiet: true },
+      {
+        stdout: { write: () => true },
+        stderr: { write: (chunk) => { stderr.push(chunk); return true } },
+      },
+      {},
+    )
+    expect(code).toBe(0)
+    expect(stderr.join('')).toBe('')
+  })
+
   it('propagates a digest mismatch with a sanitized benchmark name', async () => {
     const dir = tempDir()
     const benchmarkPath = benchmarkYaml(dir)

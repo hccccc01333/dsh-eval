@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.8 — 2026-11-27
+
+### Added
+
+- `reproduce` now accepts `--allow-external-paths` (for benchmarks referencing
+  files outside their directory) and `--quiet` (suppress per-trial progress),
+  matching `run`'s CLI surface.
+- `validate` text and JSON summaries list distinct case tags, so dimension
+  declarations get preflight feedback before a run.
+
+### Fixed
+
+- `reproduce` refuses to replay a judged baseline when no LLM chat seam is
+  available. Previously the replay silently dropped judge verdicts and then
+  reported a "successful reproduction" with incomparable scores.
+
 ## 0.5.7 — 2026-11-27
 
 ### Added

@@ -106,6 +106,8 @@ export type EvalStartupValues =
     runPath: string
     benchmarkPath: string
     outPath: string
+    allowExternalPaths?: boolean
+    quiet?: boolean
   }
   | {
     kind: 'import'
@@ -431,12 +433,20 @@ Examples:
     .argument('<run.json>', 'path to the baseline run report')
     .argument('<benchmark.yaml>', 'path to the benchmark document')
     .option('--out <path>', 'output run JSON path; must differ from the input', 'reproduced-run.json')
-    .action((runPath: string, benchmarkPath: string, options: { out: string }) => {
+    .option('--allow-external-paths', 'allow benchmark-referenced files outside the benchmark directory (trusted benchmarks only)')
+    .option('--quiet', 'suppress per-trial progress lines')
+    .action((runPath: string, benchmarkPath: string, options: {
+      out: string; allowExternalPaths?: boolean; quiet?: boolean
+    }) => {
       const samePath = resolve(runPath).toLowerCase() === resolve(options.out).toLowerCase()
       if (samePath) {
         program.error('error: --out must differ from the input run report')
       }
-      publish({ kind: 'reproduce', runPath, benchmarkPath, outPath: options.out })
+      publish({
+        kind: 'reproduce', runPath, benchmarkPath, outPath: options.out,
+        allowExternalPaths: options.allowExternalPaths === true,
+        quiet: options.quiet === true,
+      })
     })
   const importer = program.command('import').description('import an external harness session log as a run report')
   importer

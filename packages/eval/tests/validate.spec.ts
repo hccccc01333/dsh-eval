@@ -40,6 +40,19 @@ describe('dsh-eval benchmark preflight', () => {
     expect(summary).toContain('- pricing: configured')
     expect(summary).toContain('Validated: smoke is ready to run.')
     expect(summary).not.toContain('## Warnings')
+    expect(summary).not.toContain('- tags:')
+  })
+
+  it('lists distinct case tags in text and JSON summaries', () => {
+    const value = benchmark({
+      cases: [
+        { id: 'a', prompt: 'p', tags: ['hard', 'ts'] },
+        { id: 'b', prompt: 'p', tags: ['hard', 'evil\nname'] },
+      ],
+    })
+    expect(renderBenchmarkSummary(value)).toContain('- tags: evil name, hard, ts')
+    expect(summarizeBenchmark(value).tags).toEqual(['evil\nname', 'hard', 'ts'])
+    expect(JSON.parse(renderBenchmarkJson(value)).tags).toEqual(['evil\nname', 'hard', 'ts'])
   })
 
   it('warns when the benchmark cannot supply enough paired trials for a corrected sign test', () => {
