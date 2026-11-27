@@ -181,7 +181,11 @@ function formatScore(value: number | null, maxScore: number): string {
  * unchanged for them.
  */
 function escapeMarkdown(value: string): string {
-  return value.replace(/[\r\n|`]/gu, ' ')
+  // Markdown output is also printed to terminals by `report --brief`, so
+  // control bytes (ESC in particular) must never survive into it.
+  return value
+    .replace(/[\u0000-\u001f\u007f-\u009f]+/gu, ' ')
+    .replace(/[|`]/gu, ' ')
 }
 
 /** One trial whose scripted check command could not be started. */

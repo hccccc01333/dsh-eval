@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.12 — 2026-11-27
+
+### Fixed
+
+- Terminal-safety sweep: `report`, `validate`, `compare` and `gate` now strip
+  control bytes (including ESC) from benchmark- and agent-controlled text
+  before printing markdown or brief summaries. Previously a hostile case id,
+  benchmark name or error string could emit terminal escape sequences.
+  JSON output is unchanged — `JSON.stringify` already escapes those bytes.
+
 ## 0.5.11 — 2026-11-27
 
 ### Added

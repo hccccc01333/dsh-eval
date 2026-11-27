@@ -474,7 +474,7 @@ describe('dsh-eval CI gate', () => {
     const baseline = buildRun({
       grading,
       cases: [{
-        caseId: 'c|x\nnext', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        caseId: 'c|x\u001b[2J\nnext', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
         grade: { taskSuccess: true, toolSelectionAccuracy: true },
         judge: { finalAnswerScore: 8, hallucination: false },
       }],
@@ -482,7 +482,7 @@ describe('dsh-eval CI gate', () => {
     const candidate = buildRun({
       grading,
       cases: [{
-        caseId: 'c|x\nnext', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        caseId: 'c|x\u001b[2J\nnext', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
         grade: { taskSuccess: false, toolSelectionAccuracy: false },
         judge: { finalAnswerScore: 3, hallucination: false },
       }, {
@@ -497,15 +497,15 @@ describe('dsh-eval CI gate', () => {
     ])
     const markdown = renderGate(result)
     expect(markdown).toContain('- case regressions: 3 paired trial(s) got worse (showing up to 5)')
-    expect(markdown).toContain('c x next #1: task success 100.0% → 0.0%')
-    expect(markdown).toContain('c x next #1: judge score 80.0% → 30.0%')
+    expect(markdown).toContain('c x [2J next #1: task success 100.0% → 0.0%')
+    expect(markdown).toContain('c x [2J next #1: judge score 80.0% → 30.0%')
     expect(markdown).not.toContain('unpaired #1')
     // Score drops inside the tolerance are not regressions; null scores are skipped.
     const tinyDrop = buildRun({
       grading,
       cases: [
         {
-          caseId: 'c|x\nnext', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          caseId: 'c|x\u001b[2J\nnext', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
           grade: { taskSuccess: true, toolSelectionAccuracy: true },
           judge: { finalAnswerScore: 7.5, hallucination: false },
         },

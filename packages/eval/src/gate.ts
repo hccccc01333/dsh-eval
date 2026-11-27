@@ -350,13 +350,13 @@ export function renderGate(result: GateResult): string {
   const rows = result.checks.map(check => `| ${check.metric} | ${format(check.baseline, check)} | ${format(check.candidate, check)} | ${formatDelta(check.delta, check)} | ${check.passed ? 'PASS' : 'FAIL'}${check.note === undefined ? '' : ` (${check.note})`} |`)
   const regressions = (result.regressions ?? []).slice(0, 5).map(item => {
     // Case ids come from benchmark files; keep them from breaking markdown lines.
-    const caseId = item.caseId.replace(/[\r\n|]/gu, ' ')
+    const caseId = item.caseId.replace(/[\u0000-\u001f\u007f-\u009f|]+/gu, ' ')
     const before = `${(item.before * 100).toFixed(1)}%`
     const after = `${(item.after * 100).toFixed(1)}%`
     return `  - ${caseId} #${item.trial}: ${item.metric} ${before} → ${after}`
   })
   const confirmed = (result.confirmedCaseRegressions ?? []).slice(0, 5).map(item => {
-    const caseId = item.caseId.replace(/[\r\n|]/gu, ' ')
+    const caseId = item.caseId.replace(/[\u0000-\u001f\u007f-\u009f|]+/gu, ' ')
     return `  - ${caseId}: ${item.metric}, adjusted p ${formatPValue(item.adjustedP)}`
   })
   return [

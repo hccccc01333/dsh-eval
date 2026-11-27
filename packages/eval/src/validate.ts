@@ -144,33 +144,38 @@ export function summarizeBenchmark(benchmark: Benchmark): BenchmarkSummary {
  * @param benchmark - a parsed benchmark document.
  * @returns markdown ending in a newline.
  */
+/** Benchmark-controlled text printed to a terminal must not carry control bytes. */
+function terminalSafe(value: string): string {
+  return value.replace(/[\u0000-\u001f\u007f-\u009f]+/gu, ' ')
+}
+
 export function renderBenchmarkSummary(benchmark: Benchmark): string {
   const summary = summarizeBenchmark(benchmark)
   const lines = [
-    `# Benchmark: ${summary.name}`,
+    `# Benchmark: ${terminalSafe(summary.name)}`,
     '',
-    `- model: ${summary.model}`,
+    `- model: ${terminalSafe(summary.model)}`,
     ...(summary.sourceSha256 === null ? [] : [`- source sha256: ${summary.sourceSha256}`]),
-    `- profile: ${summary.profile}`,
-    `- command: ${summary.command.join(' ')}`,
+    `- profile: ${terminalSafe(summary.profile)}`,
+    `- command: ${terminalSafe(summary.command.join(' '))}`,
     `- trials per case: ${summary.trials}`,
     `- concurrency: ${summary.concurrency}`,
     `- timeout: ${summary.timeoutMs} ms${summary.caseTimeouts === 0 ? '' : ` (${summary.caseTimeouts} per-case override(s))`}`,
     `- seed: ${summary.seed} (trial n receives DSH_EVAL_SEED = ${summary.seed} + n - 1)`,
     `- cases: ${summary.cases} (${summary.gradedCases} graded, ${summary.goldAnswers} with gold answers)`,
     ...(summary.tags.length === 0 ? [] : [
-      `- tags: ${summary.tags.map(tag => tag.replace(/[\u0000-\u001f\u007f-\u009f]+/gu, ' ')).join(', ')}`,
+      `- tags: ${summary.tags.map(terminalSafe).join(', ')}`,
     ]),
     `- expectations: ${summary.checks} check(s), ${summary.toolConstraints} tool constraint(s)`,
-    `- judge: ${summary.judge === null ? 'none' : `${summary.judge.model} on ${summary.judge.provider} (max ${summary.judge.maxScore})`}`,
-    `- replay: ${summary.replay ?? 'live'}`,
+    `- judge: ${summary.judge === null ? 'none' : `${terminalSafe(summary.judge.model)} on ${terminalSafe(summary.judge.provider)} (max ${summary.judge.maxScore})`}`,
+    `- replay: ${summary.replay === null ? 'live' : terminalSafe(summary.replay)}`,
     `- pricing: ${summary.pricing ? 'configured' : 'none'}`,
     '',
-    `Validated: ${summary.name} is ready to run.`,
+    `Validated: ${terminalSafe(summary.name)} is ready to run.`,
     '',
   ]
   if (summary.warnings.length > 0) {
-    lines.push('## Warnings', '', ...summary.warnings.map(warning => `- ${warning}`), '')
+    lines.push('## Warnings', '', ...summary.warnings.map(warning => `- ${terminalSafe(warning)}`), '')
   }
   return lines.join('\n')
 }

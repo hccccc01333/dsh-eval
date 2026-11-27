@@ -43,6 +43,20 @@ describe('dsh-eval benchmark preflight', () => {
     expect(summary).not.toContain('- tags:')
   })
 
+  it('strips control bytes from benchmark-controlled terminal summaries', () => {
+    const summary = renderBenchmarkSummary(benchmark({
+      name: 'ev\u001b[2Jil', model: 'm\u001b[1A', command: ['dsh', '\u001b[2Jx'],
+      replay: { dir: '/tmp/\u001b[2Jx' },
+      judge: { provider: 'p', model: 'j\u001b[2J', maxScore: 10 },
+      cases: [
+        { id: 'd\u001b[2J', prompt: 'p' },
+        { id: 'd\u001b[2J', prompt: 'p' },
+      ],
+    }))
+    expect(summary).toContain('ev [2Jil')
+    expect(summary.replace(/\n/gu, '')).not.toMatch(/[\u001b\u0000-\u001f]/u)
+  })
+
   it('lists distinct case tags in text and JSON summaries', () => {
     const value = benchmark({
       cases: [

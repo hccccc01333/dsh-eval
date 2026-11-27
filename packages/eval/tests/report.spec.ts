@@ -91,6 +91,19 @@ describe('dsh-eval report persistence and rendering', () => {
     await expect(loadRunReport(root)).rejects.toThrow('(root)')
   })
 
+  it('strips terminal control bytes from hostile report fields', () => {
+    const markdown = renderMarkdownReport(buildRun({
+      benchmark: 'b\u001b[2Jm', model: 'm\u001b[1A',
+      cases: [{
+        caseId: 'c\u001b[2J', trial: 1, status: 'error',
+        error: 'x\u001b[2J', exitCode: null, timedOut: false,
+      }],
+    }))
+    expect(markdown).toContain('b [2Jm')
+    // Markdown's own line breaks are the only control bytes left.
+    expect(markdown.replace(/\n/gu, '')).not.toMatch(/[\u001b\u0000-\u001f]/u)
+  })
+
   it('includes anomaly, failure-cluster and segment analytics in JSON', () => {
     const parsed = JSON.parse(renderReportJson(buildRun({
       cases: [{

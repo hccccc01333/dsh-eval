@@ -309,19 +309,28 @@ describe('dsh-eval comparison', () => {
   it('falls back to judge scores for case outcomes and sanitizes case ids', () => {
     const a = buildRun({
       cases: [{
-        caseId: 'n|bad\nnext', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        caseId: 'n|bad\u001b[2J\nnext', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
         judge: { finalAnswerScore: 2, hallucination: false },
       }],
     })
     const b = buildRun({
       cases: [{
-        caseId: 'n|bad\nnext', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        caseId: 'n|bad\u001b[2J\nnext', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
         judge: { finalAnswerScore: 5, hallucination: false },
       }],
     })
-    expect(renderPairedCases(pairedCases(a, b)!)).toContain('| n bad next | 1 | 2 | 5 | B better |')
+    expect(renderPairedCases(pairedCases(a, b)!)).toContain('| n bad [2J next | 1 | 2 | 5 | B better |')
     expect(renderPairedCases([{ caseId: 'n', trial: 1, a: null, b: null, outcome: 'B better' }]))
       .toContain('| n | 1 | – | – | B better |')
+  })
+
+  it('strips control bytes from case ids in paired significance tables', () => {
+    const hostile = 's\u001b[2Jx'
+    const a = buildRun({ cases: Array.from({ length: 8 }, (_, i) => trial(hostile, i + 1, false, 2, 10)) })
+    const b = buildRun({ cases: Array.from({ length: 8 }, (_, i) => trial(hostile, i + 1, true, 2, 10)) })
+    const markdown = renderCaseSignificance(pairedCaseSignificance(a, b)!)
+    expect(markdown).toContain('s [2Jx')
+    expect(markdown.replace(/\n/gu, '')).not.toMatch(/[\u001b\u0000-\u001f]/u)
   })
 
   it('includes paired rows when both runs share completed trials', () => {

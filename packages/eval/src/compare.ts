@@ -439,7 +439,7 @@ export function renderCaseSignificance(rows: readonly CaseSignificance[]): strin
   if (shown.length > 0) {
     lines.push('', '| case | pairs | B wins | A wins | adjusted p | result |', '|---|---|---|---|---|---|')
     for (const row of shown) {
-      const caseId = row.caseId.replace(/[\r\n|]/gu, ' ')
+      const caseId = row.caseId.replace(/[\u0000-\u001f\u007f-\u009f|]+/gu, ' ')
       lines.push(`| ${caseId} | ${row.pairs} | ${row.wins} | ${row.losses} | ${formatPValue(row.adjustedP)} | ${row.verdict} |`)
     }
   }
@@ -475,7 +475,7 @@ export function renderPairedCases(cases: readonly PairedCase[]): string {
   if (shown.length > 0) {
     lines.push('', '| case | trial | A | B | result |', '|---|---|---|---|---|')
     for (const item of shown) {
-      const caseId = item.caseId.replace(/[\r\n|]/gu, ' ')
+      const caseId = item.caseId.replace(/[\u0000-\u001f\u007f-\u009f|]+/gu, ' ')
       lines.push(`| ${caseId} | ${item.trial} | ${formatCaseValue(item.a)} | ${formatCaseValue(item.b)} | ${item.outcome} |`)
     }
   }
