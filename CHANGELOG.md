@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.13 — 2026-11-27
+
+### Added
+
+- `reproduce --json` emits only the machine-readable comparison object;
+  progress lines and the human-facing signpost are suppressed in that mode.
+
+### Fixed
+
+- Root and package READMEs now document `reproduce` and `segments` in their
+  command lists. Both commands were shipped earlier but absent from the main
+  documentation.
+
 ## 0.5.12 — 2026-11-27
 
 ### Fixed

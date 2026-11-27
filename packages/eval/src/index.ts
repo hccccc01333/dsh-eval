@@ -300,7 +300,7 @@ export async function executeEval(
       const startedAtMs = Date.now()
       const replay = await reproduceRun(baseline, benchmark, {
         ...(services.judgeChat === undefined ? {} : { judgeChat: services.judgeChat }),
-        ...(values.quiet === true ? {} : {
+        ...(values.quiet === true || values.json === true ? {} : {
           onProgress: (result: EvalTrialResult, finished: number, total: number) => {
             io.stderr.write(renderProgress(result, finished, total, startedAtMs))
           },
@@ -308,10 +308,15 @@ export async function executeEval(
       })
       await writeRunReport(replay, values.outPath)
       const comparison = compareReproduce(baseline, replay)
-      const rate = (value: number | null): string => value === null ? 'n/a' : `${(value * 100).toFixed(1)}%`
+      if (values.json === true) {
+        // No human-facing signpost here: stdout must stay machine-readable.
+        io.stdout.write(`${JSON.stringify(comparison)}\n`)
+      } else {
+        const rate = (value: number | null): string => value === null ? 'n/a' : `${(value * 100).toFixed(1)}%`
+        io.stdout.write(`Wrote ${values.outPath} (baseline ${comparison.baselineCompleted}/${baseline.cases.length} completed, ${rate(comparison.baselineTaskSuccessRate)} → replay ${comparison.replayCompleted}/${replay.cases.length} completed, ${rate(comparison.replayTaskSuccessRate)})\n`)
+        io.stdout.write(`Next: dsh eval report ${values.outPath} --brief\n`)
+      }
       const failed = replay.cases.filter(result => result.status === 'error')
-      io.stdout.write(`Wrote ${values.outPath} (baseline ${comparison.baselineCompleted}/${baseline.cases.length} completed, ${rate(comparison.baselineTaskSuccessRate)} → replay ${comparison.replayCompleted}/${replay.cases.length} completed, ${rate(comparison.replayTaskSuccessRate)})\n`)
-      io.stdout.write(`Next: dsh eval report ${values.outPath} --brief\n`)
       return failed.length > 0 || replay.aggregate === null ? 1 : 0
     }
     const benchmark = await loadBenchmark(values.benchmarkPath, {

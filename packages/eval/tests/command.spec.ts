@@ -475,14 +475,14 @@ describe('dsh-eval command composition', () => {
     await program.parseAsync(['node', 'dsh', 'reproduce', runPath, benchmarkPath])
     expect(published[0]).toEqual({
       kind: 'reproduce', runPath, benchmarkPath, outPath: 'reproduced-run.json',
-      allowExternalPaths: false, quiet: false,
+      allowExternalPaths: false, quiet: false, json: false,
     })
 
     const outPath = join(dir, 'replay.json')
     await program.parseAsync(['node', 'dsh', 'reproduce', runPath, benchmarkPath, '--out', outPath])
     expect(published[1]).toEqual({
       kind: 'reproduce', runPath, benchmarkPath, outPath,
-      allowExternalPaths: false, quiet: false,
+      allowExternalPaths: false, quiet: false, json: false,
     })
 
     // Like rejudge, the comparison resolves both paths and ignores case, so a
@@ -500,8 +500,10 @@ describe('dsh-eval command composition', () => {
     const published: EvalStartupValues[] = []
     const program = evalCommand(value => published.push(value))
     await program.parseAsync(['node', 'dsh', 'reproduce', join(dir, 'run.json'),
-      benchmarkYaml(dir), '--allow-external-paths', '--quiet'])
-    expect(published[0]).toMatchObject({ kind: 'reproduce', allowExternalPaths: true, quiet: true })
+      benchmarkYaml(dir), '--allow-external-paths', '--quiet', '--json'])
+    expect(published[0]).toMatchObject({
+      kind: 'reproduce', allowExternalPaths: true, quiet: true, json: true,
+    })
   })
 
   it('parses segments with optional json and out', async () => {

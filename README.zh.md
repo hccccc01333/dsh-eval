@@ -38,6 +38,8 @@
 - `dsh eval gate candidate.json --baseline base.json --max-drop 0.05 [--require-significance] [--json]` —— CI 质量与资源预算门禁；显著性模式只在统计确认回退时失败
 - `dsh eval compare v1.json v2.json` —— 带符号的 `B - A` 对比表和配对推断；`--json` 输出结构化数据
 - `dsh eval rejudge run.json --out rejudged.json` —— 用新判官模型或 rubric 离线重评分，无需重跑 agent；记录的 SHA-256 trace 摘要可拒绝被篡改的日志
+- `dsh eval reproduce run.json benchmark.yaml --out replay.json` —— 按基线记录的 seed 与覆盖项复现运行，benchmark 摘要变化直接拒绝，并打印前后完成数与成功率；`--json` 输出机器可读对比结果
+- `dsh eval segments base.json candidate.json` —— 按 case tag 对齐两次 run，输出任务成功率与判官分数的差值；支持 `--json` 与 `--out`
 
 ## 为什么选 dsh-eval，而不是临时脚本
 
@@ -73,7 +75,7 @@
 
 ## 状态
 
-`dsh-eval@0.5.12` · 439 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.5.13` · 440 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 `0.3.1` 起可安装：`0.3.0` 的 tarball 漏掉了入口 import 的运行时模块，导致每次安装都报 `ERR_MODULE_NOT_FOUND`。详见 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -166,6 +168,8 @@ HTML 仪表盘中展示,因此 fixture 改动不会悄悄改变结果含义。CL
 | `dsh eval gate candidate.json --baseline base.json [--max-drop 0.05] [--json] [--out file]` | 回退或超限时让 CI 失败；`--max-drop` 是容许的回退比例（默认 `0` = 任何回退都失败），`--json` 输出机器可读判定 |
 | `dsh eval compare base.json candidate.json [--json] [--out file]` | 对比两个 run，给出差值与配对推断 |
 | `dsh eval rejudge run.json --out rejudged.json` | 离线重评分已保存的 trace，写入新报告 |
+| `dsh eval reproduce run.json benchmark.yaml [--out replay.json] [--json]` | 按基线设置复现；benchmark 摘要变化时拒绝 |
+| `dsh eval segments base.json candidate.json [--json] [--out file]` | 按 case tag 对比两个 run 的带符号差值 |
 | `dsh eval import codex\|claude-code log.jsonl --out run.json` | 把外部 session 日志导入为单 trial run |
 
 所有只读渲染命令(`report`、`compare`、`validate`、`leaderboard`、`gate`、
@@ -195,7 +199,7 @@ scripts/          harness-closure.mjs —— 可选的本地 harness workspace �
 改 `packages/eval/package.json` 的 `version` 并在 CHANGELOG 里加一节，然后推同名 tag：
 
 ```sh
-git tag v0.5.12 && git push origin v0.5.12
+git tag v0.5.13 && git push origin v0.5.13
 ```
 
 `.github/workflows/release.yml` 会重跑各道闸门，再通过 **trusted publishing（OIDC）** 带 provenance 发布到 npm，任何机器上都不需要存 token。npm 的 Trusted Publisher 登记（GitHub Actions，workflow 填 `release.yml`）已完成，自 `0.5.0` 起的所有版本均由此发布。账号的第二因子是安全密钥，因此既不存储也不依赖长期 token。

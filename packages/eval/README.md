@@ -345,7 +345,8 @@ It first checks that the benchmark's digest still matches the one in the
 baseline; a changed YAML is rejected rather than reported as a reproduction.
 The CLI prints before/after completion counts and task-success rates so a
 non-deterministic agent is visible without diffing two JSON files.
-`--allow-external-paths` and `--quiet` mirror the `run` command.
+`--allow-external-paths` and `--quiet` mirror the `run` command; `--json`
+prints only the comparison object, with no progress lines or signpost text.
 
 To compare runs by dimension, `dsh eval segments base.json candidate.json`
 prints a per-tag delta table for task success and judge score, with `--json`

@@ -108,6 +108,7 @@ export type EvalStartupValues =
     outPath: string
     allowExternalPaths?: boolean
     quiet?: boolean
+    json?: boolean
   }
   | {
     kind: 'segments'
@@ -443,8 +444,9 @@ Examples:
     .option('--out <path>', 'output run JSON path; must differ from the input', 'reproduced-run.json')
     .option('--allow-external-paths', 'allow benchmark-referenced files outside the benchmark directory (trusted benchmarks only)')
     .option('--quiet', 'suppress per-trial progress lines')
+    .option('--json', 'emit the comparison as machine-readable JSON instead of a summary')
     .action((runPath: string, benchmarkPath: string, options: {
-      out: string; allowExternalPaths?: boolean; quiet?: boolean
+      out: string; allowExternalPaths?: boolean; quiet?: boolean; json?: boolean
     }) => {
       const samePath = resolve(runPath).toLowerCase() === resolve(options.out).toLowerCase()
       if (samePath) {
@@ -454,6 +456,7 @@ Examples:
         kind: 'reproduce', runPath, benchmarkPath, outPath: options.out,
         allowExternalPaths: options.allowExternalPaths === true,
         quiet: options.quiet === true,
+        json: options.json === true,
       })
     })
   const segments = program.command('segments').description('compare two runs by case tag, with per-dimension deltas')

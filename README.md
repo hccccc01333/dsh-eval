@@ -41,6 +41,8 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - `dsh eval gate candidate.json --baseline base.json --max-drop 0.05 [--require-significance] [--json]` — CI quality and resource-budget gate; significance mode only fails on statistically confirmed regressions, and the output also lists family-corrected per-case regressions
 - `dsh eval compare v1.json v2.json` — signed `B - A` table plus paired inference; `--json` for structured output
 - `dsh eval rejudge run.json --out rejudged.json` — re-judge stored traces with a new judge model or rubric, without re-running the agent; a recorded SHA-256 trace digest rejects tampered logs
+- `dsh eval reproduce run.json benchmark.yaml --out replay.json` — replay a recorded run with its seed and overrides, refuse a changed benchmark digest, and print before/after completion and success rates; `--json` emits the comparison for automation
+- `dsh eval segments base.json candidate.json` — per-tag deltas for task success and judge score across two runs; `--json` and `--out` supported
 
 ## Why dsh-eval instead of an ad-hoc script
 
@@ -76,7 +78,7 @@ Progress lines are bounded and control-character safe, and `dsh eval gate` turns
 
 ## Status
 
-`dsh-eval@0.5.12` · 439 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.5.13` · 440 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 
@@ -176,6 +178,8 @@ are recorded separately in the run's option fields.
 | `dsh eval gate candidate.json --baseline base.json [--max-drop 0.05] [--json] [--out file]` | Fail CI on regressions; `--max-drop` is the tolerated fractional drop (default `0` = any drop fails), `--json` emits a machine-readable verdict |
 | `dsh eval compare base.json candidate.json [--json] [--out file]` | Compare two runs with deltas and paired inference |
 | `dsh eval rejudge run.json --out rejudged.json` | Re-judge stored traces offline and write a new report |
+| `dsh eval reproduce run.json benchmark.yaml [--out replay.json] [--json]` | Replay with the baseline's recorded settings; a changed benchmark digest is rejected |
+| `dsh eval segments base.json candidate.json [--json] [--out file]` | Compare two runs by case tag with signed deltas |
 | `dsh eval import codex\|claude-code log.jsonl --out run.json` | Import an external session log as a one-trial run |
 
 Every read-only renderer (`report`, `compare`, `validate`, `leaderboard`, `gate`,
@@ -204,7 +208,7 @@ scripts/          harness-closure.mjs — optional local-harness workspace closu
 Bump `version` in `packages/eval/package.json` and add a CHANGELOG section, then push a matching tag:
 
 ```sh
-git tag v0.5.12 && git push origin v0.5.12
+git tag v0.5.13 && git push origin v0.5.13
 ```
 
 `.github/workflows/release.yml` re-runs the gates and publishes to npm through **trusted publishing (OIDC)** with a provenance statement — no token on any machine. The npm Trusted Publisher entry (GitHub Actions, workflow `release.yml`) is already configured; every release from `0.5.0` onward has shipped this way. The account's second factor is a security key, so a long-lived token is neither stored nor needed.
