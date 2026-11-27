@@ -22,6 +22,8 @@ export interface SegmentDelta {
   taskSuccessDelta: number | null
   /** Candidate minus baseline in judge score units; null without both sides. */
   judgeScoreDelta: number | null
+  /** Same delta after normalizing each run by its judge scale, in 0..1. */
+  judgeScoreRateDelta: number | null
 }
 
 function delta(before: number | null | undefined, after: number | null | undefined): number | null {
@@ -43,6 +45,7 @@ export function compareSegments(baseline: EvalRun, candidate: EvalRun): SegmentD
       candidate: cand ?? null,
       taskSuccessDelta: delta(base?.taskSuccessRate, cand?.taskSuccessRate),
       judgeScoreDelta: delta(base?.judgeScoreMean, cand?.judgeScoreMean),
+      judgeScoreRateDelta: delta(base?.judgeScoreRate, cand?.judgeScoreRate),
     }
   })
 }
@@ -77,11 +80,11 @@ export function renderSegmentComparison(deltas: SegmentDelta[]): string {
   const lines = [
     '## Segment comparison',
     '',
-    '| tag | baseline task | candidate task | Δ task | baseline score | candidate score | Δ score |',
-    '| --- | --- | --- | --- | --- | --- | --- |',
+    '| tag | baseline task | candidate task | Δ task | baseline score | candidate score | Δ score | Δ score % |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- |',
   ]
   for (const item of deltas) {
-    lines.push(`| ${escapeMarkdown(item.tag)} | ${rate(item.baseline?.taskSuccessRate)} | ${rate(item.candidate?.taskSuccessRate)} | ${signed(item.taskSuccessDelta, 100, 'pp')} | ${score(item.baseline?.judgeScoreMean)} | ${score(item.candidate?.judgeScoreMean)} | ${signed(item.judgeScoreDelta)} |`)
+    lines.push(`| ${escapeMarkdown(item.tag)} | ${rate(item.baseline?.taskSuccessRate)} | ${rate(item.candidate?.taskSuccessRate)} | ${signed(item.taskSuccessDelta, 100, 'pp')} | ${score(item.baseline?.judgeScoreMean)} | ${score(item.candidate?.judgeScoreMean)} | ${signed(item.judgeScoreDelta)} | ${signed(item.judgeScoreRateDelta, 100, 'pp')} |`)
   }
   return `${lines.join('\n')}\n`
 }

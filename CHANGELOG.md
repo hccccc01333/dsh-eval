@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.26 — 2026-11-27
+
+### Added
+
+- `segments` now reports `judgeScoreRateDelta` in JSON and a `Δ score %` column
+  in markdown, so judge changes across runs with different `maxScore` scales can
+  be read on a common 0..1 basis alongside the raw score delta.
+
 ## 0.5.25 — 2026-11-27
 
 ### Fixed

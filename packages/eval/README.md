@@ -365,7 +365,7 @@ Its `digestChecked` field is false for baseline reports written before digests
 existed, so `digestMatches: true` there is not mistaken for a verified match.
 
 To compare runs by dimension, `dsh eval segments base.json candidate.json`
-prints a per-tag delta table for task success and judge score, with `--json`
+prints a per-tag delta table for task success and judge score (plus a scale-normalized `Δ score %` column when judge scales are recorded), with `--json`
 and `--out` options. Tags present in only one run get null deltas, so a newly
 added dimension is not mistaken for a regression. The same deltas appear in
 two-run HTML dashboards, and `report --json` carries anomalies, failure

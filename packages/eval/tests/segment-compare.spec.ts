@@ -74,7 +74,7 @@ describe('renderSegmentComparison', () => {
     )
     const markdown = renderSegmentComparison(deltas)
     expect(markdown).toContain('## Segment comparison')
-    expect(markdown).toContain('| hard  evil  | 0.0% | 100.0% | +100.0pp | – | – | – |')
+    expect(markdown).toContain('| hard  evil  | 0.0% | 100.0% | +100.0pp | – | – | – | – |')
   })
 
   it('strips terminal control bytes from hostile tags', () => {
@@ -94,8 +94,8 @@ describe('renderSegmentComparison', () => {
       run([scored(['only-after'], false, 2)]),
     )
     const markdown = renderSegmentComparison(deltas)
-    expect(markdown).toContain('| only-after | – | 0.0% | – | – | 2.0 | – |')
-    expect(markdown).toContain('| only-before | 100.0% | – | – | 7.0 | – | – |')
+    expect(markdown).toContain('| only-after | – | 0.0% | – | – | 2.0 | – | – |')
+    expect(markdown).toContain('| only-before | 100.0% | – | – | 7.0 | – | – | – |')
   })
 
   it('renders negative score deltas and machine-readable JSON', () => {
@@ -107,6 +107,19 @@ describe('renderSegmentComparison', () => {
     expect(markdown).toContain('-100.0pp')
     expect(markdown).toContain('-3.0 |')
     const json = JSON.parse(renderSegmentComparisonJson(deltas))
-    expect(json[0]).toMatchObject({ tag: 'hard', taskSuccessDelta: -1, judgeScoreDelta: -3 })
+    expect(json[0]).toMatchObject({
+      tag: 'hard', taskSuccessDelta: -1, judgeScoreDelta: -3, judgeScoreRateDelta: null,
+    })
+  })
+
+  it('reports normalized score deltas when both runs record a judge scale', () => {
+    const before = run([scored(['hard'], true, 8)])
+    const after = run([scored(['hard'], true, 60)])
+    before.judge = { provider: 'p', model: 'j1', maxScore: 10 }
+    after.judge = { provider: 'p', model: 'j2', maxScore: 100 }
+    const deltas = compareSegments(before, after)
+    expect(deltas[0]?.judgeScoreDelta).toBe(52)
+    expect(deltas[0]?.judgeScoreRateDelta).toBeCloseTo(-0.2, 10)
+    expect(renderSegmentComparison(deltas)).toContain('-20.0pp')
   })
 })
