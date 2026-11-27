@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.35 — 2026-11-27
+
+### Added
+
+- `leaderboard` and the 3+ run HTML dashboard now show a `hallucination` column
+  and expose `hallucinationRate` in JSON rows. Missing rates render as a dash;
+  ranking and paired verdicts are unchanged.
+
 ## 0.5.34 — 2026-11-27
 
 ### Added

@@ -47,6 +47,7 @@ export interface LeaderboardEntry {
   strictPassAt1: number | null
   toolSelection: number | null
   judgeScore: number | null
+  hallucinationRate: number | null
   costUsd: number | null
   latencyMs: number | null
   gapFromBest: number | null
@@ -135,6 +136,7 @@ export function buildLeaderboard(
       strictPassAt1: reliability?.strictPassAt1 ?? null,
       toolSelection: run.grading?.toolSelectionAccuracyRate ?? null,
       judgeScore: judgeRate(run),
+      hallucinationRate: run.grading?.hallucinationRate ?? null,
       costUsd: run.aggregate?.costUsd ?? null,
       latencyMs: run.aggregate?.latencyMs ?? null,
       gapFromBest: null,
@@ -280,8 +282,8 @@ export function renderLeaderboard(
   metric: LeaderboardMetric = 'taskSuccess',
 ): string {
   const withPareto = rows.some(row => row.pareto !== undefined)
-  const header = '| rank | run | completed | task | strict pass@1 | tool | judge | cost/trial | latency/trial | Δ best | vs leader |'
-  const divider = '|---|---|---|---|---|---|---|---|---|---|---|'
+  const header = '| rank | run | completed | task | strict pass@1 | tool | judge | hallucination | cost/trial | latency/trial | Δ best | vs leader |'
+  const divider = '|---|---|---|---|---|---|---|---|---|---|---|---|'
   const lines = [
     '# Leaderboard',
     '',
@@ -298,7 +300,7 @@ export function renderLeaderboard(
   ]
   for (const row of rows) {
     const label = row.label.replace(/[\u0000-\u001f\u007f-\u009f|]+/gu, ' ')
-    const line = `| ${row.rank} | ${label} | ${row.completed}/${row.total} | ${rate(row.taskSuccess)} | ${rate(row.strictPassAt1)} | ${rate(row.toolSelection)} | ${rate(row.judgeScore)} | ${row.costUsd === null ? '–' : `$${row.costUsd.toFixed(6)}`} | ${row.latencyMs === null ? '–' : `${row.latencyMs.toFixed(1)} ms`} | ${gap(row.gapFromBest, row.rank)} | ${formatLeaderboardSignificance(row.significance)} |`
+    const line = `| ${row.rank} | ${label} | ${row.completed}/${row.total} | ${rate(row.taskSuccess)} | ${rate(row.strictPassAt1)} | ${rate(row.toolSelection)} | ${rate(row.judgeScore)} | ${rate(row.hallucinationRate)} | ${row.costUsd === null ? '–' : `$${row.costUsd.toFixed(6)}`} | ${row.latencyMs === null ? '–' : `${row.latencyMs.toFixed(1)} ms`} | ${gap(row.gapFromBest, row.rank)} | ${formatLeaderboardSignificance(row.significance)} |`
     lines.push(withPareto ? `${line} ${paretoCell(row.pareto)} |` : line)
   }
   return `${lines.join('\n')}\n`

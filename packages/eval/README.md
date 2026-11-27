@@ -158,7 +158,7 @@ cannot leave a truncated report. Supplying a second run adds a
 comparison table built from the same rows as `dsh eval compare`, including
 signed `B − A` deltas and the Bonferroni-corrected paired inference rows. Three
 or more runs instead produce a leaderboard page using the same ranking as
-`dsh eval leaderboard`, with task/strict/tool/judge rates and gap to leader;
+`dsh eval leaderboard`, with task/strict/tool/judge/hallucination rates and gap to leader;
 `--metric strictPassAt1` ranks that page by the error-inclusive rate too.
 All paths share one escaped, self-contained stylesheet.
 
@@ -225,7 +225,7 @@ spending tokens on a benchmark that cannot answer its own question.
 
 `dsh eval leaderboard a.json b.json c.json ...` ranks any number of runs by
 pooled task success, with strict pass@1, tool selection, normalized judge
-score, cost, latency and a gap-to-leader column. Pass
+score, hallucination rate, cost, latency and a gap-to-leader column. Pass
 `--metric strictPassAt1` to rank by the error-inclusive rate instead; JSON
 reports carry the chosen metric as `rankedBy`. Ties share a rank and missing
 metrics sort last instead of being invented. It is explicitly a screening

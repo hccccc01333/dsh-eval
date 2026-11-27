@@ -47,8 +47,26 @@ describe('dsh-eval leaderboard', () => {
     ])
     expect(rows[1]!.gapFromBest).toBeCloseTo(0.2)
     const markdown = renderLeaderboard(rows)
-    expect(markdown).toContain('| 1 | b — strong | 1/1 | 90.0% | 100.0% | 90.0% | 90.0% | $0.000002 | 120.0 ms | leader | leader |')
-    expect(markdown).toContain('| 2 | b — middle | 1/1 | 70.0% | 100.0% | 70.0% | 70.0% | $0.000002 | 120.0 ms | -20.0pp | underpowered (p=1.000, task success) |')
+    expect(markdown).toContain('| 1 | b — strong | 1/1 | 90.0% | 100.0% | 90.0% | 90.0% | 0.0% | $0.000002 | 120.0 ms | leader | leader |')
+    expect(markdown).toContain('| 2 | b — middle | 1/1 | 70.0% | 100.0% | 70.0% | 70.0% | 0.0% | $0.000002 | 120.0 ms | -20.0pp | underpowered (p=1.000, task success) |')
+  })
+
+  it('exposes hallucination rate in markdown and JSON', () => {
+    const rows = buildLeaderboard([
+      { label: 'safe', run: graded(0.9, 'safe') },
+      { label: 'risky', run: run({
+        model: 'risky',
+        judge: { provider: 'p', model: 'j', maxScore: 10 },
+        grading: {
+          taskSuccessRate: 0.8, toolSelectionAccuracyRate: 0.8,
+          finalAnswerScore: 8, hallucinationRate: 0.25,
+        },
+      }) },
+    ])
+    expect(rows.map(row => row.hallucinationRate)).toEqual([0, 0.25])
+    expect(renderLeaderboard(rows)).toContain('| 2 | risky | 1/1 | 80.0% | 100.0% | 80.0% | 80.0% | 25.0% |')
+    const parsed = JSON.parse(renderLeaderboardJson(rows)) as { rows: { hallucinationRate: number | null }[] }
+    expect(parsed.rows.map(row => row.hallucinationRate)).toEqual([0, 0.25])
   })
 
   it('can rank by strict pass@1 so mass errors cannot top the board', () => {
@@ -215,7 +233,7 @@ describe('dsh-eval leaderboard', () => {
     expect(rows[1]!.gapFromBest).toBeNull()
     expect(rows[2]!.taskSuccess).toBeNull()
     const markdown = renderLeaderboard(rows)
-    expect(markdown).toContain('| 3 | x bad [2J name | 1/1 | – | 100.0% | – | – | – | – | – | underpowered (p=1.000, task success) |')
+    expect(markdown).toContain('| 3 | x bad [2J name | 1/1 | – | 100.0% | – | – | – | – | – | – | underpowered (p=1.000, task success) |')
   })
 
   it('still ranks judge-only runs whose task success is null', () => {
@@ -226,7 +244,7 @@ describe('dsh-eval leaderboard', () => {
     expect(rows.map(row => [row.label, row.rank, row.gapFromBest])).toEqual([
       ['first', 1, null], ['second', 2, null],
     ])
-    expect(renderLeaderboard(rows)).toContain('| 1 | first | 1/1 | – | 100.0% | – | – | – | – | – | leader |')
+    expect(renderLeaderboard(rows)).toContain('| 1 | first | 1/1 | – | 100.0% | – | – | – | – | – | – | leader |')
   })
 
   it('renders a machine-readable leaderboard', () => {

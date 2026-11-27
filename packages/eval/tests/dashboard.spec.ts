@@ -193,6 +193,7 @@ describe('dsh-eval HTML dashboard', () => {
     const html = renderDashboard([first, second, third])
     expect(html).toContain('<h1>Leaderboard</h1>')
     expect(html).toContain('<th scope="col">Strict pass@1</th>')
+    expect(html).toContain('<th scope="col">Hallucination</th>')
     expect(html).toContain('<td>first — model</td>')
     expect(html).toContain('<th scope="col">vs leader</th>')
     expect(html).toContain('Bonferroni-corrected paired sign-test verdict')
