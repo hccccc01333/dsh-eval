@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.5.6 — 2026-11-27
+
+Three improvements shipped together:
+
+### Added
+
+- **Case tags and segment analysis.** A benchmark case can declare `tags:
+  [hard, ts]`; every trial carries them into the run report, and brief/markdown/
+  HTML reports show a `Segments` table with task success, judge score and
+  hallucination rate per tag. Tags are optional, so older benchmarks and
+  reports are unaffected.
+- **Failure clustering.** Reports now group failing trials by primary cause
+  (trial error, timeout, check configuration, nonzero exit, hallucination, task
+  check) instead of listing a repeated path typo as many unrelated failures.
+  Each cluster shows a count and up to five example case references.
+
+### Changed
+
+- **`toolRegex` uses one worker for the common case.** `safeRegexTestAny` now
+  tests the whole batch in a single worker, falling back to per-input isolation
+  only for an invalid pattern or a pathological input — so one bad input still
+  cannot hide a later match. A trial calling five tool names no longer starts
+  five workers.
+
 ## 0.5.5 — 2026-11-27
 
 Four improvements shipped together rather than as four separate releases:

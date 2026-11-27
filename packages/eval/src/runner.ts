@@ -564,7 +564,10 @@ export async function runBenchmark(benchmark: Benchmark, options: RunOptions = {
     pricing: benchmark.pricing?.[benchmark.model] ?? null,
     ...(benchmark.judge !== undefined ? { judge: benchmark.judge } : {}),
     tempRoot: root,
-    cases: results,
+    cases: results.map(result => {
+      const tags = benchmark.cases.find(caseValue => caseValue.id === result.caseId)?.tags
+      return tags === undefined ? result : { ...result, tags }
+    }),
     caseInputs: benchmark.cases.map(caseValue => ({
       caseId: caseValue.id,
       prompt: caseValue.prompt,

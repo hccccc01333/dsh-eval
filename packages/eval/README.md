@@ -42,6 +42,8 @@ configuration errors rather than model failures — a path typo no longer looks
 like a 0% model score. Comparison dashboards draw paired confidence intervals
 as inline forest plots, and multi-run leaderboards mark configurations that are
 dominated on the cost–quality frontier (or impossible to replace cheaply).
+Cases may declare `tags: [hard, ts]`; reports then break results down by
+dimension and group failures by cause.
 
 While a run is in flight, each finished trial writes one bounded line to stderr, e.g. `[eval] 3/12 golden #1 task pass, 1204 ms`. Errors print their sanitized message, and agent-controlled case ids cannot inject newlines. Pass `--quiet` for scripts that want only the final stdout summary.
 

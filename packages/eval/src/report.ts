@@ -9,10 +9,12 @@ import { resolve } from 'node:path'
 import { z } from 'zod'
 import { writeTextAtomic } from './atomic-write.ts'
 import { computeAgreement, type AgreementSummary } from './agreement.ts'
+import { clusterFailures, type FailureCluster } from './clusters.ts'
 import { computeAnomalies, type TrialAnomaly } from './anomalies.ts'
 import { computeCalibration, type CalibrationSummary } from './calibration.ts'
 import { computePrecision, type RateInterval, type RunPrecision } from './precision.ts'
 import { computeCoverage, computeReliability, type ReliabilitySummary } from './reliability.ts'
+import { computeSegments } from './dimensions.ts'
 import type { EvalRun } from './types.ts'
 
 /**
@@ -83,6 +85,7 @@ const trialSchema = z.object({
   traceSha256: z.string().regex(/^[0-9a-f]{64}$/u).optional(),
   exitCode: z.number().nullable(),
   timedOut: z.boolean(),
+  tags: z.array(z.string()).readonly().optional(),
   metrics: metricsSchema.optional(),
   grade: gradeSchema.optional(),
   judge: judgeVerdictSchema.optional(),
@@ -217,6 +220,25 @@ function renderCheckErrors(errors: readonly CheckErrorEntry[]): string[] {
   ]
 }
 
+/** Render up to five case references for a cluster, then a `+N more` marker. */
+function renderClusterCases(cluster: FailureCluster): string {
+  const shown = cluster.cases.slice(0, 5)
+    .map(item => `\`${escapeMarkdown(item.caseId)}\`#${item.trial}`)
+  const remaining = cluster.count - shown.length
+  return [...shown, ...(remaining > 0 ? [`+${remaining} more`] : [])].join(' · ')
+}
+
+/** Render the failure-cluster block; callers pass only a non-empty array. */
+function renderFailureClusters(clusters: readonly FailureCluster[]): string[] {
+  return [
+    '## Failure clusters',
+    '',
+    ...clusters.map(cluster =>
+      `- ${escapeMarkdown(cluster.label)} (${cluster.count}): ${renderClusterCases(cluster)}`),
+    '',
+  ]
+}
+
 /** Render one reliability block; callers pass only a non-null summary. */
 function renderReliability(summary: ReliabilitySummary, graded: number): string[] {
   const label = summary.dimension === 'task' ? 'task success' : 'tool selection accuracy'
@@ -285,6 +307,7 @@ export function renderBriefReport(run: EvalRun): string {
   const reliability = computeReliability(run, 'task')
   const interval = computePrecision(run).task
   const agreement = computeAgreement(run)
+  const segments = computeSegments(run)
   const lines = [
     `# ${escapeMarkdown(run.benchmark)} — ${escapeMarkdown(run.model)}`,
     ...(run.benchmarkSha256 === undefined ? [] :
@@ -318,6 +341,11 @@ export function renderBriefReport(run: EvalRun): string {
     // One-sided scores have no separation but still have a meaningful error.
     lines.push(`- judge Brier: ${calibration.brier.toFixed(3)}`)
   }
+  if (segments.length > 0) {
+    lines.push(`- segments: ${segments.map(segment =>
+      `${escapeMarkdown(segment.tag)} ${segment.taskSuccessRate === null ? 'n/a' : `${(segment.taskSuccessRate * 100).toFixed(1)}%`}`,
+    ).join(' · ')}`)
+  }
   if (run.grading?.judgeFailures) lines.push(`- judge failures: ${run.grading.judgeFailures}`)
   const anomalies = computeAnomalies(run)
   if (anomalies.length > 0) {
@@ -326,6 +354,10 @@ export function renderBriefReport(run: EvalRun): string {
   const checkErrors = findCheckErrors(run)
   if (checkErrors.length > 0) {
     lines.push(`- WARNING: check command could not be started; fix check/checkArgv/checkShell and rerun: ${checkErrors.map(item => `\`${escapeMarkdown(item.caseId)}\`#${item.trial}: ${escapeMarkdown(item.error)}`).join(' · ')}`)
+  }
+  const clusters = clusterFailures(run)
+  if (clusters.length > 0) {
+    lines.push(`- failure clusters: ${clusters.map(cluster => `${escapeMarkdown(cluster.pattern)}(${cluster.count})`).join(' · ')}`)
   }
   return `${lines.join('\n')}\n`
 }
@@ -455,6 +487,16 @@ export function renderMarkdownReport(run: EvalRun): string {
   const calibration = computeCalibration(run)
   const anomalies = computeAnomalies(run)
   const checkErrors = findCheckErrors(run)
+  const clusters = clusterFailures(run)
+  const segments = computeSegments(run)
+  const segmentBlock = segments.length === 0 ? [] : [
+    '## Segments',
+    '',
+    '| tag | cases | trials | task success | judge score | hallucination |',
+    '|---|---|---|---|---|---|',
+    ...segments.map(segment => `| ${escapeMarkdown(segment.tag)} | ${segment.cases} | ${segment.trials} | ${formatRate(segment.taskSuccessRate)} | ${segment.judgeScoreMean === null ? '–' : segment.judgeScoreMean.toFixed(1)} | ${formatRate(segment.hallucinationRate)} |`),
+    '',
+  ]
   const hasPrecision = precision.task !== null || precision.toolSelection !== null
     || precision.strictPassAt1 !== null || precision.latencyP50 !== null
   const coverageLine = coverage.unscored === 0
@@ -483,7 +525,9 @@ export function renderMarkdownReport(run: EvalRun): string {
     ...(hasPrecision ? renderPrecision(precision) : []),
     ...(agreement === null ? [] : renderAgreement(agreement)),
     ...(calibration === null ? [] : renderCalibration(calibration)),
+    ...segmentBlock,
     ...(anomalies.length === 0 ? [] : renderAnomalies(anomalies)),
     ...(checkErrors.length === 0 ? [] : renderCheckErrors(checkErrors)),
+    ...(clusters.length === 0 ? [] : renderFailureClusters(clusters)),
   ].join('\n')
 }

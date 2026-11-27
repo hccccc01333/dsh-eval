@@ -54,6 +54,16 @@ function buildBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {
 }
 
 describe('dsh-eval benchmark runner', () => {
+  it('carries case tags into each trial report', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const run = await runBenchmark(buildBenchmark({
+      trials: 1,
+      cases: [{ id: 'tagged', prompt: 'p', tags: ['hard', 'ts'] }],
+    }), { tempRoot: tempDir() })
+    expect(run.cases[0]?.tags).toEqual(['hard', 'ts'])
+  })
+
   it('passes a distinct derived seed to every trial', async () => {
     const dir = tempDir()
     const script = join(dir, 'seed-dsh.mjs')

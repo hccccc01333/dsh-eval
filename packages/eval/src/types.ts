@@ -30,6 +30,8 @@ export interface BenchmarkCase {
   workspace?: string
   /** Per-case timeout in milliseconds; overrides the benchmark timeout. */
   timeoutMs?: number
+  /** Optional dimensions (e.g. `language:ts`, `difficulty:hard`) for segment analysis. */
+  tags?: readonly string[]
   /** Scripted grading annotations, when the case is graded. */
   expected?: BenchmarkExpectation
 }
@@ -196,6 +198,8 @@ export interface EvalTrialResult {
   exitCode: number | null
   /** Whether the trial hit its timeout and killed the child. */
   timedOut: boolean
+  /** Case dimensions copied from the benchmark, for segment analysis. */
+  tags?: readonly string[]
   /** Folded metrics for `completed` trials. */
   metrics?: EvalCaseMetrics
   /** Scripted grading outcome for `completed` trials with expectations. */

@@ -31,6 +31,10 @@ describe('dsh-eval time-boxed regex', () => {
     await expect(safeRegexTest('(', 'text')).rejects.toThrow('regex failed')
   })
 
+  it('degrades an invalid batch pattern to no match after per-input fallback', async () => {
+    expect(await safeRegexTestAny('(', ['text', 'more'], 200)).toBe(false)
+  })
+
   it('terminates a catastrophic backtracking pattern', async () => {
     const started = Date.now()
     await expect(safeRegexTest('(a+)+$', `${'a'.repeat(32)}!`, 200))

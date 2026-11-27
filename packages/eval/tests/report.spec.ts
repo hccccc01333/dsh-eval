@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { loadRunReport, renderBriefReport, renderMarkdownReport, renderReportJson, writeRunReport } from '../src/report.ts'
-import type { EvalRun } from '../src/types.ts'
+import type { EvalRun, EvalTrialResult } from '../src/types.ts'
 
 const dirs: string[] = []
 
@@ -617,5 +617,145 @@ describe('dsh-eval report persistence and rendering', () => {
     expect(renderMarkdownReport(baseline)).not.toContain('## Configuration errors')
     expect(renderBriefReport(baseline)).not.toContain('WARNING:')
     expect(renderBriefReport(baseline)).toBe('# b — m\n- trials: 0/0 completed\n')
+  })
+
+  it('renders failure clusters in sorted order with escaped text and a truncation marker', () => {
+    const hostileId = 'e|rr\nx`y'
+    const taskFail = (caseId: string): EvalTrialResult => ({
+      caseId, trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+      grade: { taskSuccess: false, toolSelectionAccuracy: null },
+    })
+    const run = buildRun({
+      cases: [
+        ...[1, 2, 3, 4, 5, 6].map(index => taskFail(`case${index}`)),
+        {
+          caseId: hostileId, trial: 1, status: 'error', error: 'bad|cfg\nboom`x',
+          exitCode: 1, timedOut: false,
+        },
+        {
+          caseId: hostileId, trial: 2, status: 'error', error: 'bad|cfg\nboom`x',
+          exitCode: 1, timedOut: false,
+        },
+        {
+          caseId: 'cfg', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          grade: { taskSuccess: null, toolSelectionAccuracy: null, checkError: 'oops' },
+        },
+        { caseId: 'timed', trial: 1, status: 'completed', exitCode: null, timedOut: true },
+      ],
+    })
+
+    const brief = renderBriefReport(run)
+    expect(brief).toContain('- failure clusters: task-check(6) · trial-error(2) · check-config(1) · timeout(1)')
+    expect(brief).not.toContain('bad|cfg')
+
+    const markdown = renderMarkdownReport(run)
+    expect(markdown).toContain('## Failure clusters')
+    expect(markdown).toContain('- Task check or answer regex did not pass (6): `case1`#1 · `case2`#1 · `case3`#1 · `case4`#1 · `case5`#1 · +1 more')
+    expect(markdown).toContain('- Trial error: bad cfg boom x (2): `e rr x y`#1 · `e rr x y`#2')
+    expect(markdown).toContain('- Check command could not start (configuration error) (1): `cfg`#1')
+    expect(markdown).toContain('- Trial timed out (1): `timed`#1')
+    expect(markdown).not.toContain('bad|cfg')
+    expect(markdown).not.toContain(hostileId)
+    // The pre-existing failure summaries are untouched by the new block.
+    expect(markdown).toContain('## Configuration errors')
+    expect(markdown).toContain('- `cfg`#1: oops')
+  })
+
+  it('keeps failure-cluster output out of runs with no failures', () => {
+    const run = buildRun({ cases: [{
+      caseId: 'ok', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+      grade: { taskSuccess: true, toolSelectionAccuracy: null },
+    }] })
+    expect(renderMarkdownReport(run)).not.toContain('## Failure clusters')
+    expect(renderBriefReport(run)).not.toContain('- failure clusters:')
+    // The empty-run baseline stays byte-for-byte identical.
+    expect(renderBriefReport(buildRun())).toBe('# b — m\n- trials: 0/0 completed\n')
+  })
+
+  it('renders segment summaries for multiple tags in both reports', () => {
+    const run = buildRun({
+      judge: { provider: 'p', model: 'j', maxScore: 10 },
+      cases: [
+        {
+          caseId: 'a', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          tags: ['difficulty:hard', 'language:ts'],
+          grade: { taskSuccess: true, toolSelectionAccuracy: null },
+          judge: { finalAnswerScore: 8, hallucination: false },
+        },
+        {
+          caseId: 'a', trial: 2, status: 'completed', exitCode: 0, timedOut: false,
+          tags: ['difficulty:hard', 'language:ts'],
+          grade: { taskSuccess: false, toolSelectionAccuracy: null },
+          judge: { finalAnswerScore: 4, hallucination: true },
+        },
+        {
+          caseId: 'b', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          tags: ['difficulty:easy'],
+          grade: { taskSuccess: true, toolSelectionAccuracy: null },
+          judge: { finalAnswerScore: 6, hallucination: false },
+        },
+        // An untagged trial contributes to no segment.
+        {
+          caseId: 'c', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          grade: { taskSuccess: true, toolSelectionAccuracy: null },
+        },
+      ],
+    })
+    const brief = renderBriefReport(run)
+    expect(brief).toContain('- segments: difficulty:easy 100.0% · difficulty:hard 50.0% · language:ts 50.0%')
+    expect(brief).toContain('- trials: 4/4 completed')
+
+    const markdown = renderMarkdownReport(run)
+    expect(markdown).toContain('## Segments')
+    expect(markdown).toContain('| tag | cases | trials | task success | judge score | hallucination |')
+    expect(markdown).toContain('| difficulty:easy | 1 | 1 | 100.0% | 6.0 | 0.0% |')
+    expect(markdown).toContain('| difficulty:hard | 1 | 2 | 50.0% | 6.0 | 50.0% |')
+    expect(markdown).toContain('| language:ts | 1 | 2 | 50.0% | 6.0 | 50.0% |')
+    // Existing blocks are still present and Segments slots in after calibration.
+    expect(markdown).toContain('## Reliability: task success')
+    expect(markdown).toContain('## Judge calibration')
+    expect(markdown.indexOf('## Segments')).toBeGreaterThan(markdown.indexOf('## Judge calibration'))
+
+    // Untagged runs keep their exact baseline output.
+    expect(renderBriefReport(buildRun())).toBe('# b — m\n- trials: 0/0 completed\n')
+    expect(renderMarkdownReport(buildRun())).not.toContain('## Segments')
+    expect(renderBriefReport(buildRun())).not.toContain('- segments:')
+  })
+
+  it('prints n/a and dashes for single tags without a scripted grade or judge', () => {
+    const judged = buildRun({
+      judge: { provider: 'p', model: 'j', maxScore: 10 },
+      cases: [7, 3].map((score, index) => ({
+        caseId: 'j', trial: index + 1, status: 'completed' as const,
+        exitCode: 0, timedOut: false, tags: ['judge-only'],
+        judge: { finalAnswerScore: score, hallucination: index === 1 },
+      })),
+    })
+    expect(renderBriefReport(judged)).toContain('- segments: judge-only n/a')
+    expect(renderMarkdownReport(judged)).toContain('| judge-only | 1 | 2 | – | 5.0 | 50.0% |')
+
+    const ungraded = buildRun({ cases: [{
+      caseId: 'u', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+      tags: ['ungraded'],
+    }] })
+    expect(renderBriefReport(ungraded)).toContain('- segments: ungraded n/a')
+    expect(renderMarkdownReport(ungraded)).toContain('| ungraded | 1 | 1 | – | – | – |')
+  })
+
+  it('escapes hostile tag strings before they enter segments output', () => {
+    const tag = 'ta|g\nx`y'
+    const run = buildRun({ cases: [{
+      caseId: 'c', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+      tags: [tag], grade: { taskSuccess: true, toolSelectionAccuracy: null },
+    }] })
+    const brief = renderBriefReport(run)
+    const markdown = renderMarkdownReport(run)
+    expect(brief).toContain('- segments: ta g x y 100.0%')
+    expect(brief).not.toContain(tag)
+    expect(markdown).toContain('| ta g x y | 1 | 1 | 100.0% | – | – |')
+    expect(markdown).not.toContain(tag)
+    // No raw newline or pipe from the tag may forge or split a table row.
+    const rows = markdown.split('\n').filter(line => line.startsWith('|'))
+    expect(rows).toHaveLength(7)
   })
 })

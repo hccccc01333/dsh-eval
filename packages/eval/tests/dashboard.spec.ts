@@ -359,6 +359,55 @@ describe('dsh-eval HTML dashboard', () => {
     expect(baseline).not.toContain('<h2>Configuration errors</h2>')
   })
 
+  it('renders a failure-cluster table with escaped text and a truncation marker', () => {
+    const hostileId = '</code><b>x</b>'
+    const html = renderDashboard([buildRun({
+      cases: [
+        ...[1, 2, 3, 4, 5, 6].map(index => ({
+          caseId: `c${index}`, trial: 1, status: 'completed' as const,
+          exitCode: 0, timedOut: false,
+          grade: { taskSuccess: false, toolSelectionAccuracy: null },
+        })),
+        {
+          caseId: hostileId, trial: 2, status: 'error' as const,
+          error: 'bad|<tag>', exitCode: 1, timedOut: false,
+        },
+        {
+          caseId: 'cfg', trial: 3, status: 'completed' as const,
+          exitCode: 0, timedOut: false,
+          grade: {
+            taskSuccess: null, toolSelectionAccuracy: null,
+            checkError: '<script>alert(1)</script>',
+          },
+        },
+      ],
+    })])
+    expect(html).toContain('<h2>Failure clusters</h2>')
+    const block = html.slice(html.indexOf('<h2>Failure clusters</h2>'), html.indexOf('<h2>Trials</h2>'))
+    expect(block).toContain('aria-label="Failure clusters"')
+    expect(block).toContain('<th scope="col">Pattern</th>')
+    expect(block).toContain('<td><code>task-check</code></td>')
+    expect(block).toContain('<td>Task check or answer regex did not pass</td>')
+    expect(block).toContain('<td>6</td>')
+    expect(block).toContain('<code>c1</code>#1 · <code>c2</code>#1 · <code>c3</code>#1 · <code>c4</code>#1 · <code>c5</code>#1 · +1 more')
+    expect(block).toContain('<td>Trial error: bad|&lt;tag&gt;</td>')
+    expect(block).toContain('<code>&lt;/code&gt;&lt;b&gt;x&lt;/b&gt;</code>#2')
+    expect(block).toContain('<td>Check command could not start (configuration error)</td>')
+    expect(block).not.toContain('<b>x</b>')
+    expect(block).not.toContain('<tag>')
+    // The existing configuration-error warning is still present and escaped.
+    expect(html).toContain('<h2>Configuration errors</h2>')
+    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
+  })
+
+  it('omits the failure-cluster table when no trial failed', () => {
+    const html = renderDashboard([buildRun({ cases: [{
+      caseId: 'ok', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+      grade: { taskSuccess: true, toolSelectionAccuracy: true },
+    }] })])
+    expect(html).not.toContain('<h2>Failure clusters</h2>')
+  })
+
   // Forest-plot fixtures: two completed, paired trials with varied values so
   // the bootstrap interval has a non-zero width.
   function forestPlots(html: string): string[] {
@@ -514,5 +563,79 @@ describe('dsh-eval HTML dashboard', () => {
     const baseline = buildRun({ cases: [pairedTrial(1, 10, 100, 4), pairedTrial(2, 12, 120, 6)] })
     const candidate = buildRun({ cases: [pairedTrial(1, 14, 130, 5), pairedTrial(2, 20, 160, 9)] })
     expect(renderDashboard([baseline, candidate])).toBe(renderDashboard([baseline, candidate]))
+  })
+
+  it('renders a segments table for multiple tags on the single-run page', () => {
+    const html = renderDashboard([buildRun({
+      judge: { provider: 'p', model: 'j', maxScore: 10 },
+      cases: [
+        {
+          caseId: 'a', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          tags: ['difficulty:hard', 'language:ts'],
+          grade: { taskSuccess: true, toolSelectionAccuracy: true },
+          judge: { finalAnswerScore: 8, hallucination: false },
+        },
+        {
+          caseId: 'a', trial: 2, status: 'completed', exitCode: 0, timedOut: false,
+          tags: ['difficulty:hard', 'language:ts'],
+          grade: { taskSuccess: false, toolSelectionAccuracy: false },
+          judge: { finalAnswerScore: 4, hallucination: true },
+        },
+        {
+          caseId: 'b', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          tags: ['difficulty:easy'],
+          grade: { taskSuccess: true, toolSelectionAccuracy: true },
+          judge: { finalAnswerScore: 6, hallucination: false },
+        },
+      ],
+    })])
+    expect(html).toContain('<h2>Segments</h2>')
+    const block = html.slice(html.indexOf('<h2>Segments</h2>'), html.indexOf('<h2>Trials</h2>'))
+    expect(block).toContain('aria-label="Segments"')
+    expect(block).toContain('<th scope="col">Tag</th>')
+    expect(block).toContain('<th scope="col">Judge score</th>')
+    expect(block).toContain('<td>difficulty:easy</td><td>1</td><td>1</td><td>100.0%</td><td>6.0</td><td>0.0%</td>')
+    expect(block).toContain('<td>difficulty:hard</td><td>1</td><td>2</td><td>50.0%</td><td>6.0</td><td>50.0%</td>')
+    expect(block).toContain('<td>language:ts</td><td>1</td><td>2</td><td>50.0%</td><td>6.0</td><td>50.0%</td>')
+    // Existing sections survive the new block.
+    expect(html).toContain('<h2>Reliability</h2>')
+    expect(html).toContain('<h2>Judge calibration</h2>')
+    expect(html).toContain('<h2>Failure clusters</h2>')
+    expect(html.indexOf('<h2>Segments</h2>')).toBeGreaterThan(html.indexOf('<h2>Judge calibration</h2>'))
+    expect(renderDashboard([buildRun()])).not.toContain('<h2>Segments</h2>')
+  })
+
+  it('renders dash placeholders for judge-only and ungraded single tags', () => {
+    const html = renderDashboard([buildRun({
+      judge: { provider: 'p', model: 'j', maxScore: 10 },
+      cases: [
+        {
+          caseId: 'j', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          tags: ['only'], judge: { finalAnswerScore: 7, hallucination: false },
+        },
+        {
+          caseId: 'j', trial: 2, status: 'completed', exitCode: 0, timedOut: false,
+          tags: ['only'], judge: { finalAnswerScore: 3, hallucination: true },
+        },
+        {
+          caseId: 'u', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          tags: ['ungraded'],
+        },
+      ],
+    })])
+    const block = html.slice(html.indexOf('<h2>Segments</h2>'), html.indexOf('<h2>Trials</h2>'))
+    expect(block).toContain('<td>only</td><td>1</td><td>2</td><td>–</td><td>5.0</td><td>50.0%</td>')
+    expect(block).toContain('<td>ungraded</td><td>1</td><td>1</td><td>–</td><td>–</td><td>–</td>')
+  })
+
+  it('escapes hostile tags and omits the segments table for untagged runs', () => {
+    const html = renderDashboard([buildRun({ cases: [{
+      caseId: 'c', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+      tags: ['<b>x</b>&'], grade: { taskSuccess: true, toolSelectionAccuracy: true },
+    }] })])
+    expect(html).toContain('<td>&lt;b&gt;x&lt;/b&gt;&amp;</td>')
+    expect(html).not.toContain('<b>x</b>')
+    expect(renderDashboard([buildRun()])).not.toContain('<h2>Segments</h2>')
+    expect(renderDashboard([buildRun(), buildRun({ benchmark: 'second' })])).not.toContain('<h2>Segments</h2>')
   })
 })

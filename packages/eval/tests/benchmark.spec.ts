@@ -27,6 +27,19 @@ describe('dsh-eval benchmark loading', () => {
     expect(benchmark.cases[0]?.workspace).toBeUndefined()
   })
 
+  it('preserves case tags for segment analysis', async () => {
+    const benchmark = await parseBenchmark([
+      'name: tagged',
+      'model: deepseek-v4',
+      'cases:',
+      '  - id: a',
+      '    prompt: hi',
+      '    tags: [hard, ts]',
+      '',
+    ].join('\n'), tempDir())
+    expect(benchmark.cases[0]?.tags).toEqual(['hard', 'ts'])
+  })
+
   it('loads a document with defaults and resolves relative paths', async () => {
     const dir = tempDir()
     writeFileSync(join(dir, 'prompt.md'), 'Fix the tests.')
