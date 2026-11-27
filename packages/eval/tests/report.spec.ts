@@ -429,6 +429,43 @@ describe('dsh-eval report persistence and rendering', () => {
     expect(markdown).toContain('- judge failures: 2')
   })
 
+  it('lists judge failures with escaped ids and bounds the brief summary', () => {
+    const cases = Array.from({ length: 11 }, (_, index) => ({
+      caseId: `c|bad\u001b[2J${index}`, trial: index + 1,
+      status: 'completed' as const, exitCode: 0, timedOut: false,
+      judge: { finalAnswerScore: null, hallucination: null, judgeError: `boom|${index}\n` },
+    }))
+    const run = buildRun({
+      judge: { provider: 'p', model: 'judge-m', maxScore: 10 },
+      grading: {
+        taskSuccessRate: null, toolSelectionAccuracyRate: null,
+        finalAnswerScore: null, hallucinationRate: null, judgeFailures: 11,
+      },
+      cases,
+    })
+    const markdown = renderMarkdownReport(run)
+    expect(markdown).toContain('## Judge errors')
+    expect(markdown).toContain('- `c bad [2J0`#1: boom 0')
+    expect(markdown).toContain('- +1 more')
+    expect(markdown).not.toContain('\u001b')
+    const brief = renderBriefReport(run)
+    expect(brief).toContain('- judge errors: `c bad [2J0`#1: boom 0')
+    expect(brief).toContain('+6 more')
+  })
+
+  it('lists a single judge failure without a truncation marker', () => {
+    const run = buildRun({
+      cases: [{
+        caseId: 'solo', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        judge: { finalAnswerScore: null, hallucination: null, judgeError: 'timeout' },
+      }],
+    })
+    expect(renderMarkdownReport(run)).toContain('- `solo`#1: timeout')
+    expect(renderMarkdownReport(run)).not.toContain(' more')
+    expect(renderBriefReport(run)).toContain('- judge errors: `solo`#1: timeout')
+    expect(renderBriefReport(run)).not.toContain(' more')
+  })
+
   it('renders a compact brief summary for the terminal', () => {
     const metrics = {
       turns: 1, steps: 2, toolCalls: 1, toolResults: 1, toolSuccess: 1, toolSuccessRate: 1,

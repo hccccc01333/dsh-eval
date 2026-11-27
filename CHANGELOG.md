@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.20 — 2026-11-27
+
+### Added
+
+- `report` now lists the case id, trial and diagnostic for each judge failure
+  instead of only printing the failure count. The full report shows up to ten
+  entries, `--brief` up to five, both with a `+N more` marker and escaped text.
+
 ## 0.5.19 — 2026-11-27
 
 ### Added

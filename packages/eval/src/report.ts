@@ -213,6 +213,33 @@ function renderAnomalies(anomalies: readonly TrialAnomaly[]): string[] {
   ]
 }
 
+/** One trial whose judge call failed, with the diagnostic from the verdict. */
+interface JudgeErrorEntry {
+  caseId: string
+  trial: number
+  error: string
+}
+
+/** Collect judge failures from every trial, in trial order. */
+function findJudgeErrors(run: EvalRun): JudgeErrorEntry[] {
+  return run.cases.flatMap(result => {
+    const error = result.judge?.judgeError
+    return error === undefined ? [] : [{ caseId: result.caseId, trial: result.trial, error }]
+  })
+}
+
+/** Render an actionable, bounded list of judge failures. */
+function renderJudgeErrors(errors: readonly JudgeErrorEntry[]): string[] {
+  return [
+    '## Judge errors',
+    '',
+    ...errors.slice(0, 10).map(item =>
+      `- \`${escapeMarkdown(item.caseId)}\`#${item.trial}: ${escapeMarkdown(item.error)}`),
+    ...(errors.length > 10 ? [`- +${errors.length - 10} more`] : []),
+    '',
+  ]
+}
+
 /** Render the actionable check-command configuration warning. */
 function renderCheckErrors(errors: readonly CheckErrorEntry[]): string[] {
   return [
@@ -351,6 +378,12 @@ export function renderBriefReport(run: EvalRun): string {
     ).join(' · ')}`)
   }
   if (run.grading?.judgeFailures) lines.push(`- judge failures: ${run.grading.judgeFailures}`)
+  const judgeErrors = findJudgeErrors(run)
+  if (judgeErrors.length > 0) {
+    const shown = judgeErrors.slice(0, 5).map(item =>
+      `\`${escapeMarkdown(item.caseId)}\`#${item.trial}: ${escapeMarkdown(item.error)}`)
+    lines.push(`- judge errors: ${shown.join(' · ')}${judgeErrors.length > 5 ? ` · +${judgeErrors.length - 5} more` : ''}`)
+  }
   const anomalies = computeAnomalies(run)
   if (anomalies.length > 0) {
     lines.push(`- anomalies: ${anomalies.map(item => `\`${escapeMarkdown(item.caseId)}\` #${item.trial} ${item.metric}=${item.value}`).join(' · ')}`)
@@ -498,6 +531,7 @@ export function renderMarkdownReport(run: EvalRun): string {
   const checkErrors = findCheckErrors(run)
   const clusters = clusterFailures(run)
   const segments = computeSegments(run)
+  const judgeErrors = findJudgeErrors(run)
   const segmentBlock = segments.length === 0 ? [] : [
     '## Segments',
     '',
@@ -537,6 +571,7 @@ export function renderMarkdownReport(run: EvalRun): string {
     ...segmentBlock,
     ...(anomalies.length === 0 ? [] : renderAnomalies(anomalies)),
     ...(checkErrors.length === 0 ? [] : renderCheckErrors(checkErrors)),
+    ...(judgeErrors.length === 0 ? [] : renderJudgeErrors(judgeErrors)),
     ...(clusters.length === 0 ? [] : renderFailureClusters(clusters)),
   ].join('\n')
 }
