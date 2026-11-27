@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.25 — 2026-11-27
+
+### Fixed
+
+- `gate --max-segment-drop` now compares per-tag judge scores after normalizing
+  by each run's `judge.maxScore`, matching the global judge check. Two runs with
+  different rubric scales could otherwise turn a real regression into an
+  apparent improvement. `SegmentStat` gains a `judgeScoreRate` field; older
+  reports without a recorded scale still fall back to the raw mean.
+
 ## 0.5.24 — 2026-11-27
 
 ### Added

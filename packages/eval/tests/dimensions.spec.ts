@@ -55,17 +55,30 @@ describe('computeSegments', () => {
     expect(computeSegments(run)).toEqual([
       {
         tag: 'easy', cases: 1, trials: 1,
-        taskSuccessRate: 1, judgeScoreMean: 10, hallucinationRate: 0,
+        taskSuccessRate: 1, judgeScoreMean: 10, judgeScoreRate: null, hallucinationRate: 0,
       },
       {
         tag: 'hard', cases: 1, trials: 2,
-        taskSuccessRate: 0.5, judgeScoreMean: 6, hallucinationRate: 0.5,
+        taskSuccessRate: 0.5, judgeScoreMean: 6, judgeScoreRate: null, hallucinationRate: 0.5,
       },
       {
         tag: 'ts', cases: 1, trials: 2,
-        taskSuccessRate: 0.5, judgeScoreMean: 6, hallucinationRate: 0.5,
+        taskSuccessRate: 0.5, judgeScoreMean: 6, judgeScoreRate: null, hallucinationRate: 0.5,
       },
     ])
+  })
+
+  it('normalizes judge means by the run scale and clamps out-of-range scores', () => {
+    const run = buildRun([
+      trial('a', { tags: ['x'], judge: { finalAnswerScore: 8, hallucination: false } }),
+      trial('b', { tags: ['x'], judge: { finalAnswerScore: 12, hallucination: false } }),
+    ])
+    run.judge = { provider: 'p', model: 'j', maxScore: 20 }
+    expect(computeSegments(run)[0]).toMatchObject({ judgeScoreMean: 10, judgeScoreRate: 0.5 })
+    run.judge.maxScore = 5
+    expect(computeSegments(run)[0]?.judgeScoreRate).toBe(1)
+    run.judge.maxScore = 0
+    expect(computeSegments(run)[0]?.judgeScoreRate).toBeNull()
   })
 
   it('counts distinct cases separately from trials', () => {

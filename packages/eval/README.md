@@ -251,7 +251,10 @@ never advertise one.
 `--max-segment-drop 0.02` adds one task-success and one judge-score row for
 each tag present in both runs. A regression confined to a single tag is caught
 even when the pooled rate stays flat; tags that exist on only one side are
-skipped because appearing or disappearing is not a drop.
+skipped because appearing or disappearing is not a drop. Judge-score rows use
+the score normalized by each run's `judge.maxScore`, so a different rubric scale
+cannot masquerade as an improvement; reports without a recorded scale fall back
+to the raw mean.
 
 Optional `--max-cost-increase 0.1` and `--max-latency-increase 0.2` add
 relative resource budgets, so a candidate that keeps quality but costs 2x more

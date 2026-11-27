@@ -280,9 +280,13 @@ export function evaluateGate(
         segment.baseline.taskSuccessRate, segment.candidate.taskSuccessRate,
         options.maxSegmentDrop,
       ))
+      // Prefer the scale-normalized rate: raw judge means are not comparable
+      // when the two runs were scored with different maxScore values. Older
+      // reports without a recorded judge scale fall back to the raw mean.
       checks.push(compareRate(
         `tag:${segment.tag} judge score`,
-        segment.baseline.judgeScoreMean, segment.candidate.judgeScoreMean,
+        segment.baseline.judgeScoreRate ?? segment.baseline.judgeScoreMean,
+        segment.candidate.judgeScoreRate ?? segment.candidate.judgeScoreMean,
         options.maxSegmentDrop,
       ))
     }

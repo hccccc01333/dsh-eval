@@ -24,6 +24,8 @@ export interface SegmentStat {
   taskSuccessRate: number | null
   /** Mean judge score over scored trials; null when unjudged. */
   judgeScoreMean: number | null
+  /** `judgeScoreMean` normalized to 0..1 via the run's judge scale. */
+  judgeScoreRate: number | null
   /** Hallucination rate over trials with a judge verdict; null when unjudged. */
   hallucinationRate: number | null
 }
@@ -66,12 +68,18 @@ export function computeSegments(run: EvalRun): SegmentStat[] {
       const hallucination = result.judge?.hallucination
       if (hallucination !== null && hallucination !== undefined) hallucinations.push(hallucination)
     }
+    const judgeScoreMean = mean(scores)
+    const maxScore = run.judge?.maxScore
+    const judgeScoreRate = judgeScoreMean === null || maxScore === undefined || maxScore <= 0
+      ? null
+      : Math.max(0, Math.min(1, judgeScoreMean / maxScore))
     stats.push({
       tag,
       cases: new Set(members.map(result => result.caseId)).size,
       trials: members.length,
       taskSuccessRate: rate(success),
-      judgeScoreMean: mean(scores),
+      judgeScoreMean,
+      judgeScoreRate,
       hallucinationRate: rate(hallucinations),
     })
   }

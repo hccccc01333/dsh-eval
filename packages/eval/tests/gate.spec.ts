@@ -41,6 +41,30 @@ describe('dsh-eval CI gate', () => {
     expect(markdown).toContain('- max tolerated drop: 0.0 percentage points')
   })
 
+  it('compares per-tag judge scores on a normalized scale', () => {
+    const judged = (score: number) => ({
+      caseId: 'a', trial: 1, status: 'completed' as const, exitCode: 0, timedOut: false,
+      tags: ['x'],
+      judge: { finalAnswerScore: score, hallucination: false },
+    })
+    const grading = {
+      taskSuccessRate: 1, toolSelectionAccuracyRate: 1,
+      finalAnswerScore: 8, hallucinationRate: 0,
+    }
+    const baseline = buildRun({
+      judge: { provider: 'p', model: 'j1', maxScore: 10 },
+      grading, cases: [judged(8)],
+    })
+    // Raw mean rises 8 → 60, but the normalized score drops 0.8 → 0.6.
+    const candidate = buildRun({
+      judge: { provider: 'p', model: 'j2', maxScore: 100 },
+      grading, cases: [judged(60)],
+    })
+    const gated = evaluateGate(baseline, candidate, 0, false, {}, { maxSegmentDrop: 0 })
+    expect(gated.checks.find(check => check.metric === 'tag:x judge score'))
+      .toMatchObject({ baseline: 0.8, candidate: 0.6, passed: false })
+  })
+
   it('catches a tag-local regression hidden by a flat pooled rate', () => {
     const ungraded = {
       taskSuccessRate: 4 / 6, toolSelectionAccuracyRate: null,
