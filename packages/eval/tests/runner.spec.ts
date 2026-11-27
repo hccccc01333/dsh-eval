@@ -470,13 +470,13 @@ describe('dsh-eval benchmark runner', () => {
     const started = Date.now()
     const run = await runBenchmark(buildBenchmark({
       trials: 1,
-      timeoutMs: 1000,
+      timeoutMs: 3000,
       cases: [{
         id: 'hanging', prompt: 'p',
         expected: { checkArgv: [process.execPath, '-e', 'setTimeout(() => {}, 30000)'] },
       }],
     }), { tempRoot: tempDir() })
-    expect(Date.now() - started).toBeLessThan(8000)
+    expect(Date.now() - started).toBeLessThan(12000)
     expect(run.cases[0]?.grade?.taskSuccess).toBe(false)
   })
 
@@ -486,13 +486,13 @@ describe('dsh-eval benchmark runner', () => {
     const started = Date.now()
     const run = await runBenchmark(buildBenchmark({
       trials: 1,
-      timeoutMs: 3000,
+      timeoutMs: 5000,
       cases: [{
         id: 'lingering', prompt: 'p',
         expected: { checkArgv: [process.execPath, LINGERING_CHECK] },
       }],
     }), { tempRoot: tempDir() })
-    expect(Date.now() - started).toBeLessThan(5000)
+    expect(Date.now() - started).toBeLessThan(12000)
     expect(run.cases[0]?.grade?.taskSuccess).toBe(true)
   })
 

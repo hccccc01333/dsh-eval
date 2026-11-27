@@ -891,8 +891,23 @@ describe('dsh-eval command composition', () => {
     await writeRunReport({ ...base, benchmarkSha256: 'a'.repeat(64) }, runPath)
     const mismatch = await bootEval(['provenance', runPath, benchmarkPath, '--json'])
     expect(mismatch.exits).toEqual([1])
-    expect(JSON.parse(mismatch.out) as { status: string }).toMatchObject({ status: 'mismatch' })
+    expect(JSON.parse(mismatch.out) as {
+      status: string; sourceSha256: string; overrides: unknown
+    }).toMatchObject({
+      status: 'mismatch', sourceSha256: benchmark.sourceSha256, overrides: null,
+    })
     expect(mismatch.out).toContain('benchmarkSha256')
+
+    await writeRunReport({
+      ...base,
+      benchmarkSha256: 'b'.repeat(64),
+      benchmarkOverrides: { trials: 2, dshCommand: ['dsh', 'run\u001b[2J'] },
+    }, runPath)
+    const mismatchWithOverrides = await bootEval(['provenance', runPath, benchmarkPath])
+    expect(mismatchWithOverrides.exits).toEqual([1])
+    expect(mismatchWithOverrides.out).toContain(`source: ${benchmark.sourceSha256}`)
+    expect(mismatchWithOverrides.out).toContain('"dshCommand":["dsh","run\\u001b[2J"]')
+    expect(mismatchWithOverrides.out).not.toContain('\u001b[2J')
 
     const localPath = join(dir, 'local.yml')
     writeFileSync(localPath, [

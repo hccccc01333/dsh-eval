@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.28 — 2026-11-27
+
+### Added
+
+- `provenance` now reports `sourceSha256` and the run's recorded `overrides` in
+  JSON, and prints them on a human-facing mismatch, so a digest difference can
+  be traced to changed benchmark inputs or changed CLI settings.
+
+### Fixed
+
+- Relaxed two timing-sensitive runner tests that flaked under coverage load
+  while still asserting the hanging check is killed long before its 30s timer.
+
 ## 0.5.27 — 2026-11-27
 
 ### Changed

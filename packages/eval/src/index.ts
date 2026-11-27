@@ -254,14 +254,21 @@ export async function executeEval(
       const runSha256 = run.benchmarkSha256 ?? null
       // loadBenchmark always computes this digest from the resolved inputs;
       // CLI overrides are folded in exactly as runBenchmark did.
-      const benchmarkSha256 = run.benchmarkOverrides === undefined
-        ? benchmark.sourceSha256!
-        : hashBenchmarkOverrides(benchmark.sourceSha256!, run.benchmarkOverrides)
+      const sourceSha256 = benchmark.sourceSha256!
+      const overrides = run.benchmarkOverrides ?? null
+      const benchmarkSha256 = overrides === null
+        ? sourceSha256
+        : hashBenchmarkOverrides(sourceSha256, overrides)
       const status = runSha256 === null ? 'missing'
         : runSha256 === benchmarkSha256 ? 'match' : 'mismatch'
+      // A mismatch alone does not say whether the benchmark inputs or the
+      // recorded overrides changed. Expose both so the operator can tell.
+      const diagnostic = status === 'mismatch'
+        ? `source: ${sourceSha256}\noverrides: ${JSON.stringify(overrides)}\n`
+        : ''
       const text = values.json === true
-        ? `${JSON.stringify({ status, runSha256, benchmarkSha256 })}\n`
-        : `Provenance: ${status}\nrun: ${runSha256 ?? 'n/a'}\nbenchmark: ${benchmarkSha256}\n`
+        ? `${JSON.stringify({ status, runSha256, benchmarkSha256, sourceSha256, overrides })}\n`
+        : `Provenance: ${status}\nrun: ${runSha256 ?? 'n/a'}\nbenchmark: ${benchmarkSha256}\n${diagnostic}`
       await emitText(io, text, values.outPath)
       return status === 'match' ? 0 : 1
     }
