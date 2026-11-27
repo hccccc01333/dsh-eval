@@ -344,9 +344,9 @@ row: case id, trial, status, error, scripted and judge verdicts, folded token
 and latency metrics, cost, and the trace digest. Without `--out` the CSV goes
 to stdout, plus `turns`, `toolSuccessRate`, `cacheReadTokens` and `contextTokens`
 appended after the existing columns so positional readers keep their indices.
-Agent-controlled strings are CSV-escaped and prefixed with `'` when
+Agent-controlled strings have terminal control bytes stripped, then are CSV-escaped and prefixed with `'` when
 they start with a spreadsheet formula marker, so a hostile case id cannot
-execute on export. The `tags` column holds a JSON array of the case's
+execute on export or inject escape sequences into a terminal. The `tags` column holds a JSON array of the case's
 dimensions, so segment membership survives spreadsheet round-trips. The
 `anomalies` column holds outlier findings as JSON and `failureCluster` holds
 the trial's primary-cause id.

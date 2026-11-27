@@ -26,12 +26,18 @@ const COLUMNS = [
 
 type CellValue = string | number | boolean | null | undefined
 
-/** Render one CSV cell, guarding string cells against spreadsheet formulas. */
+/**
+ * Render one CSV cell. Agent-controlled strings lose terminal control bytes
+ * (matching the markdown and HTML renderers) and are guarded against being
+ * interpreted as spreadsheet formulas, including when a control byte preceded
+ * the formula prefix.
+ */
 function cell(value: CellValue): string {
   if (value === null || value === undefined) return ''
   if (typeof value !== 'string') return String(value)
-  const safe = /^[=+\-@\t\r\n ]/u.test(value) ? `'${value}` : value
-  return /[",\r\n]/u.test(safe) ? `"${safe.replace(/"/gu, '""')}"` : safe
+  const clean = value.replace(/[\u0000-\u001f\u007f-\u009f]+/gu, ' ')
+  const safe = /^[=+\-@ ]/u.test(clean) ? `'${clean}` : clean
+  return /[",]/u.test(safe) ? `"${safe.replace(/"/gu, '""')}"` : safe
 }
 
 /** Convert one trial into a flat row aligned with {@link COLUMNS}. */

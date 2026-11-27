@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.36 — 2026-11-27
+
+### Security
+
+- CSV export now strips terminal control bytes from agent-controlled strings
+  before applying the formula-injection guard, matching the markdown and HTML
+  renderers. A value like `ESC=1+1` is neutralized instead of slipping past the
+  prefix check; JSON-array columns remain escaped by `JSON.stringify`.
+
 ## 0.5.35 — 2026-11-27
 
 ### Added

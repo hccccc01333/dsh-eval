@@ -34,7 +34,7 @@ describe('dsh-eval trial export', () => {
     expect(lines[0]).toContain('caseId,trial,status')
     expect(lines[0]).toContain('traceSha256')
     expect(lines[0]!.endsWith(',tags,anomalies,failureCluster,turns,toolSuccessRate,cacheReadTokens,contextTokens')).toBe(true)
-    expect(lines[1]).toContain('"a,""quoted""\nnext"')
+    expect(lines[1]).toContain('"a,""quoted"" next"')
     expect(lines[1]).toContain('"boom, again"')
     expect(lines[1]).toContain(',2,completed,0,false,')
     expect(lines[1]).toContain(',true,false,8,false,')
@@ -64,7 +64,24 @@ describe('dsh-eval trial export', () => {
     }))
     expect(csv).toContain(`"'=HYPERLINK(""http://evil"")"`)
     expect(csv).toContain(`,'+cmd|calc,`)
-    expect(csv).toContain("\"'\n=1+1\"")
+    // The leading newline becomes a space, then the formula prefix is neutralized.
+    expect(csv).toContain(`,' =1+1,`)
+    expect(csv).not.toContain('\n=1+1')
+  })
+
+  it('strips terminal control bytes from agent-controlled strings', () => {
+    const csv = renderTrialsCsv(run({
+      cases: [{
+        caseId: 'c\u001b[2J', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        error: 'x\u0007y', tags: ['t\u0000g'],
+      }],
+    }))
+    expect(csv).toContain('c [2J,1,completed')
+    expect(csv).toContain('x y,')
+    // JSON.stringify already escapes control bytes in tag arrays.
+    expect(csv).toContain('"[""t\\u0000g""]"')
+    // CSV's own CRLF row separators are the only control bytes left.
+    expect(csv).not.toMatch(/[\u0000-\u0009\u000b\u000c\u000e-\u001f\u007f-\u009f]/u)
   })
 
   it('exports per-trial anomalies and failure-cluster labels', () => {
