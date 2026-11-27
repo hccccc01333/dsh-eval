@@ -682,9 +682,26 @@ describe('dsh-eval HTML dashboard', () => {
     ] })
     const html = renderDashboard([baseline, candidate])
     const block = html.slice(html.indexOf('<h2>Segment deltas</h2>'))
-    expect(block).toContain('<td>hard</td><td>0.0%</td><td>100.0%</td><td>+100.0pp</td><td>4.0</td><td>6.0</td><td>+2.0</td>')
-    expect(block).toContain('<td>new</td><td>–</td><td>0.0%</td><td>–</td><td>–</td><td>2.0</td><td>–</td>')
-    expect(block).toContain('<td>old</td><td>100.0%</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td>')
-    expect(block).toContain('<td>slipped</td><td>100.0%</td><td>0.0%</td><td>-100.0pp</td><td>8.0</td><td>5.0</td><td>-3.0</td>')
+    expect(block).toContain('<td>hard</td><td>0.0%</td><td>100.0%</td><td>+100.0pp</td><td>4.0</td><td>6.0</td><td>+2.0</td><td>–</td>')
+    expect(block).toContain('<td>new</td><td>–</td><td>0.0%</td><td>–</td><td>–</td><td>2.0</td><td>–</td><td>–</td>')
+    expect(block).toContain('<td>old</td><td>100.0%</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td>')
+    expect(block).toContain('<td>slipped</td><td>100.0%</td><td>0.0%</td><td>-100.0pp</td><td>8.0</td><td>5.0</td><td>-3.0</td><td>–</td>')
+  })
+
+  it('renders normalized segment judge deltas when both scales are recorded', () => {
+    const trial = (score: number) => ({
+      caseId: 'c', trial: 1, status: 'completed' as const, exitCode: 0, timedOut: false,
+      tags: ['x'],
+      judge: { finalAnswerScore: score, hallucination: false },
+    })
+    const before = buildRun({
+      judge: { provider: 'p', model: 'j1', maxScore: 10 }, cases: [trial(8)],
+    })
+    const after = buildRun({
+      judge: { provider: 'p', model: 'j2', maxScore: 100 }, cases: [trial(60)],
+    })
+    const html = renderDashboard([before, after])
+    expect(html).toContain('Δ score %')
+    expect(html).toContain('<td>8.0</td><td>60.0</td><td>+52.0</td><td>-20.0pp</td>')
   })
 })

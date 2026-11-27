@@ -217,10 +217,11 @@ function renderComparison(a: EvalRun, b: EvalRun): string {
     scoreOrDash(item.baseline?.judgeScoreMean ?? null),
     scoreOrDash(item.candidate?.judgeScoreMean ?? null),
     signedOrDash(item.judgeScoreDelta),
+    signedOrDash(item.judgeScoreRateDelta, 100, 'pp'),
   ].map(value => `<td>${esc(value)}</td>`).join(''))
   const segmentDeltaBlock = segmentRows.length === 0 ? ''
     : `<h2>Segment deltas</h2>${table(
-      ['Tag', 'A task', 'B task', 'Δ task', 'A score', 'B score', 'Δ score'],
+      ['Tag', 'A task', 'B task', 'Δ task', 'A score', 'B score', 'Δ score', 'Δ score %'],
       segmentRows, 'Segment deltas',
     )}`
   return `<h2>Run comparison</h2>${table(['Metric', 'A', 'B', 'B − A'], rows, 'Run comparison')}`

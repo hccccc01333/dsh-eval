@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.27 — 2026-11-27
+
+### Changed
+
+- The two-run dashboard's `Segment deltas` table now shows the same
+  scale-normalized `Δ score %` column as the `segments` command, keeping all
+  three views (CLI, gate, HTML) consistent when judge scales differ.
+
 ## 0.5.26 — 2026-11-27
 
 ### Added
