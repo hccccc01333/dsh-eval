@@ -28,6 +28,12 @@ export interface SegmentStat {
   judgeScoreRate: number | null
   /** Hallucination rate over trials with a judge verdict; null when unjudged. */
   hallucinationRate: number | null
+  /** Tool-selection rate over trials with a scripted verdict; null when ungraded. */
+  toolSelectionAccuracyRate: number | null
+  /** Mean cost per trial with a recorded cost; null when unrecorded. */
+  costUsdMean: number | null
+  /** Mean latency per trial with a recorded latency; null when unrecorded. */
+  latencyMsMean: number | null
 }
 
 function rate(flags: readonly boolean[]): number | null {
@@ -58,15 +64,24 @@ export function computeSegments(run: EvalRun): SegmentStat[] {
   for (const tag of tags) {
     const members = run.cases.filter(result => tagged(result, tag))
     const success: boolean[] = []
+    const toolSelection: boolean[] = []
     const scores: number[] = []
     const hallucinations: boolean[] = []
+    const costs: number[] = []
+    const latencies: number[] = []
     for (const result of members) {
       const taskSuccess = result.grade?.taskSuccess
       if (taskSuccess !== null && taskSuccess !== undefined) success.push(taskSuccess)
+      const toolAccuracy = result.grade?.toolSelectionAccuracy
+      if (toolAccuracy !== null && toolAccuracy !== undefined) toolSelection.push(toolAccuracy)
       const score = result.judge?.finalAnswerScore
       if (score !== null && score !== undefined) scores.push(score)
       const hallucination = result.judge?.hallucination
       if (hallucination !== null && hallucination !== undefined) hallucinations.push(hallucination)
+      const cost = result.metrics?.costUsd
+      if (cost !== null && cost !== undefined) costs.push(cost)
+      const latency = result.metrics?.latencyMs
+      if (latency !== null && latency !== undefined) latencies.push(latency)
     }
     const judgeScoreMean = mean(scores)
     const maxScore = run.judge?.maxScore
@@ -81,6 +96,9 @@ export function computeSegments(run: EvalRun): SegmentStat[] {
       judgeScoreMean,
       judgeScoreRate,
       hallucinationRate: rate(hallucinations),
+      toolSelectionAccuracyRate: rate(toolSelection),
+      costUsdMean: mean(costs),
+      latencyMsMean: mean(latencies),
     })
   }
   return stats.sort((a, b) => Number(a.tag > b.tag) - Number(a.tag < b.tag))

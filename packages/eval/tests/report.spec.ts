@@ -818,10 +818,10 @@ describe('dsh-eval report persistence and rendering', () => {
 
     const markdown = renderMarkdownReport(run)
     expect(markdown).toContain('## Segments')
-    expect(markdown).toContain('| tag | cases | trials | task success | judge score | judge score % | hallucination |')
-    expect(markdown).toContain('| difficulty:easy | 1 | 1 | 100.0% | 6.0 | 60.0% | 0.0% |')
-    expect(markdown).toContain('| difficulty:hard | 1 | 2 | 50.0% | 6.0 | 60.0% | 50.0% |')
-    expect(markdown).toContain('| language:ts | 1 | 2 | 50.0% | 6.0 | 60.0% | 50.0% |')
+    expect(markdown).toContain('| tag | cases | trials | task success | tool selection | judge score | judge score % | hallucination | cost/trial | latency/trial |')
+    expect(markdown).toContain('| difficulty:easy | 1 | 1 | 100.0% | – | 6.0 | 60.0% | 0.0% | – | – |')
+    expect(markdown).toContain('| difficulty:hard | 1 | 2 | 50.0% | – | 6.0 | 60.0% | 50.0% | – | – |')
+    expect(markdown).toContain('| language:ts | 1 | 2 | 50.0% | – | 6.0 | 60.0% | 50.0% | – | – |')
     // Existing blocks are still present and Segments slots in after calibration.
     expect(markdown).toContain('## Reliability: task success')
     expect(markdown).toContain('## Judge calibration')
@@ -843,7 +843,7 @@ describe('dsh-eval report persistence and rendering', () => {
       })),
     })
     expect(renderBriefReport(judged)).toContain('- segments: judge-only n/a · judge 50.0%')
-    expect(renderMarkdownReport(judged)).toContain('| judge-only | 1 | 2 | – | 5.0 | 50.0% | 50.0% |')
+    expect(renderMarkdownReport(judged)).toContain('| judge-only | 1 | 2 | – | – | 5.0 | 50.0% | 50.0% | – | – |')
 
     const ungraded = buildRun({ cases: [{
       caseId: 'u', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
@@ -868,5 +868,23 @@ describe('dsh-eval report persistence and rendering', () => {
     // No raw newline or pipe from the tag may forge or split a table row.
     const rows = markdown.split('\n').filter(line => line.startsWith('|'))
     expect(rows).toHaveLength(7)
+  })
+
+  it('renders recorded cost and latency in tagged segments', () => {
+    const priced = buildRun({ cases: [{
+      caseId: 'p', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+      tags: ['priced'],
+      metrics: {
+        turns: 1, steps: 1, toolCalls: 1, toolResults: 1, toolSuccess: 1, toolSuccessRate: 1,
+        invalidToolCalls: 0, retries: 0,
+        tokens: { inputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
+        totalTokens: 1, contextTokens: 1, llmMs: 1, toolMs: 2, ttftMs: 3,
+        latencyMs: 250, costUsd: 0.000001,
+      },
+    }] })
+    expect(renderMarkdownReport(priced)).toContain(
+      '| priced | 1 | 1 | – | – | – | – | – | $0.000001 | 250.0 ms |',
+    )
+    expect(renderReportJson(priced)).toContain('"costUsdMean":0.000001')
   })
 })

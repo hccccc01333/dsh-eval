@@ -56,14 +56,17 @@ describe('computeSegments', () => {
       {
         tag: 'easy', cases: 1, trials: 1,
         taskSuccessRate: 1, judgeScoreMean: 10, judgeScoreRate: null, hallucinationRate: 0,
+        toolSelectionAccuracyRate: null, costUsdMean: null, latencyMsMean: null,
       },
       {
         tag: 'hard', cases: 1, trials: 2,
         taskSuccessRate: 0.5, judgeScoreMean: 6, judgeScoreRate: null, hallucinationRate: 0.5,
+        toolSelectionAccuracyRate: null, costUsdMean: null, latencyMsMean: null,
       },
       {
         tag: 'ts', cases: 1, trials: 2,
         taskSuccessRate: 0.5, judgeScoreMean: 6, judgeScoreRate: null, hallucinationRate: 0.5,
+        toolSelectionAccuracyRate: null, costUsdMean: null, latencyMsMean: null,
       },
     ])
   })
@@ -109,6 +112,31 @@ describe('computeSegments', () => {
       taskSuccessRate: 1,
       judgeScoreMean: null,
       hallucinationRate: null,
+    })
+  })
+
+  it('aggregates tool selection, cost and latency per tag', () => {
+    const metrics = (costUsd: number | null, latencyMs: number) => ({
+      turns: 1, steps: 1, toolCalls: 2, toolResults: 2, toolSuccess: 2,
+      toolSuccessRate: 1, invalidToolCalls: 0, retries: 0,
+      tokens: { inputTokens: 10, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 5 },
+      totalTokens: 15, contextTokens: 15, llmMs: 10, toolMs: 10, ttftMs: 2,
+      latencyMs, costUsd,
+    })
+    const run = buildRun([
+      trial('a', {
+        tags: ['costly'],
+        grade: { taskSuccess: true, toolSelectionAccuracy: true },
+        metrics: metrics(0.002, 1000),
+      }),
+      trial('b', {
+        tags: ['costly'],
+        grade: { taskSuccess: true, toolSelectionAccuracy: false },
+        metrics: metrics(null, 3000),
+      }),
+    ])
+    expect(computeSegments(run)[0]).toMatchObject({
+      toolSelectionAccuracyRate: 0.5, costUsdMean: 0.002, latencyMsMean: 2000,
     })
   })
 })

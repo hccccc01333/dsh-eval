@@ -542,9 +542,9 @@ export function renderMarkdownReport(run: EvalRun): string {
   const segmentBlock = segments.length === 0 ? [] : [
     '## Segments',
     '',
-    '| tag | cases | trials | task success | judge score | judge score % | hallucination |',
-    '|---|---|---|---|---|---|---|',
-    ...segments.map(segment => `| ${escapeMarkdown(segment.tag)} | ${segment.cases} | ${segment.trials} | ${formatRate(segment.taskSuccessRate)} | ${segment.judgeScoreMean === null ? '–' : segment.judgeScoreMean.toFixed(1)} | ${formatRate(segment.judgeScoreRate)} | ${formatRate(segment.hallucinationRate)} |`),
+    '| tag | cases | trials | task success | tool selection | judge score | judge score % | hallucination | cost/trial | latency/trial |',
+    '|---|---|---|---|---|---|---|---|---|---|',
+    ...segments.map(segment => `| ${escapeMarkdown(segment.tag)} | ${segment.cases} | ${segment.trials} | ${formatRate(segment.taskSuccessRate)} | ${formatRate(segment.toolSelectionAccuracyRate)} | ${segment.judgeScoreMean === null ? '–' : segment.judgeScoreMean.toFixed(1)} | ${formatRate(segment.judgeScoreRate)} | ${formatRate(segment.hallucinationRate)} | ${segment.costUsdMean === null ? '–' : `$${segment.costUsdMean.toFixed(6)}`} | ${segment.latencyMsMean === null ? '–' : `${segment.latencyMsMean.toFixed(1)} ms`} |`),
     '',
   ]
   const hasPrecision = precision.task !== null || precision.toolSelection !== null

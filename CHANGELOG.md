@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.40 — 2026-11-27
+
+### Added
+
+- Tag dimension stats now include tool-selection accuracy, mean cost per trial
+  and mean latency per trial, surfaced in `report --json`, Markdown segment
+  tables and HTML dashboards. Trials without a recorded metric contribute no
+  value rather than a misleading zero.
+
 ## 0.5.39 — 2026-11-27
 
 ### Added

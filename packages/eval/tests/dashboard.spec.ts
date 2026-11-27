@@ -615,15 +615,25 @@ describe('dsh-eval HTML dashboard', () => {
     expect(block).toContain('<th scope="col">Tag</th>')
     expect(block).toContain('<th scope="col">Judge score</th>')
     expect(block).toContain('<th scope="col">Judge score %</th>')
-    expect(block).toContain('<td>difficulty:easy</td><td>1</td><td>1</td><td>100.0%</td><td>6.0</td><td>60.0%</td><td>0.0%</td>')
-    expect(block).toContain('<td>difficulty:hard</td><td>1</td><td>2</td><td>50.0%</td><td>6.0</td><td>60.0%</td><td>50.0%</td>')
-    expect(block).toContain('<td>language:ts</td><td>1</td><td>2</td><td>50.0%</td><td>6.0</td><td>60.0%</td><td>50.0%</td>')
+    expect(block).toContain('<th scope="col">Cost/trial</th>')
+    expect(block).toContain('<td>difficulty:easy</td><td>1</td><td>1</td><td>100.0%</td><td>6.0</td><td>60.0%</td><td>0.0%</td><td>100.0%</td><td>–</td><td>–</td>')
+    expect(block).toContain('<td>difficulty:hard</td><td>1</td><td>2</td><td>50.0%</td><td>6.0</td><td>60.0%</td><td>50.0%</td><td>50.0%</td><td>–</td><td>–</td>')
+    expect(block).toContain('<td>language:ts</td><td>1</td><td>2</td><td>50.0%</td><td>6.0</td><td>60.0%</td><td>50.0%</td><td>50.0%</td><td>–</td><td>–</td>')
     // Existing sections survive the new block.
     expect(html).toContain('<h2>Reliability</h2>')
     expect(html).toContain('<h2>Judge calibration</h2>')
     expect(html).toContain('<h2>Failure clusters</h2>')
     expect(html.indexOf('<h2>Segments</h2>')).toBeGreaterThan(html.indexOf('<h2>Judge calibration</h2>'))
     expect(renderDashboard([buildRun()])).not.toContain('<h2>Segments</h2>')
+  })
+
+  it('renders recorded segment cost and latency when metrics are present', () => {
+    const html = renderDashboard([buildRun({ cases: [{
+      caseId: 'p', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+      tags: ['priced'], metrics: METRICS,
+    }] })])
+    const block = html.slice(html.indexOf('<h2>Segments</h2>'), html.indexOf('<h2>Trials</h2>'))
+    expect(block).toContain('<td>$0.000001</td><td>120.0 ms</td>')
   })
 
   it('renders dash placeholders for judge-only and ungraded single tags', () => {
