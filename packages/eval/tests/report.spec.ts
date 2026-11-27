@@ -34,6 +34,27 @@ function buildRun(overrides: Partial<EvalRun> = {}): EvalRun {
 }
 
 describe('dsh-eval report persistence and rendering', () => {
+  it('shows the pooled hallucination rate in the brief report', () => {
+    const run = buildRun({
+      grading: {
+        taskSuccessRate: 1, toolSelectionAccuracyRate: 1,
+        finalAnswerScore: 8, hallucinationRate: 0.25,
+      },
+      cases: [
+        {
+          caseId: 'c', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          judge: { finalAnswerScore: 8, hallucination: false },
+        },
+        {
+          caseId: 'c', trial: 2, status: 'completed', exitCode: 0, timedOut: false,
+          judge: { finalAnswerScore: 4, hallucination: true },
+        },
+      ],
+    })
+    expect(renderBriefReport(run)).toContain('- hallucination: 25.0% (n=2)')
+    expect(renderBriefReport(buildRun())).not.toContain('- hallucination:')
+  })
+
   it('writes and loads a run report, creating parent directories', async () => {
     const dir = tempDir()
     const path = join(dir, 'nested', 'run.json')

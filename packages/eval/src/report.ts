@@ -361,6 +361,11 @@ export function renderBriefReport(run: EvalRun): string {
   if (interval !== null && interval.lower !== null && interval.upper !== null) {
     lines.push(`- task precision: ${(interval.rate * 100).toFixed(1)}% [95% CI ${(interval.lower * 100).toFixed(1)}%, ${(interval.upper * 100).toFixed(1)}%]`)
   }
+  const hallucinationRate = run.grading?.hallucinationRate
+  if (hallucinationRate !== null && hallucinationRate !== undefined) {
+    const judged = run.cases.filter(result => typeof result.judge?.hallucination === 'boolean').length
+    lines.push(`- hallucination: ${(hallucinationRate * 100).toFixed(1)}% (n=${judged})`)
+  }
   if (agreement !== null) {
     lines.push(`- judge/script agreement: ${(agreement.rate * 100).toFixed(1)}% (n=${agreement.pairs}) · kappa ${agreement.kappa.toFixed(2)}`)
   }

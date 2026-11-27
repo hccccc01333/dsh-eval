@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.31 — 2026-11-27
+
+### Added
+
+- `report --brief` now shows the pooled hallucination rate together with the
+  number of trials that produced a judge hallucination verdict, so the safety
+  metric gated by `--max-hallucination-increase` is visible in the terminal
+  summary too.
+
 ## 0.5.30 — 2026-11-27
 
 ### Added
