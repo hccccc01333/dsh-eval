@@ -813,15 +813,15 @@ describe('dsh-eval report persistence and rendering', () => {
       ],
     })
     const brief = renderBriefReport(run)
-    expect(brief).toContain('- segments: difficulty:easy 100.0% · difficulty:hard 50.0% · language:ts 50.0%')
+    expect(brief).toContain('- segments: difficulty:easy 100.0% · judge 60.0% · difficulty:hard 50.0% · judge 60.0% · language:ts 50.0% · judge 60.0%')
     expect(brief).toContain('- trials: 4/4 completed')
 
     const markdown = renderMarkdownReport(run)
     expect(markdown).toContain('## Segments')
-    expect(markdown).toContain('| tag | cases | trials | task success | judge score | hallucination |')
-    expect(markdown).toContain('| difficulty:easy | 1 | 1 | 100.0% | 6.0 | 0.0% |')
-    expect(markdown).toContain('| difficulty:hard | 1 | 2 | 50.0% | 6.0 | 50.0% |')
-    expect(markdown).toContain('| language:ts | 1 | 2 | 50.0% | 6.0 | 50.0% |')
+    expect(markdown).toContain('| tag | cases | trials | task success | judge score | judge score % | hallucination |')
+    expect(markdown).toContain('| difficulty:easy | 1 | 1 | 100.0% | 6.0 | 60.0% | 0.0% |')
+    expect(markdown).toContain('| difficulty:hard | 1 | 2 | 50.0% | 6.0 | 60.0% | 50.0% |')
+    expect(markdown).toContain('| language:ts | 1 | 2 | 50.0% | 6.0 | 60.0% | 50.0% |')
     // Existing blocks are still present and Segments slots in after calibration.
     expect(markdown).toContain('## Reliability: task success')
     expect(markdown).toContain('## Judge calibration')
@@ -842,15 +842,15 @@ describe('dsh-eval report persistence and rendering', () => {
         judge: { finalAnswerScore: score, hallucination: index === 1 },
       })),
     })
-    expect(renderBriefReport(judged)).toContain('- segments: judge-only n/a')
-    expect(renderMarkdownReport(judged)).toContain('| judge-only | 1 | 2 | – | 5.0 | 50.0% |')
+    expect(renderBriefReport(judged)).toContain('- segments: judge-only n/a · judge 50.0%')
+    expect(renderMarkdownReport(judged)).toContain('| judge-only | 1 | 2 | – | 5.0 | 50.0% | 50.0% |')
 
     const ungraded = buildRun({ cases: [{
       caseId: 'u', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
       tags: ['ungraded'],
     }] })
     expect(renderBriefReport(ungraded)).toContain('- segments: ungraded n/a')
-    expect(renderMarkdownReport(ungraded)).toContain('| ungraded | 1 | 1 | – | – | – |')
+    expect(renderMarkdownReport(ungraded)).toContain('| ungraded | 1 | 1 | – | – | – | – |')
   })
 
   it('escapes hostile tag strings before they enter segments output', () => {

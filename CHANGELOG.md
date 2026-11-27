@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.33 — 2026-11-27
+
+### Changed
+
+- Markdown reports show a normalized `judge score %` column in the `Segments`
+  table, and `report --brief` appends the per-tag normalized score when a judge
+  scale is recorded. Raw judge means and old reports stay unchanged.
+
 ## 0.5.32 — 2026-11-27
 
 ### Changed

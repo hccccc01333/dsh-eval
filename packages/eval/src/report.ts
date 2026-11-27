@@ -379,7 +379,7 @@ export function renderBriefReport(run: EvalRun): string {
   }
   if (segments.length > 0) {
     lines.push(`- segments: ${segments.map(segment =>
-      `${escapeMarkdown(segment.tag)} ${segment.taskSuccessRate === null ? 'n/a' : `${(segment.taskSuccessRate * 100).toFixed(1)}%`}`,
+      `${escapeMarkdown(segment.tag)} ${segment.taskSuccessRate === null ? 'n/a' : `${(segment.taskSuccessRate * 100).toFixed(1)}%`}${segment.judgeScoreRate === null ? '' : ` · judge ${formatRate(segment.judgeScoreRate)}`}`,
     ).join(' · ')}`)
   }
   if (run.grading?.judgeFailures) lines.push(`- judge failures: ${run.grading.judgeFailures}`)
@@ -542,9 +542,9 @@ export function renderMarkdownReport(run: EvalRun): string {
   const segmentBlock = segments.length === 0 ? [] : [
     '## Segments',
     '',
-    '| tag | cases | trials | task success | judge score | hallucination |',
-    '|---|---|---|---|---|---|',
-    ...segments.map(segment => `| ${escapeMarkdown(segment.tag)} | ${segment.cases} | ${segment.trials} | ${formatRate(segment.taskSuccessRate)} | ${segment.judgeScoreMean === null ? '–' : segment.judgeScoreMean.toFixed(1)} | ${formatRate(segment.hallucinationRate)} |`),
+    '| tag | cases | trials | task success | judge score | judge score % | hallucination |',
+    '|---|---|---|---|---|---|---|',
+    ...segments.map(segment => `| ${escapeMarkdown(segment.tag)} | ${segment.cases} | ${segment.trials} | ${formatRate(segment.taskSuccessRate)} | ${segment.judgeScoreMean === null ? '–' : segment.judgeScoreMean.toFixed(1)} | ${formatRate(segment.judgeScoreRate)} | ${formatRate(segment.hallucinationRate)} |`),
     '',
   ]
   const hasPrecision = precision.task !== null || precision.toolSelection !== null
