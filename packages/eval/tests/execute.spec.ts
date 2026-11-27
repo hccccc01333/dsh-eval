@@ -83,4 +83,42 @@ describe('dsh-eval failure-summary sanitization', () => {
     expect(err).toBe('dsh eval: 1 trial(s) failed:\nevil x#1: boom forged log line\n')
     expect(err).not.toMatch(/\u001b/)
   })
+
+  it('warns about check configuration errors on completed trials', async () => {
+    const dir = tempDir()
+    const benchmarkPath = benchmarkYaml(dir)
+    const run: EvalRun = {
+      benchmark: 'n',
+      model: 'm',
+      createdAt: 0,
+      trials: 1,
+      seed: 0,
+      pricing: null,
+      tempRoot: dir,
+      cases: [{
+        caseId: 'c\u001b[2J',
+        trial: 1,
+        status: 'completed',
+        exitCode: 0,
+        timedOut: false,
+        grade: {
+          taskSuccess: false,
+          toolSelectionAccuracy: null,
+          checkError: 'spawn ./check.sh ENOENT\u0007',
+        },
+      }],
+      aggregate: null,
+      grading: null,
+    }
+    vi.mocked(runBenchmark).mockResolvedValueOnce(run)
+    const stderr: string[] = []
+    await executeEval(
+      { kind: 'run', benchmarkPath, outPath: join(dir, 'run.json') },
+      { stdout: { write: () => {} }, stderr: { write: (chunk) => { stderr.push(chunk); return true } } },
+    )
+    const err = stderr.join('')
+    expect(err).toContain('1 trial(s) had check configuration errors (not model failures)')
+    expect(err).toContain('c#1: spawn ./check.sh ENOENT')
+    expect(err).not.toMatch(/[\u001b\u0007]/u)
+  })
 })

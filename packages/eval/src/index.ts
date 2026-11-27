@@ -298,6 +298,16 @@ export async function executeEval(
       }).join('\n')
       io.stderr.write(`dsh eval: ${failed.length} trial(s) failed:\n${sample}\n`)
     }
+    // A check command that could not be spawned leaves a *completed* trial with
+    // taskSuccess=false, so it never reaches the failed-trial summary above.
+    // Without this line a path typo looks like a model failure in the report.
+    const checkErrors = run.cases.filter(result => result.grade?.checkError !== undefined)
+    if (checkErrors.length > 0) {
+      const sample = checkErrors.slice(0, 3).map(result =>
+        `${sanitizeTerminal(result.caseId)}#${result.trial}: ${sanitizeTerminal(result.grade!.checkError!)}`,
+      ).join('\n')
+      io.stderr.write(`dsh eval: ${checkErrors.length} trial(s) had check configuration errors (not model failures):\n${sample}\n`)
+    }
     return failed.length > 0 || run.aggregate === null ? 1 : 0
   } catch (error) {
     io.stderr.write(`dsh eval: ${error instanceof Error ? error.message : String(error)}\n`)

@@ -140,7 +140,9 @@ async function toolSelectionOf(
  * Grade one trial against its expectations: the expected tool is matched
  * against recorded tool-call names, and the check command runs in the trial
  * workspace with the same timeout as the agent. A spawn failure or timeout
- * reads as task failure, never as an aborted run.
+ * reads as task failure, never as an aborted run; a spawn failure additionally
+ * records the reason in `checkError` so a bad configuration is not mistaken
+ * for a model failure.
  * @param caseValue - the case being graded.
  * @param trace - the harvested trace.
  * @param workspace - the trial's workspace, where the check runs.
@@ -161,6 +163,7 @@ async function gradeTrial(
   const names = [...new Set(trace.events.flatMap(event => event.type === 'tool/call' ? [event.data.name] : []))]
   const toolSelectionAccuracy = await toolSelectionOf(expected, names)
   let taskSuccess: boolean | null = null
+  let checkError: string | undefined
   const shell = expected.checkShell !== undefined
   const checkArgv = expected.checkArgv !== undefined
     ? [...expected.checkArgv]
@@ -174,8 +177,12 @@ async function gradeTrial(
         detached: true,
       })
       taskSuccess = !outcome.timedOut && outcome.exitCode === 0
-    } catch {
+    } catch (error) {
+      // The command never started: a configuration error, not a scored task
+      // failure. Keep a short, single-line, control-free reason in the grade.
+      // A non-zero exit above stays a plain task failure with no checkError.
       taskSuccess = false
+      checkError = message(error).slice(0, 200).replace(/[\x00-\x1f\x7f-\x9f]+/gu, ' ').trim()
     }
   } else if (expected.answerRegex !== undefined) {
     // Deterministic final-answer grading: no command, no LLM needed.
@@ -190,7 +197,11 @@ async function gradeTrial(
       taskSuccess = false
     }
   }
-  return { taskSuccess, toolSelectionAccuracy }
+  return {
+    taskSuccess,
+    toolSelectionAccuracy,
+    ...(checkError !== undefined ? { checkError } : {}),
+  }
 }
 
 /** Pool one nullable boolean across graded trials into a rate, or null. */

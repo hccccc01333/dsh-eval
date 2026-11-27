@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.5.4 — 2026-11-27
+
+### Added
+
+- **Anomalous trial detection.** Reports and dashboards now flag trials whose
+  latency, token use, step count or retry count falls outside the run's Tukey
+  1.5×IQR fence. A small set of outliers no longer hides behind a pooled mean.
+  The new `computeAnomalies` is a pure derivation: no collected evidence, report
+  schema or digest changes, and no block appears when the run is uniform.
+
+### Fixed
+
+- **Check command configuration errors are no longer mistaken for model
+  failures.** A check that cannot be spawned (a bad path or non-executable
+  file) used to be silently recorded as `taskSuccess=false`. The grade now
+  carries a sanitized `checkError`, the CLI warns on stderr that these are
+  configuration errors, and brief/markdown/HTML reports show an actionable
+  "Configuration errors" section. A command that runs and exits nonzero is
+  still an ordinary task failure and is not flagged as a configuration error.
+
 ## 0.5.3 — 2026-11-27
 
 ### Fixed

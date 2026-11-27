@@ -36,6 +36,11 @@ dsh eval provenance run-v1.json benchmark.yaml
 
 Trials are independent — private temp workspace, isolated `DSH_HOME`, own patch overlay — so `concurrency` runs that many of them at once. The run record still lists results in case-then-trial order whatever the interleaving, and `--concurrency` overrides the document. Raising it trades wall time for peak CPU, memory, and concurrent model quota.
 
+Reports flag anomalous trials (latency, tokens, steps or retries outside the
+run's 1.5×IQR fence) and surface check commands that could not be started as
+configuration errors rather than model failures — a path typo no longer looks
+like a 0% model score.
+
 While a run is in flight, each finished trial writes one bounded line to stderr, e.g. `[eval] 3/12 golden #1 task pass, 1204 ms`. Errors print their sanitized message, and agent-controlled case ids cannot inject newlines. Pass `--quiet` for scripts that want only the final stdout summary.
 
 ## See it in action

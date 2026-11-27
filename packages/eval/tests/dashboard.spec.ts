@@ -294,4 +294,67 @@ describe('dsh-eval HTML dashboard', () => {
     await writeDashboard([buildRun()], path)
     expect(readFileSync(path, 'utf8')).toContain('<!doctype html>')
   })
+
+  it('renders an Anomalies section with escaped case ids', () => {
+    const outlierId = '</code><b>x</b>'
+    const latencies = [100, 110, 120, 130, 140, 1000]
+    const html = renderDashboard([buildRun({
+      cases: latencies.map((latencyMs, index) => ({
+        caseId: index === latencies.length - 1 ? outlierId : `normal-${index}`,
+        trial: 1, status: 'completed' as const, exitCode: 0, timedOut: false,
+        metrics: { ...METRICS, latencyMs },
+      })),
+    })])
+    expect(html).toContain('<h2>Anomalies</h2>')
+    const block = html.slice(html.indexOf('<h2>Anomalies</h2>'), html.indexOf('<h2>Trials</h2>'))
+    expect(block).toContain('aria-label="Anomalies"')
+    expect(block).toContain('<th scope="col">Metric</th>')
+    expect(block).toContain('<td>latencyMs</td>')
+    expect(block).toContain('<td>1000</td>')
+    expect(block).toContain('&lt;/code&gt;&lt;b&gt;x&lt;/b&gt;')
+    expect(block).not.toContain('<b>x</b>')
+    const baseline = renderDashboard([buildRun()])
+    expect(baseline).not.toContain('<h2>Anomalies</h2>')
+  })
+
+  it('omits paired inference and case evidence when two runs share no measured trials', () => {
+    const ungraded = (benchmark: string): EvalRun => buildRun({
+      benchmark, cases: [], aggregate: null, grading: null,
+    })
+    const html = renderDashboard([ungraded('baseline'), ungraded('candidate')])
+    expect(html).toContain('<h2>Run comparison</h2>')
+    expect(html).not.toContain('<h2>Paired inference</h2>')
+    expect(html).not.toContain('Changed cases</h2>')
+    expect(html).not.toContain('Confirmed case changes</h2>')
+  })
+
+  it('renders dash placeholders for leaderboard rows without metrics', () => {
+    const sparse = (benchmark: string): EvalRun => buildRun({
+      benchmark, cases: [], aggregate: null, grading: null,
+    })
+    const html = renderDashboard([sparse('first'), sparse('second'), sparse('third')])
+    expect(html).toContain('<h1>Leaderboard</h1>')
+    expect(html).toContain('<td>–</td>')
+  })
+
+  it('omits the source label when the run has no benchmark hash', () => {
+    const { benchmarkSha256: _hash, ...withoutHash } = buildRun()
+    expect(renderDashboard([withoutHash])).not.toContain('source ffffffff')
+  })
+
+  it('renders a configuration-error warning with escaped case ids and messages', () => {
+    const html = renderDashboard([buildRun({
+      cases: [{
+        caseId: 'c<tag>', trial: 3, status: 'completed', exitCode: 0, timedOut: false,
+        grade: { taskSuccess: null, toolSelectionAccuracy: null, checkError: '<script>alert(1)</script>' },
+      }],
+    })])
+    expect(html).toContain('<h2>Configuration errors</h2>')
+    const block = html.slice(html.indexOf('<h2>Configuration errors</h2>'), html.indexOf('<h2>Trials</h2>'))
+    expect(block).toContain('Fix the benchmark check configuration')
+    expect(block).toContain('<code>c&lt;tag&gt;</code>#3: &lt;script&gt;alert(1)&lt;/script&gt;')
+    expect(block).not.toContain('<script>')
+    const baseline = renderDashboard([buildRun()])
+    expect(baseline).not.toContain('<h2>Configuration errors</h2>')
+  })
 })

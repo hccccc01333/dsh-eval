@@ -111,6 +111,8 @@ describe('dsh-eval report persistence and rendering', () => {
     expect(parsed.agreement).toBeDefined()
     expect(parsed.calibration).toBeDefined()
     expect(parsed.cases).toHaveLength(run.cases.length)
+    // Omitted optional inputs are rendered as an empty array, not dropped.
+    expect((JSON.parse(renderReportJson(buildRun())) as { caseInputs: unknown[] }).caseInputs).toEqual([])
   })
 
   it('renders completed and failed trials plus the aggregate row', () => {
@@ -561,5 +563,59 @@ describe('dsh-eval report persistence and rendering', () => {
     expect(markdown).toContain('  - fl aky q case trial 2: script fail · judge score 8')
     expect(markdown).not.toContain('fl|aky')
     expect(markdown).not.toContain('ju|dge')
+  })
+
+  it('renders an Anomalies block for outlier trials and escapes the case id', () => {
+    const outlierId = 'an|om\n`aly'
+    const latencies = [100, 110, 120, 130, 140, 1000]
+    const metrics = (latencyMs: number) => ({
+      turns: 1, steps: 1, toolCalls: 0, toolResults: 0, toolSuccess: 0, toolSuccessRate: null,
+      invalidToolCalls: 0, retries: 0,
+      tokens: { inputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
+      totalTokens: 10, contextTokens: 10, llmMs: 1, toolMs: 1, ttftMs: 1, latencyMs, costUsd: null,
+    })
+    const run = buildRun({
+      cases: latencies.map((latencyMs, index) => ({
+        caseId: index === latencies.length - 1 ? outlierId : `normal-${index}`,
+        trial: 1, status: 'completed' as const, exitCode: 0, timedOut: false,
+        metrics: metrics(latencyMs),
+      })),
+    })
+    const markdown = renderMarkdownReport(run)
+    expect(markdown).toContain('## Anomalies')
+    expect(markdown).toContain('- `an om  aly` trial 1: metric latencyMs, value 1000 — latencyMs 1000 outside [75, 175]')
+    expect(markdown).not.toContain('an|om')
+    expect(markdown).not.toContain('`aly')
+    const brief = renderBriefReport(run)
+    expect(brief).toContain('- anomalies: `an om  aly` #1 latencyMs=1000')
+    expect(brief).not.toContain('an|om')
+    // A run with no outlier keeps its baseline output verbatim.
+    const baseline = buildRun()
+    expect(renderMarkdownReport(baseline)).not.toContain('## Anomalies')
+    expect(renderBriefReport(baseline)).not.toContain('- anomalies:')
+    expect(renderBriefReport(baseline)).toBe('# b — m\n- trials: 0/0 completed\n')
+  })
+
+  it('warns about check-command configuration errors and escapes case ids and messages', () => {
+    const run = buildRun({
+      cases: [{
+        caseId: 'ch|eck`1', trial: 2, status: 'completed', exitCode: 0, timedOut: false,
+        grade: { taskSuccess: null, toolSelectionAccuracy: null, checkError: 'bad|cfg\nline' },
+      }],
+    })
+    const markdown = renderMarkdownReport(run)
+    expect(markdown).toContain('## Configuration errors')
+    expect(markdown).toContain('Fix the benchmark check configuration (`check` / `checkArgv` / `checkShell`')
+    expect(markdown).toContain('- `ch eck 1`#2: bad cfg line')
+    expect(markdown).not.toContain('ch|eck')
+    expect(markdown).not.toContain('bad|cfg')
+    const brief = renderBriefReport(run)
+    expect(brief).toContain('- WARNING: check command could not be started; fix check/checkArgv/checkShell and rerun: `ch eck 1`#2: bad cfg line')
+    expect(brief).not.toContain('bad|cfg')
+    // No checkError means no warning and unchanged baseline output.
+    const baseline = buildRun()
+    expect(renderMarkdownReport(baseline)).not.toContain('## Configuration errors')
+    expect(renderBriefReport(baseline)).not.toContain('WARNING:')
+    expect(renderBriefReport(baseline)).toBe('# b — m\n- trials: 0/0 completed\n')
   })
 })

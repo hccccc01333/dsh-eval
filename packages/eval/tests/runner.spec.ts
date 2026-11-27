@@ -141,6 +141,20 @@ describe('dsh-eval benchmark runner', () => {
     expect(run.benchmarkSha256).not.toBe(base)
   })
 
+  it('defaults the temp root and pricing, and records a seed override', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const benchmark = buildBenchmark({ trials: 1 })
+    delete benchmark.pricing
+    // No tempRoot override: the platform temp dir is the fallback.
+    const run = await runBenchmark(benchmark, { seed: 7 })
+    dirs.push(run.tempRoot)
+    expect(run.seed).toBe(7)
+    expect(run.benchmarkOverrides).toEqual({ seed: 7 })
+    expect(run.pricing).toBeNull()
+    expect(run.cases[0]?.status).toBe('completed')
+  })
+
   it('runs every trial, harvests traces, and folds metrics', async () => {
     process.env.FAKE_DASH_MODE = 'log'
     process.env.FAKE_DASH_LOG = FIXTURE_LOG
@@ -480,6 +494,39 @@ describe('dsh-eval benchmark runner', () => {
       cases: [{ id: 'missing-check', prompt: 'p', expected: { check: 'definitely-missing-check-xyz' } }],
     }), { tempRoot: tempDir() })
     expect(run.cases[0]?.grade?.taskSuccess).toBe(false)
+  })
+
+  it('surfaces a check spawn failure as checkError in the grade', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const missing = '/nonexistent/definitely-missing-check'
+    const run = await runBenchmark(buildBenchmark({
+      trials: 1,
+      cases: [{ id: 'spawn-fail', prompt: 'p', expected: { checkArgv: [missing] } }],
+    }), { tempRoot: tempDir() })
+    expect(run.cases[0]?.status).toBe('completed')
+    expect(run.cases[0]?.grade?.taskSuccess).toBe(false)
+    // The reason names the missing command (or the spawn ENOENT) and stays one line.
+    expect(run.cases[0]?.grade?.checkError).toMatch(/ENOENT|definitely-missing-check/u)
+    expect(run.cases[0]?.grade?.checkError).not.toMatch(/[\x00-\x1f\x7f-\x9f]/u)
+  })
+
+  it('does not mark a nonzero check exit or an invalid answerRegex as a spawn error', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const failingCheck = await runBenchmark(buildBenchmark({
+      trials: 1,
+      cases: [{ id: 'fail', prompt: 'p', expected: { checkArgv: [process.execPath, CHECK_FAIL] } }],
+    }), { tempRoot: tempDir() })
+    expect(failingCheck.cases[0]?.grade?.taskSuccess).toBe(false)
+    expect(failingCheck.cases[0]?.grade?.checkError).toBeUndefined()
+
+    const malformedRegex = await runBenchmark(buildBenchmark({
+      trials: 1,
+      cases: [{ id: 'regex', prompt: 'p', expected: { answerRegex: '[' } }],
+    }), { tempRoot: tempDir() })
+    expect(malformedRegex.cases[0]?.grade?.taskSuccess).toBe(false)
+    expect(malformedRegex.cases[0]?.grade?.checkError).toBeUndefined()
   })
 
   it('sanitizes case ids for trial directories', async () => {

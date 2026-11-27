@@ -210,6 +210,8 @@ export interface EvalGrade {
   taskSuccess: boolean | null
   /** Whether an expected tool was called, or null when no tool is configured. */
   toolSelectionAccuracy: boolean | null
+  /** Check command could not be spawned (a configuration error, not a task failure). */
+  checkError?: string
 }
 
 /** LLM-judge verdict for one trial. */

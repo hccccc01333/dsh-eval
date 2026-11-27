@@ -21,7 +21,7 @@
 | **面向 CI** | `--require-significance` 门禁 + 硬成本/延迟预算 |
 | **零外部资源报告** | 自包含、适配深色模式的 HTML 仪表盘 |
 
-`dsh-eval@0.5.3` · 335 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.5.4` · 356 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 本包同时是一个 bundle 和一个命令行应用。装进 profile 后即可运行评测：
 
@@ -36,6 +36,8 @@ dsh eval compare run-v1.json run-v2.json
 `dsh eval` 是 `--profile eval` 的启动器别名，eval profile 由 `dsh-base` 加本 bundle 组成。每个 trial 以 benchmark 配置的 `dsh` 命令（默认 `dsh`）和配置的 profile（默认 `headless`）启动，带有独立的临时工作区、隔离的 `DSH_HOME`，以及一层强制纯 JSONL 持久化和非交互 workspace-write/never-approval 权限的补丁。收获的主 session 日志即该 trial 的 trace；该 trial `DSH_HOME` 下的子 agent 日志会在指标折叠前合并进来。
 
 trial 之间彼此独立——各自的临时工作区、隔离的 `DSH_HOME`、各自的补丁层——所以 `concurrency` 可以让这么多个 trial 同时跑。无论并发如何交错，run 记录仍按 case、再按 trial 的顺序列出结果；`--concurrency` 可覆盖文档里的值。调高它是用墙钟时间换峰值 CPU、内存与并发的模型额度。
+
+报告会标出异常 trial（延迟、token、步数或重试次数超出该 run 的 1.5×IQR 围栏），并把无法启动的 check 命令作为配置错误而非模型失败呈现——路径写错不再看起来像 0% 的模型成绩。
 
 run 进行中时，每个完成的 trial 会向 stderr 写一行有长度上限的进度，例如 `[eval] 3/12 golden #1 task pass, 1204 ms`。错误会输出净化后的消息，agent 控制的 case id 无法注入换行。只想要最终 stdout 摘要的脚本可以传 `--quiet`。
 

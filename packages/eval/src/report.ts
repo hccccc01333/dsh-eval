@@ -9,6 +9,7 @@ import { resolve } from 'node:path'
 import { z } from 'zod'
 import { writeTextAtomic } from './atomic-write.ts'
 import { computeAgreement, type AgreementSummary } from './agreement.ts'
+import { computeAnomalies, type TrialAnomaly } from './anomalies.ts'
 import { computeCalibration, type CalibrationSummary } from './calibration.ts'
 import { computePrecision, type RateInterval, type RunPrecision } from './precision.ts'
 import { computeCoverage, computeReliability, type ReliabilitySummary } from './reliability.ts'
@@ -62,6 +63,7 @@ const metricsSchema = z.object({
 const gradeSchema = z.object({
   taskSuccess: z.boolean().nullable(),
   toolSelectionAccuracy: z.boolean().nullable(),
+  checkError: z.string().optional(),
 })
 
 const judgeVerdictSchema = z.object({
@@ -179,6 +181,42 @@ function escapeMarkdown(value: string): string {
   return value.replace(/[\r\n|`]/gu, ' ')
 }
 
+/** One trial whose scripted check command could not be started. */
+interface CheckErrorEntry {
+  caseId: string
+  trial: number
+  error: string
+}
+
+/** Collect check-command configuration errors from every trial, in trial order. */
+function findCheckErrors(run: EvalRun): CheckErrorEntry[] {
+  return run.cases.flatMap(result => {
+    const error = result.grade?.checkError
+    return error === undefined ? [] : [{ caseId: result.caseId, trial: result.trial, error }]
+  })
+}
+
+/** Render outlier trials as a markdown list; callers pass a non-empty array. */
+function renderAnomalies(anomalies: readonly TrialAnomaly[]): string[] {
+  return [
+    '## Anomalies',
+    '',
+    ...anomalies.map(item => `- \`${escapeMarkdown(item.caseId)}\` trial ${item.trial}: metric ${item.metric}, value ${item.value} — ${escapeMarkdown(item.why)}`),
+    '',
+  ]
+}
+
+/** Render the actionable check-command configuration warning. */
+function renderCheckErrors(errors: readonly CheckErrorEntry[]): string[] {
+  return [
+    '## Configuration errors',
+    '',
+    '> WARNING: a scripted check command could not be started. Fix the benchmark check configuration (`check` / `checkArgv` / `checkShell`: executable present and valid working directory) and rerun; the graded results below are unreliable.',
+    ...errors.map(item => `- \`${escapeMarkdown(item.caseId)}\`#${item.trial}: ${escapeMarkdown(item.error)}`),
+    '',
+  ]
+}
+
 /** Render one reliability block; callers pass only a non-null summary. */
 function renderReliability(summary: ReliabilitySummary, graded: number): string[] {
   const label = summary.dimension === 'task' ? 'task success' : 'tool selection accuracy'
@@ -281,6 +319,14 @@ export function renderBriefReport(run: EvalRun): string {
     lines.push(`- judge Brier: ${calibration.brier.toFixed(3)}`)
   }
   if (run.grading?.judgeFailures) lines.push(`- judge failures: ${run.grading.judgeFailures}`)
+  const anomalies = computeAnomalies(run)
+  if (anomalies.length > 0) {
+    lines.push(`- anomalies: ${anomalies.map(item => `\`${escapeMarkdown(item.caseId)}\` #${item.trial} ${item.metric}=${item.value}`).join(' · ')}`)
+  }
+  const checkErrors = findCheckErrors(run)
+  if (checkErrors.length > 0) {
+    lines.push(`- WARNING: check command could not be started; fix check/checkArgv/checkShell and rerun: ${checkErrors.map(item => `\`${escapeMarkdown(item.caseId)}\`#${item.trial}: ${escapeMarkdown(item.error)}`).join(' · ')}`)
+  }
   return `${lines.join('\n')}\n`
 }
 
@@ -407,6 +453,8 @@ export function renderMarkdownReport(run: EvalRun): string {
   const precision = computePrecision(run)
   const agreement = computeAgreement(run)
   const calibration = computeCalibration(run)
+  const anomalies = computeAnomalies(run)
+  const checkErrors = findCheckErrors(run)
   const hasPrecision = precision.task !== null || precision.toolSelection !== null
     || precision.strictPassAt1 !== null || precision.latencyP50 !== null
   const coverageLine = coverage.unscored === 0
@@ -435,5 +483,7 @@ export function renderMarkdownReport(run: EvalRun): string {
     ...(hasPrecision ? renderPrecision(precision) : []),
     ...(agreement === null ? [] : renderAgreement(agreement)),
     ...(calibration === null ? [] : renderCalibration(calibration)),
+    ...(anomalies.length === 0 ? [] : renderAnomalies(anomalies)),
+    ...(checkErrors.length === 0 ? [] : renderCheckErrors(checkErrors)),
   ].join('\n')
 }
