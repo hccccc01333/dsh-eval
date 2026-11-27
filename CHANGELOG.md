@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.22 — 2026-11-27
+
+### Added
+
+- `reproduce --json` now reports `digestChecked` alongside `digestMatches`.
+  Old reports without a benchmark digest previously reported
+  `digestMatches: true` even though no verification took place; the human
+  output likewise appends a `digest not verifiable (legacy report)` caveat.
+
 ## 0.5.21 — 2026-11-27
 
 ### Added

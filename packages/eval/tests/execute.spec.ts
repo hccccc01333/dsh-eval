@@ -201,10 +201,27 @@ describe('dsh-eval reproduce execution', () => {
     )
     expect(code).toBe(0)
     expect(stdout.join('')).toBe(
-      `Wrote ${outPath} (baseline 1/1 completed, 50.0% → replay 1/1 completed, 75.0%, judge 7.0 → 9.0 (+2.0))\n`
+      `Wrote ${outPath} (baseline 1/1 completed, 50.0% → replay 1/1 completed, 75.0%, judge 7.0 → 9.0 (+2.0); digest not verifiable (legacy report))\n`
       + `Next: dsh eval report ${outPath} --brief\n`,
     )
     expect(stderr.join('')).toBe('[eval] 1/1 a #1 task n/a, ? ms\n')
+
+    // A replay carrying a digest makes the same human line omit the caveat.
+    vi.mocked(runBenchmark).mockImplementation(async () => ({
+      ...replay,
+      ...(benchmark.sourceSha256 === undefined ? {} : { benchmarkSha256: benchmark.sourceSha256 }),
+    }))
+    const verified: string[] = []
+    const verifiedCode = await executeEval(
+      { kind: 'reproduce', runPath, benchmarkPath, outPath },
+      {
+        stdout: { write: (chunk) => { verified.push(chunk); return true } },
+        stderr: { write: () => true },
+      },
+      { judgeChat },
+    )
+    expect(verifiedCode).toBe(0)
+    expect(verified.join('')).not.toContain('digest not verifiable')
     expect(vi.mocked(runBenchmark).mock.calls[0]?.[1]?.judgeChat).toBe(judgeChat)
     expect(existsSync(outPath)).toBe(true)
   })
@@ -274,6 +291,7 @@ describe('dsh-eval reproduce execution', () => {
     expect(JSON.parse(stdout.join(''))).toMatchObject({
       baselineCompleted: 1, replayCompleted: 1,
       baselineTaskSuccessRate: 0.5, replayTaskSuccessRate: 0.75,
+      digestChecked: false,
     })
     expect(stdout.join('')).not.toContain('Next:')
   })

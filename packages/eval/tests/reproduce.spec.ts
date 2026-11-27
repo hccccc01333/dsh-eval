@@ -193,6 +193,7 @@ describe('compareReproduce', () => {
     })
     expect(compareReproduce(baseline, replay)).toEqual({
       digestMatches: false,
+      digestChecked: true,
       baselineCompleted: 1,
       replayCompleted: 1,
       baselineTaskSuccessRate: 0.75,
@@ -220,6 +221,7 @@ describe('compareReproduce', () => {
   it('reports null rates for ungraded runs with no digest', () => {
     expect(compareReproduce(buildRun(), buildRun())).toEqual({
       digestMatches: true,
+      digestChecked: false,
       baselineCompleted: 0,
       replayCompleted: 0,
       baselineTaskSuccessRate: null,

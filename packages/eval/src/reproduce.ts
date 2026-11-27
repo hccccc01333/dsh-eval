@@ -25,6 +25,8 @@ export interface ReproduceOptions {
 /** Side-by-side numbers for a baseline and its replay. */
 export interface ReproduceComparison {
   digestMatches: boolean
+  /** False when the baseline predates digest recording, so no check was made. */
+  digestChecked: boolean
   baselineCompleted: number
   replayCompleted: number
   baselineTaskSuccessRate: number | null
@@ -55,6 +57,7 @@ export function compareReproduce(baseline: EvalRun, replay: EvalRun): ReproduceC
   const replayJudgeScore = replay.grading?.finalAnswerScore ?? null
   return {
     digestMatches: baseline.benchmarkSha256 === replay.benchmarkSha256,
+    digestChecked: baseline.benchmarkSha256 !== undefined && replay.benchmarkSha256 !== undefined,
     baselineCompleted: completedCount(baseline),
     replayCompleted: completedCount(replay),
     baselineTaskSuccessRate: baseline.grading?.taskSuccessRate ?? null,

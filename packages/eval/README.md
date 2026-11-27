@@ -357,6 +357,8 @@ signed judge-score delta (when both runs are judged), so a non-deterministic
 agent is visible without diffing two JSON files.
 `--allow-external-paths` and `--quiet` mirror the `run` command; `--json`
 prints only the comparison object, with no progress lines or signpost text.
+Its `digestChecked` field is false for baseline reports written before digests
+existed, so `digestMatches: true` there is not mistaken for a verified match.
 
 To compare runs by dimension, `dsh eval segments base.json candidate.json`
 prints a per-tag delta table for task success and judge score, with `--json`

@@ -353,7 +353,8 @@ export async function executeEval(
         const after = comparison.replayJudgeScore
         const judge = before === null || after === null ? ''
           : `, judge ${before.toFixed(1)} → ${after.toFixed(1)} (${SIGNED_ONE.format(comparison.judgeScoreDelta!)})`
-        io.stdout.write(`Wrote ${values.outPath} (baseline ${comparison.baselineCompleted}/${baseline.cases.length} completed, ${rate(comparison.baselineTaskSuccessRate)} → replay ${comparison.replayCompleted}/${replay.cases.length} completed, ${rate(comparison.replayTaskSuccessRate)}${judge})\n`)
+        const digest = comparison.digestChecked ? '' : '; digest not verifiable (legacy report)'
+        io.stdout.write(`Wrote ${values.outPath} (baseline ${comparison.baselineCompleted}/${baseline.cases.length} completed, ${rate(comparison.baselineTaskSuccessRate)} → replay ${comparison.replayCompleted}/${replay.cases.length} completed, ${rate(comparison.replayTaskSuccessRate)}${judge}${digest})\n`)
         io.stdout.write(`Next: dsh eval report ${values.outPath} --brief\n`)
       }
       const failed = replay.cases.filter(result => result.status === 'error')
