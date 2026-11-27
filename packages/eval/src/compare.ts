@@ -524,6 +524,14 @@ export function compareRuns(a: EvalRun, b: EvalRun): CompareRow[] {
     rates(run => run.grading?.taskSuccessRate ?? null, 'task success', 'pp'),
     rates(run => run.grading?.toolSelectionAccuracyRate ?? null, 'tool selection accuracy', 'pp'),
     numeric(run => run.grading?.judgeFailures ?? null, 'judge failures'),
+    ...(a.judge === undefined && b.judge === undefined ? [] : [{
+      metric: 'judge config (model/maxScore)',
+      a: a.judge === undefined ? 'none' : `${a.judge.model}/${a.judge.maxScore}`,
+      b: b.judge === undefined ? 'none' : `${b.judge.model}/${b.judge.maxScore}`,
+      delta: a.judge === undefined || b.judge === undefined
+        ? '–'
+        : a.judge.maxScore === b.judge.maxScore ? '–' : 'scale mismatch',
+    }]),
     numeric(run => run.aggregate?.invalidToolCalls ?? null, 'invalid tool calls/trial'),
     numeric(run => run.aggregate?.retries ?? null, 'retries/trial'),
     numeric(run => run.aggregate?.totalTokens ?? null, 'tokens/trial'),

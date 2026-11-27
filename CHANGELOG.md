@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.21 — 2026-11-27
+
+### Added
+
+- `compare` now prints a `judge config (model/maxScore)` row, flagging
+  `scale mismatch` when two runs' judge scales differ. Paired judge scores are
+  raw, so comparing runs with different scales without this warning was
+  misleading.
+
 ## 0.5.20 — 2026-11-27
 
 ### Added

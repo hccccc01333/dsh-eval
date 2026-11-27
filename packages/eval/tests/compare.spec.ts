@@ -546,6 +546,23 @@ describe('dsh-eval comparison', () => {
     })
   })
 
+  it('flags judge scale mismatches between compared runs', () => {
+    const withJudge = (maxScore: number, model: string) => buildRun({
+      judge: { provider: 'p', model, maxScore },
+    })
+    const mismatch = compareRuns(withJudge(10, 'j1'), withJudge(100, 'j2'))
+    expect(mismatch.find(row => row.metric === 'judge config (model/maxScore)')).toEqual({
+      metric: 'judge config (model/maxScore)', a: 'j1/10', b: 'j2/100',
+      delta: 'scale mismatch',
+    })
+    const same = compareRuns(withJudge(10, 'j1'), withJudge(10, 'j2'))
+    expect(same.find(row => row.metric === 'judge config (model/maxScore)')?.delta).toBe('–')
+    const oneSided = compareRuns(withJudge(10, 'j1'), buildRun())
+    expect(oneSided.find(row => row.metric === 'judge config (model/maxScore)')?.b).toBe('none')
+    const reversed = compareRuns(buildRun(), withJudge(10, 'j2'))
+    expect(reversed.find(row => row.metric === 'judge config (model/maxScore)')?.a).toBe('none')
+  })
+
   it('keeps a partial metric and skips its missing pairs instead of counting ties', () => {
     // Only two of four pairs carry task success: one a-null, one b-null.
     const a = buildRun({
