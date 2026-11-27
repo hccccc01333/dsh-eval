@@ -102,6 +102,12 @@ export type EvalStartupValues =
     allowedRoot?: string
   }
   | {
+    kind: 'reproduce'
+    runPath: string
+    benchmarkPath: string
+    outPath: string
+  }
+  | {
     kind: 'import'
     format: ImportFormat
     path: string
@@ -221,6 +227,7 @@ Examples:
   dsh --profile eval validate benchmark.yaml
   dsh --profile eval run benchmark.yaml --out run.json
   dsh --profile eval provenance run.json benchmark.yaml
+  dsh --profile eval reproduce run.json benchmark.yaml --out replay.json
   dsh --profile eval report run.json --brief
   dsh --profile eval export run.json --out trials.csv
   dsh --profile eval compare base.json candidate.json
@@ -229,7 +236,7 @@ Examples:
   dsh --profile eval gate candidate.json --baseline base.json --require-significance --json
 `)
     .action(() => {
-      program.error('error: eval needs a subcommand: run <benchmark.yaml>, validate <benchmark.yaml>, provenance <run.json> <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, export <run.json>, rejudge <run.json>, dashboard <run.json>, leaderboard <run.json>..., gate <candidate.json>, or import <format> <log.jsonl>')
+      program.error('error: eval needs a subcommand: run <benchmark.yaml>, validate <benchmark.yaml>, provenance <run.json> <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, export <run.json>, rejudge <run.json>, reproduce <run.json> <benchmark.yaml>, dashboard <run.json>, leaderboard <run.json>..., gate <candidate.json>, or import <format> <log.jsonl>')
     })
   const run = program.command('run').description('run a benchmark and write its JSON report')
   run
@@ -418,6 +425,18 @@ Examples:
           },
         }),
       })
+    })
+  const reproduce = program.command('reproduce').description('replay a stored run against its benchmark and compare the two')
+  reproduce
+    .argument('<run.json>', 'path to the baseline run report')
+    .argument('<benchmark.yaml>', 'path to the benchmark document')
+    .option('--out <path>', 'output run JSON path; must differ from the input', 'reproduced-run.json')
+    .action((runPath: string, benchmarkPath: string, options: { out: string }) => {
+      const samePath = resolve(runPath).toLowerCase() === resolve(options.out).toLowerCase()
+      if (samePath) {
+        program.error('error: --out must differ from the input run report')
+      }
+      publish({ kind: 'reproduce', runPath, benchmarkPath, outPath: options.out })
     })
   const importer = program.command('import').description('import an external harness session log as a run report')
   importer

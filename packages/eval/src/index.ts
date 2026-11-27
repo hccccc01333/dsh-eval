@@ -30,6 +30,7 @@ import { buildLeaderboard, renderLeaderboard, renderLeaderboardJson } from './le
 import { llmJudgeChat, type JudgeChat } from './judge.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
 import { rejudgeRun } from './rejudge.ts'
+import { compareReproduce, reproduceRun } from './reproduce.ts'
 import { renderBenchmarkJson, renderBenchmarkSummary } from './validate.ts'
 import { renderBriefReport, renderMarkdownReport, renderReportJson, writeRunReport, loadRunReport } from './report.ts'
 import { runBenchmark } from './runner.ts'
@@ -272,6 +273,26 @@ export async function executeEval(
       io.stdout.write(`Wrote ${values.outPath} (${judgedCount}/${rejudged.cases.length} judged)\n`)
       return 0
     }
+    if (values.kind === 'reproduce') {
+      const baseline = await loadRunReport(values.runPath)
+      const benchmark = await loadBenchmark(values.benchmarkPath, {
+        excludeFromDigest: [values.outPath],
+      })
+      const startedAtMs = Date.now()
+      const replay = await reproduceRun(baseline, benchmark, {
+        ...(services.judgeChat === undefined ? {} : { judgeChat: services.judgeChat }),
+        onProgress: (result: EvalTrialResult, finished: number, total: number) => {
+          io.stderr.write(renderProgress(result, finished, total, startedAtMs))
+        },
+      })
+      await writeRunReport(replay, values.outPath)
+      const comparison = compareReproduce(baseline, replay)
+      const rate = (value: number | null): string => value === null ? 'n/a' : `${(value * 100).toFixed(1)}%`
+      const failed = replay.cases.filter(result => result.status === 'error')
+      io.stdout.write(`Wrote ${values.outPath} (baseline ${comparison.baselineCompleted}/${baseline.cases.length} completed, ${rate(comparison.baselineTaskSuccessRate)} → replay ${comparison.replayCompleted}/${replay.cases.length} completed, ${rate(comparison.replayTaskSuccessRate)})\n`)
+      io.stdout.write(`Next: dsh eval report ${values.outPath} --brief\n`)
+      return failed.length > 0 || replay.aggregate === null ? 1 : 0
+    }
     const benchmark = await loadBenchmark(values.benchmarkPath, {
       allowExternalPaths: values.allowExternalPaths === true,
       excludeFromDigest: [values.outPath],
@@ -320,7 +341,9 @@ export async function executeEval(
     }
     return failed.length > 0 || run.aggregate === null ? 1 : 0
   } catch (error) {
-    io.stderr.write(`dsh eval: ${error instanceof Error ? error.message : String(error)}\n`)
+    // A digest mismatch embeds the baseline's benchmark name; run/benchmark
+    // controlled text must never inject newlines or terminal control codes.
+    io.stderr.write(`dsh eval: ${sanitizeTerminal(error instanceof Error ? error.message : String(error))}\n`)
     return 1
   }
 }

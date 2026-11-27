@@ -1,0 +1,153 @@
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { hashBenchmarkOverrides } from '../src/digest.ts'
+import { compareReproduce, reproduceRun } from '../src/reproduce.ts'
+import type { Benchmark, EvalRun } from '../src/types.ts'
+
+const FAKE_SCRIPT = fileURLToPath(new URL('./fixtures/fake-dsh.mjs', import.meta.url))
+const FIXTURE_LOG = fileURLToPath(new URL('./fixtures/session.jsonl', import.meta.url))
+
+vi.setConfig({ testTimeout: 30_000 })
+
+const dirs: string[] = []
+function tempDir(): string {
+  const dir = mkdtempSync(join(tmpdir(), 'dsh-eval-reproduce-'))
+  dirs.push(dir)
+  return dir
+}
+afterEach(() => {
+  for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true })
+})
+
+const SHA = 'a'.repeat(64)
+
+function buildBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {
+  return {
+    name: 'repro',
+    model: 'deepseek-v4',
+    profile: 'headless',
+    command: [process.execPath, FAKE_SCRIPT],
+    trials: 1,
+    concurrency: 1,
+    timeoutMs: 30_000,
+    seed: 0,
+    cases: [{ id: 'a', prompt: 'Say hello.' }],
+    pricing: {},
+    baseDir: process.cwd(),
+    sourceSha256: SHA,
+    ...overrides,
+  }
+}
+
+function buildRun(overrides: Partial<EvalRun> = {}): EvalRun {
+  return {
+    benchmark: 'repro',
+    model: 'deepseek-v4',
+    createdAt: 1,
+    trials: 1,
+    seed: 0,
+    pricing: null,
+    tempRoot: '/tmp',
+    cases: [],
+    aggregate: null,
+    grading: null,
+    ...overrides,
+  }
+}
+
+describe('reproduceRun', () => {
+  it('replays a run with the same effective digest when no overrides were recorded', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const benchmark = buildBenchmark()
+    const baseline = buildRun({ benchmarkSha256: SHA })
+    const replay = await reproduceRun(baseline, benchmark, { tempRoot: tempDir() })
+    expect(replay.benchmarkSha256).toBe(SHA)
+    expect(replay.seed).toBe(0)
+    expect(replay.trials).toBe(1)
+  })
+
+  it('rejects a benchmark that no longer matches the recorded digest', async () => {
+    const benchmark = buildBenchmark()
+    const baseline = buildRun({ benchmarkSha256: 'b'.repeat(64) })
+    await expect(reproduceRun(baseline, benchmark)).rejects.toThrow('benchmark differs')
+  })
+
+  it('skips the digest check for older reports without one', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const benchmark = buildBenchmark()
+    delete benchmark.sourceSha256
+    const replay = await reproduceRun(buildRun(), benchmark, { tempRoot: tempDir() })
+    expect(replay.benchmarkSha256).toBeUndefined()
+  })
+
+  it('passes every recorded override through to the runner', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const overrides = {
+      trials: 1, seed: 0, concurrency: 1, profile: 'headless',
+      dshCommand: [process.execPath, FAKE_SCRIPT],
+    }
+    const benchmark = buildBenchmark()
+    const baseline = buildRun({
+      benchmarkSha256: hashBenchmarkOverrides(SHA, overrides),
+      benchmarkOverrides: overrides,
+    })
+    const replay = await reproduceRun(baseline, benchmark, { tempRoot: tempDir() })
+    expect(replay.benchmarkSha256).toBe(baseline.benchmarkSha256)
+    expect(replay.trials).toBe(1)
+  })
+
+  it('forwards the judge seam and progress observer', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const judgeChat = async () => '{}'
+    const onProgress = vi.fn()
+    const replay = await reproduceRun(buildRun(), buildBenchmark(), { judgeChat, onProgress })
+    expect(replay.cases).toHaveLength(1)
+    expect(onProgress).toHaveBeenCalledOnce()
+  })
+})
+
+describe('compareReproduce', () => {
+  it('reports completed counts, rates and digest equality', () => {
+    const grading = {
+      taskSuccessRate: 0.75, toolSelectionAccuracyRate: null,
+      finalAnswerScore: null, hallucinationRate: null,
+    }
+    const baseline = buildRun({
+      benchmarkSha256: SHA,
+      grading,
+      cases: [{ caseId: 'a', trial: 1, status: 'completed', exitCode: 0, timedOut: false }],
+    })
+    const replay = buildRun({
+      benchmarkSha256: 'b'.repeat(64),
+      grading: { ...grading, taskSuccessRate: 0.5 },
+      cases: [
+        { caseId: 'a', trial: 1, status: 'completed', exitCode: 0, timedOut: false },
+        { caseId: 'a', trial: 2, status: 'error', exitCode: null, timedOut: false },
+      ],
+    })
+    expect(compareReproduce(baseline, replay)).toEqual({
+      digestMatches: false,
+      baselineCompleted: 1,
+      replayCompleted: 1,
+      baselineTaskSuccessRate: 0.75,
+      replayTaskSuccessRate: 0.5,
+    })
+  })
+
+  it('reports null rates for ungraded runs with no digest', () => {
+    expect(compareReproduce(buildRun(), buildRun())).toEqual({
+      digestMatches: true,
+      baselineCompleted: 0,
+      replayCompleted: 0,
+      baselineTaskSuccessRate: null,
+      replayTaskSuccessRate: null,
+    })
+  })
+})

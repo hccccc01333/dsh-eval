@@ -466,12 +466,38 @@ describe('dsh-eval command composition', () => {
     expect((published[1] as { allowedRoot?: string }).allowedRoot).toBeUndefined()
   })
 
+  it('parses reproduce with its default and explicit --out and rejects the input path', async () => {
+    const dir = tempDir()
+    const runPath = join(dir, 'run.json')
+    const benchmarkPath = benchmarkYaml(dir)
+    const published: EvalStartupValues[] = []
+    const program = evalCommand(value => published.push(value))
+    await program.parseAsync(['node', 'dsh', 'reproduce', runPath, benchmarkPath])
+    expect(published[0]).toEqual({
+      kind: 'reproduce', runPath, benchmarkPath, outPath: 'reproduced-run.json',
+    })
+
+    const outPath = join(dir, 'replay.json')
+    await program.parseAsync(['node', 'dsh', 'reproduce', runPath, benchmarkPath, '--out', outPath])
+    expect(published[1]).toEqual({ kind: 'reproduce', runPath, benchmarkPath, outPath })
+
+    // Like rejudge, the comparison resolves both paths and ignores case, so a
+    // case-only difference cannot silently overwrite the baseline report.
+    const inPlace = await bootEval(['reproduce', runPath, benchmarkPath, '--out', runPath])
+    expect(inPlace.exits).toEqual([1])
+    expect(inPlace.err).toContain('error: --out must differ from the input run report')
+    const sameName = await bootEval(['reproduce', runPath, benchmarkPath, '--out', runPath.toUpperCase()])
+    expect(sameName.exits).toEqual([1])
+    expect(sameName.err).toContain('--out must differ')
+  })
+
   it('prints help and exits 0 without running', async () => {
     const observed = await bootEval(['--help'])
     expect(observed.exits).toEqual([0])
     expect(observed.out).toContain('dsh --profile eval')
     expect(observed.out).toContain('Examples:')
     expect(observed.out).toContain('validate benchmark.yaml')
+    expect(observed.out).toContain('reproduce run.json benchmark.yaml --out replay.json')
     expect(observed.out).toContain('gate candidate.json --baseline base.json')
   })
 
@@ -479,6 +505,7 @@ describe('dsh-eval command composition', () => {
     const observed = await bootEval([])
     expect(observed.exits).toEqual([1])
     expect(observed.err).toContain('needs a subcommand')
+    expect(observed.err).toContain('reproduce <run.json> <benchmark.yaml>')
   })
 
   it('rejects an invalid trials override', async () => {

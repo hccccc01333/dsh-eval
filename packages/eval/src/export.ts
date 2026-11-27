@@ -17,7 +17,7 @@ const COLUMNS = [
   'taskSuccess', 'toolSelectionAccuracy', 'judgeScore', 'hallucination',
   'judgeError', 'steps', 'toolCalls', 'toolSuccess', 'invalidToolCalls', 'retries',
   'inputTokens', 'outputTokens', 'totalTokens', 'costUsd', 'latencyMs',
-  'llmMs', 'toolMs', 'ttftMs', 'traceSha256',
+  'llmMs', 'toolMs', 'ttftMs', 'traceSha256', 'tags',
 ] as const
 
 type CellValue = string | number | boolean | null | undefined
@@ -42,6 +42,8 @@ function row(result: EvalTrialResult): CellValue[] {
     metrics?.tokens.outputTokens, metrics?.totalTokens, metrics?.costUsd,
     metrics?.latencyMs, metrics?.llmMs, metrics?.toolMs, metrics?.ttftMs,
     result.traceSha256,
+    // JSON array keeps pipe/comma-bearing tags unambiguous and round-trippable.
+    result.tags === undefined ? null : JSON.stringify(result.tags),
   ]
 }
 

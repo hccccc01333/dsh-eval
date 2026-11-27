@@ -33,12 +33,23 @@ describe('dsh-eval trial export', () => {
     expect(lines).toHaveLength(2)
     expect(lines[0]).toContain('caseId,trial,status')
     expect(lines[0]).toContain('traceSha256')
+    expect(lines[0]!.endsWith(',tags')).toBe(true)
     expect(lines[1]).toContain('"a,""quoted""\nnext"')
     expect(lines[1]).toContain('"boom, again"')
     expect(lines[1]).toContain(',2,completed,0,false,')
     expect(lines[1]).toContain(',true,false,8,false,')
     expect(lines[1]).toContain(',2,3,2,0,1,10,4,14,0.000123,55,20,30,5,')
-    expect(lines[1]!.endsWith('f'.repeat(64))).toBe(true)
+    expect(lines[1]!.endsWith(`${'f'.repeat(64)},`)).toBe(true)
+  })
+
+  it('serializes case tags as a parseable JSON array', () => {
+    const csv = renderTrialsCsv(run({
+      cases: [{
+        caseId: 'tagged', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        tags: ['hard', 'ts'],
+      }],
+    }))
+    expect(csv).toContain('"[""hard"",""ts""]"')
   })
 
   it('neutralizes spreadsheet formulas in agent-controlled strings', () => {

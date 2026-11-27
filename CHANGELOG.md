@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.5.7 — 2026-11-27
+
+### Added
+
+- **`reproduce <run.json> <benchmark.yaml>`.** Replays a stored run with the
+  seed, trial count and CLI overrides recorded in it, then writes a second
+  report next to the baseline. The benchmark digest is checked first: replaying
+  against a different YAML is rejected instead of being presented as a
+  reproduction. The CLI prints before/after completion counts and task-success
+  rates. The baseline file is never overwritten.
+- **Case tags in CSV exports.** `dsh eval export` now includes a `tags` column
+  holding a JSON array, so segment membership survives spreadsheet/notebook
+  round-trips without delimiter ambiguity.
+
+### Changed
+
+- Top-level CLI errors pass through terminal sanitization, so a benchmark name
+  embedded in a digest-mismatch message cannot inject control sequences.
+
 ## 0.5.6 — 2026-11-27
 
 Three improvements shipped together:

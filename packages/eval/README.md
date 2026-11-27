@@ -328,7 +328,21 @@ row: case id, trial, status, error, scripted and judge verdicts, folded token
 and latency metrics, cost, and the trace digest. Without `--out` the CSV goes
 to stdout. Agent-controlled strings are CSV-escaped and prefixed with `'` when
 they start with a spreadsheet formula marker, so a hostile case id cannot
-execute on export.
+execute on export. The `tags` column holds a JSON array of the case's
+dimensions, so segment membership survives spreadsheet round-trips.
+
+## Replaying a run
+
+```sh
+dsh eval reproduce recorded-run.json benchmark.yaml --out replay.json
+```
+
+`reproduce` replays a stored run with the seed, trial count and CLI overrides
+recorded in it, and writes a second report (the baseline is never overwritten).
+It first checks that the benchmark's digest still matches the one in the
+baseline; a changed YAML is rejected rather than reported as a reproduction.
+The CLI prints before/after completion counts and task-success rates so a
+non-deterministic agent is visible without diffing two JSON files.
 
 ## Importing external traces
 

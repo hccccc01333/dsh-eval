@@ -21,7 +21,7 @@
 | **面向 CI** | `--require-significance` 门禁 + 硬成本/延迟预算 |
 | **零外部资源报告** | 自包含、适配深色模式的 HTML 仪表盘 |
 
-`dsh-eval@0.5.6` · 404 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.5.7` · 416 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 本包同时是一个 bundle 和一个命令行应用。装进 profile 后即可运行评测：
 
@@ -192,6 +192,14 @@ dsh eval rejudge recorded-run.json --out judged.json \
 ```
 
 覆盖配置只需 `--judge-model`，其余默认 `deepseek`、`10` 与无 rubric；实际使用的配置会写入新报告。若判官调用失败，已有的有效裁决会被保留并标注 `judgeError`，不会被一次故障抹掉。
+
+## 复现一次 run
+
+```sh
+dsh eval reproduce recorded-run.json benchmark.yaml --out replay.json
+```
+
+`reproduce` 用报告里记录的 seed、trial 数与 CLI 覆盖项重跑，并写入第二份报告（基线不会被覆盖）。它会先校验 benchmark 的 digest 与基线一致；YAML 已变化时直接拒绝，而不是冒充一次成功复现。CLI 会打印前后完成数与任务成功率，便于发现非确定性，而不必手工 diff 两份 JSON。
 
 ## 导入外部 trace
 
