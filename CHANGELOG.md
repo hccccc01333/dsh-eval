@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.5.11 — 2026-11-27
+
+### Added
+
+- Trial CSV export now carries `anomalies` (JSON array of outlier findings)
+  and `failureCluster` (stable primary-cause id), so spreadsheet and notebook
+  users get the same derived signals as the markdown and JSON reports.
+
+### Fixed
+
+- `segments` terminal output strips control bytes from hostile case tags.
+  Previously a tag containing ESC could emit terminal escape sequences when
+  printed by `dsh eval segments`.
+
 ## 0.5.10 — 2026-11-27
 
 ### Added

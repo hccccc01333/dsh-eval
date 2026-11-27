@@ -77,6 +77,17 @@ describe('renderSegmentComparison', () => {
     expect(markdown).toContain('| hard  evil  | 0.0% | 100.0% | +100.0pp | – | – | – |')
   })
 
+  it('strips terminal control bytes from hostile tags', () => {
+    const tag = 'hard\u001b[2Jevil'
+    const deltas = compareSegments(
+      run([scored([tag], true, 5)]), run([scored([tag], true, 5)]),
+    )
+    const markdown = renderSegmentComparison(deltas)
+    expect(markdown).toContain('hard ')
+    // Table line breaks are the only control bytes in the rendered text.
+    expect(markdown.replace(/\n/gu, '')).not.toMatch(/[\u001b\u0000-\u001f]/u)
+  })
+
   it('renders dashes for dimensions missing from one side', () => {
     const deltas = compareSegments(
       run([scored(['only-before'], true, 7)]),

@@ -33,13 +33,13 @@ describe('dsh-eval trial export', () => {
     expect(lines).toHaveLength(2)
     expect(lines[0]).toContain('caseId,trial,status')
     expect(lines[0]).toContain('traceSha256')
-    expect(lines[0]!.endsWith(',tags')).toBe(true)
+    expect(lines[0]!.endsWith(',tags,anomalies,failureCluster')).toBe(true)
     expect(lines[1]).toContain('"a,""quoted""\nnext"')
     expect(lines[1]).toContain('"boom, again"')
     expect(lines[1]).toContain(',2,completed,0,false,')
     expect(lines[1]).toContain(',true,false,8,false,')
     expect(lines[1]).toContain(',2,3,2,0,1,10,4,14,0.000123,55,20,30,5,')
-    expect(lines[1]!.endsWith(`${'f'.repeat(64)},`)).toBe(true)
+    expect(lines[1]!.endsWith(`${'f'.repeat(64)},,,`)).toBe(true)
   })
 
   it('serializes case tags as a parseable JSON array', () => {
@@ -65,6 +65,27 @@ describe('dsh-eval trial export', () => {
     expect(csv).toContain(`"'=HYPERLINK(""http://evil"")"`)
     expect(csv).toContain(`,'+cmd|calc,`)
     expect(csv).toContain("\"'\n=1+1\"")
+  })
+
+  it('exports per-trial anomalies and failure-cluster labels', () => {
+    const cases = Array.from({ length: 8 }, (_, index) => ({
+      caseId: `c${index}`, trial: 1, status: 'completed' as const, exitCode: 0,
+      timedOut: false,
+      metrics: {
+        ...METRICS,
+        steps: index === 7 ? 1000 : index + 1,
+        latencyMs: index === 7 ? 100000 : (index + 1) * 10,
+      },
+    }))
+    const csv = renderTrialsCsv(run({ cases: [
+      ...cases,
+      { caseId: 'err', trial: 1, status: 'error', error: 'boom', exitCode: 1, timedOut: false },
+    ] }))
+    const outlier = csv.split('\r\n').find(line => line.startsWith('c7,'))!
+    expect(outlier).toContain('steps: steps 1000 outside')
+    expect(outlier).toContain('latencyMs: latencyMs 100000 outside')
+    const failed = csv.split('\r\n').find(line => line.startsWith('err,'))!
+    expect(failed.endsWith(',,,trial-error')).toBe(true)
   })
 
   it('writes an empty header for a run without trials', () => {

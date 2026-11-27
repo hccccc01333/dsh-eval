@@ -47,9 +47,15 @@ export function compareSegments(baseline: EvalRun, candidate: EvalRun): SegmentD
   })
 }
 
-/** Markdown special characters from a benchmark-controlled tag become spaces. */
+/**
+ * Benchmark-controlled tags are printed to the terminal by the `segments`
+ * command. Strip control bytes (including ESC sequences) as well as markdown
+ * syntax so a hostile tag cannot repaint or inject into the console.
+ */
 function escapeMarkdown(value: string): string {
-  return value.replace(/[\r\n|`]/gu, ' ')
+  return value
+    .replace(/[\u0000-\u001f\u007f-\u009f]+/gu, ' ')
+    .replace(/[|`]/gu, ' ')
 }
 
 function rate(value: number | null | undefined): string {

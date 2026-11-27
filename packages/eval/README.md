@@ -329,7 +329,9 @@ and latency metrics, cost, and the trace digest. Without `--out` the CSV goes
 to stdout. Agent-controlled strings are CSV-escaped and prefixed with `'` when
 they start with a spreadsheet formula marker, so a hostile case id cannot
 execute on export. The `tags` column holds a JSON array of the case's
-dimensions, so segment membership survives spreadsheet round-trips.
+dimensions, so segment membership survives spreadsheet round-trips. The
+`anomalies` column holds outlier findings as JSON and `failureCluster` holds
+the trial's primary-cause id.
 
 ## Replaying a run
 

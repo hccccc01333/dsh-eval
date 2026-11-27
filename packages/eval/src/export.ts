@@ -9,6 +9,8 @@
  * @module dsh-eval/export
  */
 
+import { computeAnomalies } from './anomalies.ts'
+import { clusterFailures } from './clusters.ts'
 import type { EvalRun, EvalTrialResult } from './types.ts'
 
 /** Column order of the exported CSV. */
@@ -17,7 +19,7 @@ const COLUMNS = [
   'taskSuccess', 'toolSelectionAccuracy', 'judgeScore', 'hallucination',
   'judgeError', 'steps', 'toolCalls', 'toolSuccess', 'invalidToolCalls', 'retries',
   'inputTokens', 'outputTokens', 'totalTokens', 'costUsd', 'latencyMs',
-  'llmMs', 'toolMs', 'ttftMs', 'traceSha256', 'tags',
+  'llmMs', 'toolMs', 'ttftMs', 'traceSha256', 'tags', 'anomalies', 'failureCluster',
 ] as const
 
 type CellValue = string | number | boolean | null | undefined
@@ -31,7 +33,11 @@ function cell(value: CellValue): string {
 }
 
 /** Convert one trial into a flat row aligned with {@link COLUMNS}. */
-function row(result: EvalTrialResult): CellValue[] {
+function row(
+  result: EvalTrialResult,
+  anomalies: readonly string[] | undefined,
+  failureCluster: string | undefined,
+): CellValue[] {
   const metrics = result.metrics
   return [
     result.caseId, result.trial, result.status, result.exitCode, result.timedOut,
@@ -42,9 +48,16 @@ function row(result: EvalTrialResult): CellValue[] {
     metrics?.tokens.outputTokens, metrics?.totalTokens, metrics?.costUsd,
     metrics?.latencyMs, metrics?.llmMs, metrics?.toolMs, metrics?.ttftMs,
     result.traceSha256,
-    // JSON array keeps pipe/comma-bearing tags unambiguous and round-trippable.
+    // JSON arrays keep comma-bearing values unambiguous and round-trippable.
     result.tags === undefined ? null : JSON.stringify(result.tags),
+    anomalies === undefined ? null : JSON.stringify(anomalies),
+    failureCluster ?? null,
   ]
+}
+
+/** Stable map key for one case x trial. */
+function trialKey(caseId: string, trial: number): string {
+  return `${caseId}\u0000${trial}`
 }
 
 /**
@@ -53,7 +66,24 @@ function row(result: EvalTrialResult): CellValue[] {
  * @returns CSV text ending in a newline, with a header row even for empty runs.
  */
 export function renderTrialsCsv(run: EvalRun): string {
-  const lines = [COLUMNS.join(','), ...run.cases.map(result =>
-    row(result).map(cell).join(','))]
+  const anomalyMap = new Map<string, string[]>()
+  for (const item of computeAnomalies(run)) {
+    const key = trialKey(item.caseId, item.trial)
+    const detail = `${item.metric}: ${item.why}`
+    const existing = anomalyMap.get(key)
+    if (existing === undefined) anomalyMap.set(key, [detail])
+    else existing.push(detail)
+  }
+  const clusterMap = new Map<string, string>()
+  // Each failing trial has exactly one primary cause, so a key appears once.
+  for (const cluster of clusterFailures(run)) {
+    for (const ref of cluster.cases) {
+      clusterMap.set(trialKey(ref.caseId, ref.trial), cluster.pattern)
+    }
+  }
+  const lines = [COLUMNS.join(','), ...run.cases.map(result => {
+    const key = trialKey(result.caseId, result.trial)
+    return row(result, anomalyMap.get(key), clusterMap.get(key)).map(cell).join(',')
+  })]
   return `${lines.join('\r\n')}\r\n`
 }
