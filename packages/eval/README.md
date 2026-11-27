@@ -378,7 +378,8 @@ prints a per-tag delta table for task success and judge score (plus a scale-norm
 and `--out` options. Tags present in only one run get null deltas, so a newly
 added dimension is not mistaken for a regression. The same deltas appear in
 two-run HTML dashboards, and `report --json` carries anomalies, failure
-clusters, segments, and structured judge/check error lists for downstream
+clusters (including judge call failures), segments, and structured judge/check
+error lists for downstream
 tooling.
 
 ## Importing external traces

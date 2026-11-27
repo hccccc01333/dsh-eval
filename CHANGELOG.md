@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.38 — 2026-11-27
+
+### Changed
+
+- Failure clustering now recognizes a failed judge call as a primary cause
+  (`judge-error`) when the scripted verdict passed, with the error text
+  normalized to one line. Scripted task failures stay primary when both apply,
+  so the cluster reflects the strongest available evidence.
+
 ## 0.5.37 — 2026-11-27
 
 ### Added

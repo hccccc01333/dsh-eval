@@ -39,7 +39,7 @@ describe('dsh-eval trial export', () => {
     expect(lines[1]).toContain(',2,completed,0,false,')
     expect(lines[1]).toContain(',true,false,8,false,')
     expect(lines[1]).toContain(',2,3,2,0,1,10,4,14,0.000123,55,20,30,5,')
-    expect(lines[1]!.endsWith(`${'f'.repeat(64)},,,,1,0.6666666666666666,0,1000`)).toBe(true)
+    expect(lines[1]!.endsWith(`${'f'.repeat(64)},,,judge-error,1,0.6666666666666666,0,1000`)).toBe(true)
   })
 
   it('serializes case tags as a parseable JSON array', () => {

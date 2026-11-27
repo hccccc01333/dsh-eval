@@ -61,6 +61,11 @@ function causeOf(result: EvalTrialResult): Cause | null {
   if (result.grade?.taskSuccess === false) {
     return { pattern: 'task-check', label: 'Task check or answer regex did not pass' }
   }
+  // A scripted pass can still be unusable when the judge call failed; keep the
+  // scripted verdict primary when both happened.
+  if (result.judge?.judgeError !== undefined) {
+    return { pattern: 'judge-error', label: `Judge call failed: ${oneLine(result.judge.judgeError)}` }
+  }
   return null
 }
 

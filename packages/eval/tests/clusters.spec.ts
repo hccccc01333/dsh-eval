@@ -64,6 +64,28 @@ describe('clusterFailures', () => {
     expect(clusters[5]?.label).toBe('Trial error: unknown error')
   })
 
+  it('clusters judge call failures while keeping a scripted failure primary', () => {
+    const failedJudge = (judgeError: string) => ({ finalAnswerScore: null, hallucination: null, judgeError })
+    const run = buildRun([
+      trial('j1', { judge: failedJudge('rate limit\u0007') }),
+      trial('j2', { judge: failedJudge('rate limit') }),
+      trial('j3', {
+        grade: { taskSuccess: false, toolSelectionAccuracy: null },
+        judge: failedJudge('rate limit'),
+      }),
+    ])
+    expect(clusterFailures(run)).toEqual([
+      {
+        pattern: 'judge-error', label: 'Judge call failed: rate limit',
+        count: 2, cases: [{ caseId: 'j1', trial: 1 }, { caseId: 'j2', trial: 1 }],
+      },
+      {
+        pattern: 'task-check', label: 'Task check or answer regex did not pass',
+        count: 1, cases: [{ caseId: 'j3', trial: 1 }],
+      },
+    ])
+  })
+
   it('uses a fixed priority when several causes apply to one trial', () => {
     const run = buildRun([trial('all', {
       status: 'error',
