@@ -456,6 +456,8 @@ export function renderReportJson(run: EvalRun): string {
     // Keep the derived analytics machine-readable too: markdown and HTML show
     // them, so an --json consumer should not have to reimplement the same math.
     anomalies: computeAnomalies(run),
+    judgeErrors: findJudgeErrors(run),
+    checkErrors: findCheckErrors(run),
     failureClusters: clusterFailures(run),
     segments: computeSegments(run),
     cases: run.cases,

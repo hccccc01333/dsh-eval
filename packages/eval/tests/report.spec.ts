@@ -120,6 +120,30 @@ describe('dsh-eval report persistence and rendering', () => {
     expect(parsed.segments).toMatchObject([{ tag: 'hard', trials: 1 }])
   })
 
+  it('includes judge and check error details in JSON', () => {
+    const parsed = JSON.parse(renderReportJson(buildRun({
+      cases: [
+        {
+          caseId: 'judge-fail', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+          judge: { finalAnswerScore: null, hallucination: null, judgeError: 'rate limited' },
+        },
+        {
+          caseId: 'check-fail', trial: 2, status: 'completed', exitCode: 0, timedOut: false,
+          grade: { taskSuccess: null, toolSelectionAccuracy: null, checkError: 'no such binary' },
+        },
+      ],
+    }))) as {
+      judgeErrors: { caseId: string; trial: number; error: string }[]
+      checkErrors: { caseId: string; trial: number; error: string }[]
+    }
+    expect(parsed.judgeErrors).toEqual([
+      { caseId: 'judge-fail', trial: 1, error: 'rate limited' },
+    ])
+    expect(parsed.checkErrors).toEqual([
+      { caseId: 'check-fail', trial: 2, error: 'no such binary' },
+    ])
+  })
+
   it('renders a machine-readable report with the same derived blocks', () => {
     const run = buildRun({
       benchmark: 'structured',

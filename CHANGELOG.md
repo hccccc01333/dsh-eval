@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.24 — 2026-11-27
+
+### Added
+
+- `report --json` now exposes `judgeErrors` and `checkErrors` arrays with case
+  id, trial and diagnostic, matching the markdown/dashboard views. Automation
+  no longer has to re-derive them from the raw `cases` array.
+
 ## 0.5.23 — 2026-11-27
 
 ### Added
