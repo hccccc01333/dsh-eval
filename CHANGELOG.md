@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.5.5 — 2026-11-27
+
+Four improvements shipped together rather than as four separate releases:
+
+### Added
+
+- **Confidence-interval forest plots.** The comparison dashboard now draws the
+  three paired deltas as inline SVG interval plots with a zero reference line,
+  alongside (not instead of) the existing numeric intervals. Null, zero-width
+  and extreme intervals render safely; no new dependency.
+- **Cost–quality Pareto frontier.** Leaderboards mark rows that cannot be
+  replaced by a cheaper, equally good configuration (`★`) and those that are
+  dominated (`dominated`). When no run has pricing data the column and markers
+  are omitted entirely, keeping old reports byte-compatible.
+
+### Changed
+
+- **Benchmark validation errors are now actionable.** Instead of raw Zod JSON,
+  a bad benchmark reports `file: dotted.path: what is wrong`, e.g.
+  `benchmark.yaml: cases.0.prompt: each case needs exactly one of prompt or promptFile`.
+  Unknown fields suggest checking spelling. The public API is unchanged.
+- **Next-step guidance.** A successful `run` now prints one line pointing at
+  the report to read; a successful text-mode `validate` points at `dsh eval run`.
+  JSON output stays machine-readable.
+
 ## 0.5.4 — 2026-11-27
 
 ### Added

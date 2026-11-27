@@ -37,13 +37,19 @@ describe('dsh-eval non-Error failures', () => {
   it('renders a non-Error rejection into the stderr diagnostic', async () => {
     const dir = tempDir()
     const benchmarkPath = benchmarkYaml(dir)
+    const stdout: string[] = []
     const stderr: string[] = []
     const code = await executeEval(
       { kind: 'run', benchmarkPath, outPath: join(dir, 'run.json') },
-      { stdout: { write: () => {} }, stderr: { write: (chunk) => { stderr.push(chunk); return true } } },
+      {
+        stdout: { write: (chunk) => { stdout.push(chunk); return true } },
+        stderr: { write: (chunk) => { stderr.push(chunk); return true } },
+      },
     )
     expect(code).toBe(1)
     expect(stderr.join('')).toBe('dsh eval: boom\n')
+    // A rejected run never wrote a report, so it must not suggest one.
+    expect(stdout.join('')).toBe('')
   })
 })
 
@@ -71,12 +77,18 @@ describe('dsh-eval failure-summary sanitization', () => {
       grading: null,
     }
     vi.mocked(runBenchmark).mockResolvedValueOnce(run)
+    const stdout: string[] = []
     const stderr: string[] = []
     const code = await executeEval(
       { kind: 'run', benchmarkPath, outPath: join(dir, 'run.json') },
-      { stdout: { write: () => {} }, stderr: { write: (chunk) => { stderr.push(chunk); return true } } },
+      {
+        stdout: { write: (chunk) => { stdout.push(chunk); return true } },
+        stderr: { write: (chunk) => { stderr.push(chunk); return true } },
+      },
     )
     expect(code).toBe(1)
+    // A failed run still points to the report that holds the per-trial detail.
+    expect(stdout.join('')).toContain(`Next: dsh eval report ${join(dir, 'run.json')} --brief`)
     const err = stderr.join('')
     // Exactly two lines: the fixed header and one sanitized sample. No ANSI
     // escape, BEL, or forged newline survived from the case id or the error.
@@ -111,11 +123,18 @@ describe('dsh-eval failure-summary sanitization', () => {
       grading: null,
     }
     vi.mocked(runBenchmark).mockResolvedValueOnce(run)
+    const stdout: string[] = []
     const stderr: string[] = []
     await executeEval(
       { kind: 'run', benchmarkPath, outPath: join(dir, 'run.json') },
-      { stdout: { write: () => {} }, stderr: { write: (chunk) => { stderr.push(chunk); return true } } },
+      {
+        stdout: { write: (chunk) => { stdout.push(chunk); return true } },
+        stderr: { write: (chunk) => { stderr.push(chunk); return true } },
+      },
     )
+    // A checkError lives on a completed trial; stderr explains it and stdout
+    // points to the report, in one line each.
+    expect(stdout.join('')).toContain(`Next: dsh eval report ${join(dir, 'run.json')} --brief`)
     const err = stderr.join('')
     expect(err).toContain('1 trial(s) had check configuration errors (not model failures)')
     expect(err).toContain('c#1: spawn ./check.sh ENOENT')

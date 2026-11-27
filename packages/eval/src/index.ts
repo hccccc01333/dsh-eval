@@ -200,6 +200,12 @@ export async function executeEval(
       await emitText(io, values.json === true
         ? renderBenchmarkJson(benchmark)
         : renderBenchmarkSummary(benchmark), values.outPath)
+      // JSON mode must keep stdout machine-readable; the signpost is for the
+      // human-facing path only. `values.benchmarkPath` is the path the operator
+      // typed, so the suggested command can be copy/pasted as-is.
+      if (values.json !== true) {
+        io.stdout.write(`Next: dsh eval run ${values.benchmarkPath}\n`)
+      }
       return 0
     }
     if (values.kind === 'provenance') {
@@ -288,6 +294,10 @@ export async function executeEval(
     const failed = run.cases.filter(result => result.status === 'error')
     const completed = run.cases.length - failed.length
     io.stdout.write(`Wrote ${values.outPath} (${completed}/${run.cases.length} completed, ${summary(run)})\n`)
+    // A completed run always leaves a report behind; point newcomers at it in
+    // one short line. Failed trials and check errors are detailed on stderr and
+    // in that report, so the same signpost also covers partially failing runs.
+    io.stdout.write(`Next: dsh eval report ${values.outPath} --brief\n`)
     // A failed trial lives in the JSON report, but a CLI run must also say why
     // on stderr — otherwise an empty stdout/stderr looks like a clean failure.
     if (failed.length > 0) {

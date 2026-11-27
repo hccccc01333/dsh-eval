@@ -12,6 +12,7 @@
  */
 
 import { formatPValue, pairedSignals } from './compare.ts'
+import { computeParetoFrontier } from './pareto.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
 import { signTest, signTestPower } from './stats.ts'
 import type { EvalRun } from './types.ts'
@@ -51,6 +52,12 @@ export interface LeaderboardEntry {
   gapFromBest: number | null
   /** Paired verdict against the leader; null for the leader itself. */
   significance: LeaderboardSignificance | null
+  /**
+   * Cost–quality placement: `dominated` rows cost at least as much as a
+   * frontier row without delivering more quality. Absent when no usable
+   * cost/quality data exists, so old reports stay unchanged.
+   */
+  pareto?: 'on-frontier' | 'dominated'
 }
 
 /** Normalize a pooled judge score using the run's configured scale. */
@@ -157,6 +164,19 @@ export function buildLeaderboard(
     row.rank = lastRank
     row.gapFromBest = best === null || value === null ? null : best - value
   })
+  // Cost–quality placement. Missing quality/cost becomes NaN so the frontier
+  // ignores those rows; with no cost data at all every row would trivially
+  // look efficient, so no marker is written and old reports stay identical.
+  const quality = (row: LeaderboardEntry): number => metricValue(row, metric) ?? Number.NaN
+  const cost = (row: LeaderboardEntry): number => row.costUsd ?? Number.NaN
+  if (rows.some(row => !Number.isNaN(cost(row)))) {
+    const frontier = new Set(computeParetoFrontier(rows, quality, cost))
+    rows.forEach((row, index) => {
+      if (!Number.isNaN(quality(row)) && !Number.isNaN(cost(row))) {
+        row.pareto = frontier.has(index) ? 'on-frontier' : 'dominated'
+      }
+    })
+  }
   const leader = rows.find(row => row.rank === 1)
   const leaderRun = leader === undefined ? undefined : runByEntry.get(leader)
   const family = Math.max(1, rows.length - 1)
@@ -244,6 +264,12 @@ export function formatLeaderboardSignificance(value: LeaderboardSignificance | n
   return `${value.verdict} (p=${formatPValue(value.adjustedP)}, ${value.primaryMetric})`
 }
 
+/** Short markdown cell for the optional cost–quality marker. */
+function paretoCell(value: LeaderboardEntry['pareto']): string {
+  if (value === undefined) return '–'
+  return value === 'on-frontier' ? '★' : 'dominated'
+}
+
 /**
  * Render a leaderboard as markdown.
  * @param rows - rows from {@link buildLeaderboard}.
@@ -253,6 +279,9 @@ export function renderLeaderboard(
   rows: readonly LeaderboardEntry[],
   metric: LeaderboardMetric = 'taskSuccess',
 ): string {
+  const withPareto = rows.some(row => row.pareto !== undefined)
+  const header = '| rank | run | completed | task | strict pass@1 | tool | judge | cost/trial | latency/trial | Δ best | vs leader |'
+  const divider = '|---|---|---|---|---|---|---|---|---|---|---|'
   const lines = [
     '# Leaderboard',
     '',
@@ -260,13 +289,17 @@ export function renderLeaderboard(
       ? '- ranked by strict pass@1 (errors and timeouts stay in the denominator); ties share a rank'
       : '- ranked by pooled task success; ties share a rank',
     '- ranks are a screening view; `vs leader` applies a Bonferroni-corrected paired sign test',
+    ...(withPareto
+      ? ['- `pareto`: ★ is on the cost–quality frontier; `dominated` costs more without higher quality']
+      : []),
     '',
-    '| rank | run | completed | task | strict pass@1 | tool | judge | cost/trial | latency/trial | Δ best | vs leader |',
-    '|---|---|---|---|---|---|---|---|---|---|---|',
+    withPareto ? `${header} pareto |` : header,
+    withPareto ? `${divider}---|` : divider,
   ]
   for (const row of rows) {
     const label = row.label.replace(/[\r\n|]/gu, ' ')
-    lines.push(`| ${row.rank} | ${label} | ${row.completed}/${row.total} | ${rate(row.taskSuccess)} | ${rate(row.strictPassAt1)} | ${rate(row.toolSelection)} | ${rate(row.judgeScore)} | ${row.costUsd === null ? '–' : `$${row.costUsd.toFixed(6)}`} | ${row.latencyMs === null ? '–' : `${row.latencyMs.toFixed(1)} ms`} | ${gap(row.gapFromBest, row.rank)} | ${formatLeaderboardSignificance(row.significance)} |`)
+    const line = `| ${row.rank} | ${label} | ${row.completed}/${row.total} | ${rate(row.taskSuccess)} | ${rate(row.strictPassAt1)} | ${rate(row.toolSelection)} | ${rate(row.judgeScore)} | ${row.costUsd === null ? '–' : `$${row.costUsd.toFixed(6)}`} | ${row.latencyMs === null ? '–' : `${row.latencyMs.toFixed(1)} ms`} | ${gap(row.gapFromBest, row.rank)} | ${formatLeaderboardSignificance(row.significance)} |`
+    lines.push(withPareto ? `${line} ${paretoCell(row.pareto)} |` : line)
   }
   return `${lines.join('\n')}\n`
 }

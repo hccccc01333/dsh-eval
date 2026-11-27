@@ -12,7 +12,8 @@ import { hashBenchmarkOverrides } from '../src/digest.ts'
 import { evalCommand, type EvalStartupValues } from '../src/command.ts'
 import { apply, executeEval, internals, renderProgress, resolveJudgeChat } from '../src/index.ts'
 import { loadRunReport, writeRunReport } from '../src/report.ts'
-import type { EvalRun } from '../src/types.ts'
+import type { Benchmark, EvalRun } from '../src/types.ts'
+import { renderBenchmarkSummary } from '../src/validate.ts'
 
 const FAKE_SCRIPT = fileURLToPath(new URL('./fixtures/fake-dsh.mjs', import.meta.url))
 const FIXTURE_LOG = fileURLToPath(new URL('./fixtures/session.jsonl', import.meta.url))
@@ -116,6 +117,7 @@ describe('dsh-eval command composition', () => {
     ])
     expect(observed.exits).toEqual([0])
     expect(observed.out).toContain(`Wrote ${outPath} (1/1 completed, tool success 100.0%, 1 unscored, 1.0 steps/trial)`)
+    expect(observed.out).toContain(`Next: dsh eval report ${outPath} --brief`)
     expect(existsSync(outPath)).toBe(true)
     expect(observed.err).toContain('[eval] 1/1 hello #1 task n/a, ')
 
@@ -668,8 +670,11 @@ describe('dsh-eval command composition', () => {
     expect(observed.exits).toEqual([0])
     expect(observed.out).toContain('# Benchmark: command-smoke')
     expect(observed.out).toContain('Validated: command-smoke is ready to run.')
+    expect(observed.out).toContain(`Next: dsh eval run ${benchmarkPath}`)
     const structured = await bootEval(['validate', benchmarkPath, '--json'])
     expect(structured.exits).toEqual([0])
+    // The signpost must not corrupt machine-readable JSON stdout.
+    expect(structured.out).not.toContain('Next:')
     expect(JSON.parse(structured.out) as { name: string }).toMatchObject({ name: 'command-smoke' })
 
     const invalidPath = join(dir, 'invalid.yml')
@@ -677,6 +682,84 @@ describe('dsh-eval command composition', () => {
     const invalid = await bootEval(['validate', invalidPath])
     expect(invalid.exits).toEqual([1])
     expect(invalid.err).toContain('at most one of check')
+  })
+
+  it('covers every preflight warning branch in the targeted coverage run', () => {
+    // validate.spec.ts owns these renderers in the full suite, but the targeted
+    // verification command loads only this file and execute.spec.ts while still
+    // enforcing 100% coverage on src/validate.ts. Keep the branch coverage here
+    // so both the targeted and the full runs stay green.
+    const base = {
+      name: 'rich', model: 'm', profile: 'headless', command: ['dsh'] as const,
+      trials: 3, concurrency: 1, timeoutMs: 1000, seed: 0, baseDir: '/tmp',
+    }
+    const rich: Benchmark = {
+      ...base,
+      // No sourceSha256: exercises the null side of the digest field.
+      cases: [
+        {
+          id: 'dup', prompt: 'p', timeoutMs: 500,
+          expected: { tool: 'bash', check: 'true', answer: '42', answerRegex: '42' },
+        },
+        { id: 'dup', prompt: 'p', expected: { checkArgv: ['true'], answerRegex: 'x' } },
+        { id: 'shell', prompt: 'p', expected: { checkShell: 'echo ok | grep ok', tools: ['bash'] } },
+        { id: 'regex-only', prompt: 'p', expected: { answerRegex: 'z' } },
+      ],
+      judge: { provider: 'p', model: 'j', maxScore: 10 },
+      replay: { dir: '/tmp/replay' },
+      pricing: {
+        m: {
+          inputUsdPerMTokens: 1, cacheReadUsdPerMTokens: 1,
+          cacheWriteUsdPerMTokens: 1, outputUsdPerMTokens: 1,
+        },
+      },
+    }
+    const richText = renderBenchmarkSummary(rich)
+    expect(richText).toContain('# Benchmark: rich')
+    expect(richText).toContain('- timeout: 1000 ms (1 per-case override(s))')
+    expect(richText).toContain('- cases: 4 (4 graded, 1 with gold answers)')
+    expect(richText).toContain('- expectations: 4 check(s), 2 tool constraint(s)')
+    expect(richText).toContain('- judge: j on p (max 10)')
+    expect(richText).toContain('- replay: /tmp/replay')
+    expect(richText).toContain('- pricing: configured')
+    expect(richText).not.toContain('- source sha256:')
+    expect(richText).toContain('duplicate case ids (dup)')
+    expect(richText).toContain('case dup combines a check command with answerRegex')
+    expect(richText).toContain('1 shell check(s) need a trusted benchmark file')
+    expect(richText).not.toContain('at most 12 paired trials')
+
+    const judgedWithoutGold: Benchmark = {
+      ...base,
+      trials: 1,
+      cases: [{ id: 'raw', prompt: 'p' }],
+      sourceSha256: 'b'.repeat(64),
+      judge: { provider: 'p', model: 'j', maxScore: 10 },
+    }
+    const judgedText = renderBenchmarkSummary(judgedWithoutGold)
+    expect(judgedText).toContain('- source sha256: ' + 'b'.repeat(64))
+    expect(judgedText).toContain('no case has scripted expectations — results depend entirely on the judge')
+    expect(judgedText).toContain('judge is configured but no case supplies a gold answer')
+
+    const replayWithoutJudge: Benchmark = {
+      ...base,
+      trials: 1,
+      cases: [{ id: 'raw', prompt: 'p' }],
+      sourceSha256: 'c'.repeat(64),
+      replay: { dir: '/tmp/replay' },
+    }
+    expect(renderBenchmarkSummary(replayWithoutJudge))
+      .toContain('replay runs have no live judge; use `dsh eval rejudge`')
+
+    // The only warning-free shape: a judge, gold answers, enough pairs and no
+    // shell checks — covers the `warnings.length > 0 === false` side.
+    const clean: Benchmark = {
+      ...base,
+      trials: 8,
+      cases: [{ id: 'ok', prompt: 'p', expected: { tools: ['bash'], checkArgv: ['true'], answer: '42' } }],
+      sourceSha256: 'd'.repeat(64),
+      judge: { provider: 'p', model: 'j', maxScore: 10 },
+    }
+    expect(renderBenchmarkSummary(clean)).not.toContain('## Warnings')
   })
 
   it('rejects an unknown leaderboard metric', async () => {

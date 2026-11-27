@@ -179,6 +179,7 @@ describe('dsh-eval HTML dashboard', () => {
     expect(html).toContain('<h2>Run comparison</h2>')
     expect(html).toContain('<th scope="col">B − A</th>')
     expect(html).toContain('<h2>Paired inference</h2>')
+    expect(html).toContain('<th scope="col">Interval plot</th>')
     expect(html).toContain('baseline')
     expect(html).toContain('candidate')
     expect(html).not.toContain('Changed cases</h2>')
@@ -356,5 +357,162 @@ describe('dsh-eval HTML dashboard', () => {
     expect(block).not.toContain('<script>')
     const baseline = renderDashboard([buildRun()])
     expect(baseline).not.toContain('<h2>Configuration errors</h2>')
+  })
+
+  // Forest-plot fixtures: two completed, paired trials with varied values so
+  // the bootstrap interval has a non-zero width.
+  function forestPlots(html: string): string[] {
+    return html.match(/<svg class="forest"[\s\S]*?<\/svg>/gu) ?? []
+  }
+
+  function pairedTrial(trialIndex: number, steps: number, tokens: number, score: number) {
+    return {
+      caseId: 'c', trial: trialIndex, status: 'completed' as const, exitCode: 0, timedOut: false,
+      metrics: { ...METRICS, steps, totalTokens: tokens },
+      grade: { taskSuccess: true, toolSelectionAccuracy: true },
+      judge: { finalAnswerScore: score, hallucination: false },
+    }
+  }
+
+  function attribute(plot: string, pattern: RegExp): number {
+    const match = plot.match(pattern)
+    if (match === null) throw new Error(`missing SVG attribute: ${String(pattern)}`)
+    return Number(match[1])
+  }
+
+  it('adds a self-contained forest plot beside each paired delta text value', () => {
+    const baseline = buildRun({ benchmark: 'base', model: 'v1', cases: [
+      pairedTrial(1, 10, 100, 4), pairedTrial(2, 12, 120, 6),
+    ] })
+    const candidate = buildRun({ benchmark: 'cand', model: 'v2', cases: [
+      pairedTrial(1, 14, 130, 5), pairedTrial(2, 20, 160, 9),
+    ] })
+    const html = renderDashboard([baseline, candidate])
+    // Original text output is still there, including the numeric interval.
+    expect(html).toContain('paired steps delta (B-A)')
+    expect(html).toContain('paired tokens delta (B-A)')
+    expect(html).toContain('paired final-answer delta (B-A)')
+    expect(html).toMatch(/\d+(\.\d+)?% CI/u)
+    const plots = forestPlots(html)
+    expect(plots).toHaveLength(3)
+    for (const plot of plots) {
+      expect(plot).toContain('viewBox="0 0 180 34"')
+      expect(plot).toContain('role="img"')
+      expect(plot).toContain('class="forest-zero"')
+      expect(plot).toContain('class="forest-ci"')
+      expect(plot).toContain('class="forest-estimate"')
+      expect(plot).not.toMatch(/NaN|Infinity/u)
+      for (const value of plot.match(/(?:x1|x2|cx|cy)="[^"]+"/gu) ?? []) {
+        expect(value).toMatch(/^(?:x1|x2|cx|cy)="\d+(?:\.\d+)?"$/u)
+      }
+    }
+  })
+
+  it('draws a zero reference line and places the estimate inside the interval', () => {
+    const baseline = buildRun({ cases: [pairedTrial(1, 10, 100, 4), pairedTrial(2, 12, 120, 6)] })
+    const candidate = buildRun({ cases: [pairedTrial(1, 14, 130, 5), pairedTrial(2, 20, 160, 9)] })
+    const plots = forestPlots(renderDashboard([baseline, candidate]))
+    expect(plots).toHaveLength(3)
+    const plot = plots[0]!
+    const zero = attribute(plot, /class="forest-zero" x1="([\d.]+)"/u)
+    const zeroEnd = attribute(plot, /class="forest-zero"[\s\S]*?x2="([\d.]+)"/u)
+    const low = attribute(plot, /class="forest-ci" x1="([\d.]+)"/u)
+    const high = attribute(plot, /class="forest-ci"[\s\S]*?x2="([\d.]+)"/u)
+    const point = attribute(plot, /class="forest-estimate" cx="([\d.]+)"/u)
+    expect(zero).toBe(zeroEnd)
+    expect(zero).toBeLessThanOrEqual(low)
+    expect(low).toBeLessThan(high)
+    expect(point).toBeGreaterThanOrEqual(low)
+    expect(point).toBeLessThanOrEqual(high)
+  })
+
+  it('renders zero-width intervals without NaN or Infinity', () => {
+    const trials = [pairedTrial(1, 10, 100, 5), pairedTrial(2, 10, 100, 5)]
+    const identical = buildRun({ cases: trials })
+    const plots = forestPlots(renderDashboard([identical, identical]))
+    expect(plots).toHaveLength(3)
+    for (const plot of plots) {
+      expect(plot).toContain('cx="90.00"')
+      expect(plot).toContain('class="forest-zero" x1="90.00"')
+      expect(attribute(plot, /class="forest-ci" x1="([\d.]+)"/u))
+        .toBe(attribute(plot, /class="forest-ci"[\s\S]*?x2="([\d.]+)"/u))
+      expect(plot).not.toMatch(/NaN|Infinity/u)
+    }
+  })
+
+  it('omits the plot when the interval is unavailable but keeps the text', () => {
+    const onePair = buildRun({ cases: [pairedTrial(1, 10, 100, 5)] })
+    const html = renderDashboard([onePair, onePair])
+    expect(html).toContain('<h2>Paired inference</h2>')
+    expect(html).toContain('paired steps delta (B-A)')
+    expect(forestPlots(html)).toHaveLength(0)
+  })
+
+  it('omits plots for deltas with no paired measurements', () => {
+    const unjudged = (steps: number): EvalRun => buildRun({ cases: [{
+      caseId: 'c', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+      metrics: { ...METRICS, steps },
+      grade: { taskSuccess: true, toolSelectionAccuracy: true },
+    }, {
+      caseId: 'c', trial: 2, status: 'completed', exitCode: 0, timedOut: false,
+      metrics: { ...METRICS, steps: steps + 2 },
+      grade: { taskSuccess: true, toolSelectionAccuracy: true },
+    }] })
+    const html = renderDashboard([unjudged(1), unjudged(3)])
+    expect(html).not.toContain('paired final-answer delta (B-A)')
+    expect(forestPlots(html)).toHaveLength(2)
+  })
+
+  it('keeps extreme finite bounds inside a valid finite viewBox', () => {
+    const runWith = (steps: number): EvalRun => buildRun({ cases: [
+      pairedTrial(1, steps, 100, 4), pairedTrial(2, steps, 100, 6),
+    ] })
+    const plots = forestPlots(renderDashboard([runWith(0), runWith(1e300)]))
+    expect(plots).toHaveLength(3)
+    for (const plot of plots) {
+      expect(plot).not.toMatch(/NaN|Infinity/u)
+      for (const value of plot.match(/(?:x1|x2|cx|cy)="[^"]+"/gu) ?? []) {
+        expect(value).toMatch(/^(?:x1|x2|cx|cy)="\d+(?:\.\d+)?"$/u)
+      }
+    }
+  })
+
+  it('never writes non-finite values into SVG coordinates', () => {
+    const runWith = (steps: number): EvalRun => buildRun({ cases: [
+      pairedTrial(1, steps, 100, 4), pairedTrial(2, steps, 100, 6),
+    ] })
+    const plots = forestPlots(renderDashboard([runWith(0), runWith(Number.POSITIVE_INFINITY)]))
+    // Only the steps delta is non-finite; tokens and score plots still render.
+    expect(plots).toHaveLength(2)
+    for (const plot of plots) {
+      expect(plot).not.toMatch(/NaN|Infinity/u)
+      for (const value of plot.match(/(?:x1|x2|cx|cy)="[^"]+"/gu) ?? []) {
+        expect(value).toMatch(/^(?:x1|x2|cx|cy)="\d+(?:\.\d+)?"$/u)
+      }
+    }
+  })
+
+  it('escapes run strings interpolated into the forest plot', () => {
+    const hostile = '<img src=x onerror=alert(1)>'
+    const baseline = buildRun({ benchmark: hostile, cases: [
+      pairedTrial(1, 10, 100, 4), pairedTrial(2, 12, 120, 6),
+    ] })
+    const candidate = buildRun({ benchmark: 'cand', cases: [
+      pairedTrial(1, 14, 130, 5), pairedTrial(2, 20, 160, 9),
+    ] })
+    const html = renderDashboard([baseline, candidate])
+    expect(html).not.toContain('<img')
+    const plots = forestPlots(html)
+    expect(plots).toHaveLength(3)
+    for (const plot of plots) {
+      expect(plot).toContain('&lt;img src=x onerror=alert(1)&gt;')
+      expect(plot).not.toContain('<img')
+    }
+  })
+
+  it('renders identical forest plots for identical inputs', () => {
+    const baseline = buildRun({ cases: [pairedTrial(1, 10, 100, 4), pairedTrial(2, 12, 120, 6)] })
+    const candidate = buildRun({ cases: [pairedTrial(1, 14, 130, 5), pairedTrial(2, 20, 160, 9)] })
+    expect(renderDashboard([baseline, candidate])).toBe(renderDashboard([baseline, candidate]))
   })
 })

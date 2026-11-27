@@ -13,9 +13,10 @@ import { writeTextAtomic } from './atomic-write.ts'
 import { computeAgreement } from './agreement.ts'
 import { computeAnomalies } from './anomalies.ts'
 import { computeCalibration } from './calibration.ts'
-import { compareRuns, formatCaseValue, formatPValue, pairedCases, pairedCaseSignificance } from './compare.ts'
+import { compareRuns, formatCaseValue, formatPValue, pairedCases, pairedCaseSignificance, pairedCompare } from './compare.ts'
 import { buildLeaderboard, formatLeaderboardSignificance, type LeaderboardMetric } from './leaderboard.ts'
 import type { RateInterval } from './precision.ts'
+import type { PairedDelta } from './stats.ts'
 import { computePrecision } from './precision.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
 import type { EvalRun } from './types.ts'
@@ -36,6 +37,8 @@ tr:last-child td{border-bottom:0}code{font-family:ui-monospace,SFMono-Regular,Co
 .detail{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
 .table-wrapper{overflow:auto;max-inline-size:100%;max-block-size:min(500px,80vh);container-type:inline-size;border-radius:12px}
 .table-wrapper table{border-radius:0}.table-wrapper thead{position:sticky;inset-block-start:0;z-index:1;background:var(--card)}
+.forest{display:block;max-width:100%}.forest-zero{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.forest-ci{stroke:var(--accent);stroke-width:3;stroke-linecap:round}.forest-estimate{fill:var(--accent)}
 footer{margin-top:32px;color:var(--muted);font-size:12px}
 `
 
@@ -82,6 +85,44 @@ function interval(value: RateInterval): string {
   return `${rate(value.rate)}${range} <span class="note">n=${value.trials}</span>`
 }
 
+/** Geometry of one forest plot; fixed viewBox keeps identical input byte-identical output. */
+const FOREST_WIDTH = 180
+const FOREST_HEIGHT = 34
+const FOREST_PAD = 12
+
+/**
+ * Render a paired delta as a self-contained inline SVG forest plot: a segment
+ * spanning the bootstrap interval, a dot at the point estimate, and a dashed
+ * vertical zero reference. The scale is centred on the finite min/max of the
+ * plotted values, so a zero-width interval, an extreme magnitude or a
+ * non-finite input can never put NaN/Infinity into an SVG coordinate. Returns
+ * an empty string when the interval is unavailable (too few pairs).
+ */
+function deltaForestPlot(delta: PairedDelta, context: string): string {
+  const { lower, upper, mean } = delta
+  if (lower === null || upper === null) return ''
+  if (![lower, upper, mean].every(Number.isFinite)) return ''
+  const lo = Math.min(lower, upper, mean, 0)
+  const hi = Math.max(lower, upper, mean, 0)
+  // lo/2 + hi/2 cannot overflow, unlike (lo + hi) / 2, for opposite extremes.
+  const mid = lo / 2 + hi / 2
+  const radius = Math.max(hi - mid, mid - lo)
+  const centre = FOREST_WIDTH / 2
+  const half = (FOREST_WIDTH - 2 * FOREST_PAD) / 2
+  const x = (value: number): string => {
+    const scaled = radius === 0 ? centre : centre + ((value - mid) / radius) * half
+    return Math.min(FOREST_WIDTH, Math.max(0, scaled)).toFixed(2)
+  }
+  const y = FOREST_HEIGHT / 2
+  const description = `${context} bootstrap interval with zero reference`
+  return `<svg class="forest" viewBox="0 0 ${FOREST_WIDTH} ${FOREST_HEIGHT}" width="${FOREST_WIDTH}" height="${FOREST_HEIGHT}" role="img" aria-label="${esc(description)}">`
+    + `<title>${esc(description)}</title>`
+    + `<line class="forest-zero" x1="${x(0)}" y1="4" x2="${x(0)}" y2="${FOREST_HEIGHT - 4}"/>`
+    + `<line class="forest-ci" x1="${x(lower)}" y1="${y}" x2="${x(upper)}" y2="${y}"/>`
+    + `<circle class="forest-estimate" cx="${x(mean)}" cy="${y}" r="4"/>`
+    + '</svg>'
+}
+
 /** Render a table from a header and already-escaped row fragments. */
 function table(headers: readonly string[], rows: readonly string[], label = 'Evaluation data'): string {
   return [
@@ -100,8 +141,24 @@ function renderComparison(a: EvalRun, b: EvalRun): string {
   const rows = compared.filter(row => row.inference === undefined)
     .map(row => [row.metric, row.a, row.b, row.delta]
       .map(value => `<td>${esc(value)}</td>`).join(''))
+  // The paired inference rows keep their original text values. Alongside them
+  // we render a small self-contained forest plot for each non-null bootstrap
+  // interval; a delta with no interval (one pair) simply has an empty cell.
+  const paired = pairedCompare(a, b)
+  const plots = new Map<string, string>()
+  if (paired !== null) {
+    const context = `${a.benchmark} → ${b.benchmark}`
+    const deltas: readonly (readonly [string, PairedDelta | null])[] = [
+      ['paired steps delta (B-A)', paired.stepsDelta],
+      ['paired tokens delta (B-A)', paired.tokensDelta],
+      ['paired final-answer delta (B-A)', paired.scoreDelta],
+    ]
+    for (const [label, delta] of deltas) {
+      if (delta !== null) plots.set(label, deltaForestPlot(delta, `${context} ${label}`))
+    }
+  }
   const inferenceRows = compared.filter(row => row.inference !== undefined)
-    .map(row => `<td>${esc(row.metric)}</td><td>${esc(row.inference!)}</td>`)
+    .map(row => `<td>${esc(row.metric)}</td><td>${esc(row.inference!)}</td><td>${plots.get(row.metric) ?? ''}</td>`)
   const cases = pairedCases(a, b) ?? []
   const discordant = cases.filter(item => item.outcome !== 'tie').slice(0, 10)
   const caseRows = discordant.map(item => [item.caseId, String(item.trial),
@@ -128,7 +185,7 @@ function renderComparison(a: EvalRun, b: EvalRun): string {
     + table(['Case', 'Pairs', 'B wins', 'A wins', 'Adjusted p', 'Result'], significanceRows,
       'Confirmed case changes')
   return `<h2>Run comparison</h2>${table(['Metric', 'A', 'B', 'B − A'], rows, 'Run comparison')}`
-    + (inferenceRows.length === 0 ? '' : `<h2>Paired inference</h2>${table(['Test', 'Result'], inferenceRows, 'Paired inference')}`)
+    + (inferenceRows.length === 0 ? '' : `<h2>Paired inference</h2>${table(['Test', 'Result', 'Interval plot'], inferenceRows, 'Paired inference')}`)
     + caseBlock + significanceBlock + powerNote
 }
 

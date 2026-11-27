@@ -416,7 +416,118 @@ describe('dsh-eval benchmark loading', () => {
       .rejects.toThrow()
   })
 
+  it('omits excluded artifacts from the provenance digest', async () => {
+    const dir = tempDir()
+    writeFileSync(join(dir, 'fixture.txt'), 'fixture')
+    const text = [
+      'name: digest',
+      'model: m',
+      'cases:',
+      '  - id: a',
+      '    prompt: p',
+      '    workspace: .',
+      '',
+    ].join('\n')
+    const included = await parseBenchmark(text, dir)
+    const excluded = await parseBenchmark(text, dir, { excludeFromDigest: [join(dir, 'fixture.txt')] })
+    expect(excluded.sourceSha256).not.toBe(included.sourceSha256)
+  })
+
   it('rejects a missing benchmark file', async () => {
     await expect(loadBenchmark(join(tempDir(), 'missing.yml'))).rejects.toThrow()
+  })
+})
+
+describe('dsh-eval benchmark validation diagnostics', () => {
+  it('reports a missing required field with a file label, path and readable hint', async () => {
+    const invalid = parseBenchmark('model: m\ncases:\n  - id: a\n    prompt: p\n', tempDir())
+    await expect(invalid).rejects.toBeInstanceOf(Error)
+    await expect(invalid).rejects.toMatchObject({
+      message: expect.stringContaining('benchmark.yaml: name:'),
+    })
+    await expect(invalid).rejects.toMatchObject({
+      message: expect.stringMatching(/required/u),
+    })
+    await expect(invalid).rejects.toMatchObject({
+      message: expect.not.stringContaining('issue'),
+    })
+    await expect(invalid).rejects.toMatchObject({
+      message: expect.not.stringContaining('{'),
+    })
+    await expect(invalid).rejects.not.toHaveProperty('issues')
+  })
+
+  it('points a missing case prompt at the nested case path', async () => {
+    const invalid = parseBenchmark('name: n\nmodel: m\ncases:\n  - id: a\n', tempDir())
+    await expect(invalid).rejects.toMatchObject({
+      message: expect.stringContaining('benchmark.yaml: cases.0.prompt:'),
+    })
+    await expect(invalid).rejects.toMatchObject({
+      message: expect.stringContaining('exactly one of prompt or promptFile'),
+    })
+    await expect(invalid).rejects.toMatchObject({
+      message: expect.not.stringContaining('issue'),
+    })
+  })
+
+  it('explains unknown fields with a spelling hint instead of raw issue codes', async () => {
+    const invalid = parseBenchmark('name: n\nmodel: m\nbogus: 1\ncases:\n  - id: a\n    prompt: p\n', tempDir())
+    await expect(invalid).rejects.toMatchObject({
+      message: expect.stringContaining('benchmark.yaml: (root): unknown field(s): `bogus`'),
+    })
+    await expect(invalid).rejects.toMatchObject({
+      message: expect.stringContaining('check spelling / see field reference'),
+    })
+    await expect(invalid).rejects.toMatchObject({
+      message: expect.not.stringContaining('issue'),
+    })
+    await expect(invalid).rejects.toMatchObject({
+      message: expect.not.stringContaining('unrecognized_keys'),
+    })
+  })
+
+  it('formats nested paths and joins several problems into one message', async () => {
+    const invalid = parseBenchmark([
+      'name: n',
+      'model: m',
+      'cases:',
+      '  - id: a',
+      '    prompt: p',
+      '    timeoutMs: -1',
+      '    expected:',
+      '      mistyped: true',
+      '',
+    ].join('\n'), tempDir())
+    await expect(invalid).rejects.toMatchObject({
+      message: expect.stringContaining('benchmark.yaml: cases.0.timeoutMs:'),
+    })
+    await expect(invalid).rejects.toMatchObject({
+      message: expect.stringContaining('benchmark.yaml: cases.0.expected: unknown field(s): `mistyped`'),
+    })
+    await expect(invalid).rejects.toMatchObject({
+      message: expect.stringContaining('; benchmark.yaml:'),
+    })
+    await expect(invalid).rejects.toMatchObject({
+      message: expect.not.stringContaining('issue'),
+    })
+  })
+
+  it('keeps readable diagnostics for a wrong value type', async () => {
+    const invalid = parseBenchmark('name: 42\nmodel: m\ncases:\n  - id: a\n    prompt: p\n', tempDir())
+    await expect(invalid).rejects.toMatchObject({
+      message: expect.stringContaining('benchmark.yaml: name:'),
+    })
+    await expect(invalid).rejects.toMatchObject({
+      message: expect.not.stringContaining('issue'),
+    })
+  })
+
+  it('labels loadBenchmark errors with the file path the caller supplied', async () => {
+    const dir = tempDir()
+    const file = join(dir, 'benchmark.yaml')
+    writeFileSync(file, 'model: m\ncases:\n  - id: a\n    prompt: p\n')
+    await expect(loadBenchmark(file)).rejects.toMatchObject({
+      message: expect.stringContaining(`${file}: name:`),
+    })
   })
 })

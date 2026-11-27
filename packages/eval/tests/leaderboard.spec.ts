@@ -312,6 +312,68 @@ describe('dsh-eval leaderboard', () => {
       { label: 'other', run: run({ model: 'other', cases: [] }) },
     ])
     expect(unpaired[1]!.significance?.verdict).toBe('unpaired')
+    expect(renderLeaderboard(unpaired)).toContain('| unpaired |')
+  })
+
+  it('marks the cost-quality frontier only when cost data exists', () => {
+    const priced = (rate: number, costUsd: number, model: string): EvalRun => run({
+      model,
+      aggregate: { ...METRICS, costUsd },
+      grading: {
+        taskSuccessRate: rate, toolSelectionAccuracyRate: rate,
+        finalAnswerScore: rate * 10, hallucinationRate: 0,
+      },
+    })
+    const rows = buildLeaderboard([
+      { label: 'cheap-strong', run: priced(0.9, 0.000001, 'cs') },
+      { label: 'costly-weak', run: priced(0.7, 0.000002, 'cw') },
+      { label: 'no-cost', run: run({
+        model: 'nc',
+        grading: {
+          taskSuccessRate: 0.8, toolSelectionAccuracyRate: null,
+          finalAnswerScore: null, hallucinationRate: null,
+        },
+      }) },
+      { label: 'no-quality', run: run({
+        model: 'nq', aggregate: { ...METRICS, costUsd: 0.000001 },
+      }) },
+      { label: 'no-data', run: run({ model: 'nd' }) },
+    ])
+    const byLabel = new Map(rows.map(row => [row.label, row]))
+    expect(byLabel.get('cheap-strong')?.pareto).toBe('on-frontier')
+    expect(byLabel.get('costly-weak')?.pareto).toBe('dominated')
+    expect(byLabel.get('no-cost')?.pareto).toBeUndefined()
+    expect(byLabel.get('no-quality')?.pareto).toBeUndefined()
+    expect(byLabel.get('no-data')?.pareto).toBeUndefined()
+    const markdown = renderLeaderboard(rows)
+    expect(markdown).toContain('| pareto |')
+    expect(markdown).toMatch(/\|\s*1 \| cheap-strong \|[^\n]*\| ★ \|/)
+    expect(markdown).toMatch(/\| costly-weak \|[^\n]*\| dominated \|/)
+    const parsed = JSON.parse(renderLeaderboardJson(rows)) as {
+      rows: { label: string; pareto?: string }[]
+    }
+    expect(parsed.rows.find(row => row.label === 'cheap-strong')?.pareto).toBe('on-frontier')
+    expect(parsed.rows.find(row => row.label === 'costly-weak')?.pareto).toBe('dominated')
+    expect('pareto' in parsed.rows.find(row => row.label === 'no-cost')!).toBe(false)
+  })
+
+  it('omits Pareto markers and column when no run has cost data', () => {
+    const unpriced = (rate: number, model: string): EvalRun => run({
+      model,
+      grading: {
+        taskSuccessRate: rate, toolSelectionAccuracyRate: null,
+        finalAnswerScore: null, hallucinationRate: null,
+      },
+    })
+    const rows = buildLeaderboard([
+      { label: 'a', run: unpriced(0.9, 'a') },
+      { label: 'b', run: unpriced(0.5, 'b') },
+    ])
+    expect(rows.every(row => row.pareto === undefined)).toBe(true)
+    expect(renderLeaderboard(rows)).not.toContain('| pareto |')
+    expect(renderLeaderboard(rows)).not.toContain('★')
+    const parsed = JSON.parse(renderLeaderboardJson(rows)) as { rows: object[] }
+    expect(parsed.rows.every(row => !('pareto' in row))).toBe(true)
   })
 
   it('renders an empty leaderboard header', () => {

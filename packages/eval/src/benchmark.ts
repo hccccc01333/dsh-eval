@@ -83,7 +83,7 @@ const benchmarkCaseSchema = z.object({
   ).optional(),
 }).strict().refine(
   caseValue => (caseValue.prompt === undefined) !== (caseValue.promptFile === undefined),
-  { message: 'each case needs exactly one of prompt or promptFile' },
+  { message: 'each case needs exactly one of prompt or promptFile', path: ['prompt'] },
 )
 
 const benchmarkSchema = z.object({
@@ -121,13 +121,29 @@ const benchmarkSchema = z.object({
 })
 
 /**
- * Resolve one parsed case's prompt and workspace against the benchmark
- * directory. Prompt files are read at load time so a run fails before any
- * trial starts.
- * @param parsed - the zod-validated case document.
- * @param baseDir - absolute directory the benchmark file lives in.
- * @returns the resolved runtime case.
+ * Render a validation failure as short, field-first diagnostics instead of
+ * zod's raw issue array: `<label>: <dotted path>: <readable message>`, one
+ * clause per problem joined by semicolons. Callers (notably the CLI) print
+ * only `error.message`, so every clause carries its own file label and path.
+ * @param error - the failed `safeParse` result's error.
+ * @param label - the benchmark file path when known, else a generic name.
+ * @returns a plain Error whose message is safe to show end users.
  */
+function formatBenchmarkError(error: z.ZodError, label: string): Error {
+  const detail = error.issues.map((issue) => {
+    const path = issue.path.length === 0 ? '(root)' : issue.path.join('.')
+    if (issue.code === 'invalid_type' && issue.message.includes('received undefined')) {
+      return `${label}: ${path}: this field is required (expected ${issue.expected})`
+    }
+    if (issue.code === 'unrecognized_keys') {
+      const keys = issue.keys.map(key => `\`${key}\``).join(', ')
+      return `${label}: ${path}: unknown field(s): ${keys}; check spelling / see field reference`
+    }
+    return `${label}: ${path}: ${issue.message}`
+  }).join('; ')
+  return new Error(detail)
+}
+
 /**
  * Resolve a referenced path without letting a third-party benchmark read
  * outside its directory. The override is caller-supplied (CLI/API), never
@@ -161,6 +177,14 @@ async function resolveInputPath(
   return resolved
 }
 
+/**
+ * Resolve one parsed case's prompt and workspace against the benchmark
+ * directory. Prompt files are read at load time so a run fails before any
+ * trial starts.
+ * @param parsed - the zod-validated case document.
+ * @param baseDir - absolute directory the benchmark file lives in.
+ * @returns the resolved runtime case.
+ */
 async function resolveCase(
   parsed: z.infer<typeof benchmarkCaseSchema>,
   baseDir: string,
@@ -194,12 +218,6 @@ async function resolveCase(
   }
 }
 
-/**
- * Parse benchmark YAML text into a validated runtime document.
- * @param text - the benchmark document's YAML source.
- * @param baseDir - absolute directory used to resolve prompt and workspace paths.
- * @returns the validated benchmark.
- */
 /** Trusted caller options; the benchmark document itself cannot set these. */
 export interface BenchmarkLoadOptions {
   /** Permit referenced paths outside the benchmark directory. */
@@ -208,40 +226,52 @@ export interface BenchmarkLoadOptions {
   excludeFromDigest?: readonly string[]
 }
 
-export async function parseBenchmark(
+/**
+ * Parse benchmark YAML text into a validated runtime document.
+ * @param text - the benchmark document's YAML source.
+ * @param baseDir - absolute directory used to resolve prompt and workspace paths.
+ * @param options - trusted caller overrides (never read from the document).
+ * @param label - file name shown in validation errors.
+ * @returns the validated benchmark.
+ */
+async function parseBenchmarkText(
   text: string,
   baseDir: string,
-  options: BenchmarkLoadOptions = {},
+  options: BenchmarkLoadOptions,
+  label: string,
 ): Promise<Benchmark> {
   const value = load(text)
   if (typeof value !== 'object' || value === null) {
     throw new Error('benchmark document must be a YAML mapping')
   }
-  const parsed = benchmarkSchema.parse(value)
+  const parsed = benchmarkSchema.safeParse(value)
+  if (!parsed.success) {
+    throw formatBenchmarkError(parsed.error, label)
+  }
   // `allowExternalPaths` in YAML is accepted for backward compatibility but
   // ignored: only the operator running the CLI/API may widen the boundary.
   const allowExternalPaths = options.allowExternalPaths === true
   const cases: BenchmarkCase[] = []
-  for (const caseValue of parsed.cases) {
+  for (const caseValue of parsed.data.cases) {
     cases.push(await resolveCase(caseValue, baseDir, allowExternalPaths))
   }
-  const pricing = parsed.pricing
-  const judge = parsed.judge
-  const replay = parsed.replay
+  const pricing = parsed.data.pricing
+  const judge = parsed.data.judge
+  const replay = parsed.data.replay
   const benchmark: Benchmark = {
-    name: parsed.name,
-    model: parsed.model,
-    profile: parsed.profile,
-    command: parsed.command,
+    name: parsed.data.name,
+    model: parsed.data.model,
+    profile: parsed.data.profile,
+    command: parsed.data.command,
     allowExternalPaths,
-    trials: parsed.trials,
-    concurrency: parsed.concurrency,
-    timeoutMs: parsed.timeoutMs,
-    seed: parsed.seed,
+    trials: parsed.data.trials,
+    concurrency: parsed.data.concurrency,
+    timeoutMs: parsed.data.timeoutMs,
+    seed: parsed.data.seed,
     cases,
     ...(pricing !== undefined ? { pricing } : {}),
     ...(judge !== undefined
-      ? { judge: { provider: judge.provider, model: judge.model ?? parsed.model, ...(judge.rubric !== undefined ? { rubric: judge.rubric } : {}), maxScore: judge.maxScore } }
+      ? { judge: { provider: judge.provider, model: judge.model ?? parsed.data.model, ...(judge.rubric !== undefined ? { rubric: judge.rubric } : {}), maxScore: judge.maxScore } }
       : {}),
     ...(replay !== undefined
       ? { replay: { dir: await resolveInputPath(replay.dir, baseDir, allowExternalPaths, 'replay.dir') } }
@@ -257,7 +287,23 @@ export async function parseBenchmark(
 }
 
 /**
+ * Parse benchmark YAML text into a validated runtime document.
+ * @param text - the benchmark document's YAML source.
+ * @param baseDir - absolute directory used to resolve prompt and workspace paths.
+ * @param options - trusted caller overrides (never read from the document).
+ * @returns the validated benchmark.
+ */
+export async function parseBenchmark(
+  text: string,
+  baseDir: string,
+  options: BenchmarkLoadOptions = {},
+): Promise<Benchmark> {
+  return parseBenchmarkText(text, baseDir, options, 'benchmark.yaml')
+}
+
+/**
  * Load and validate a benchmark document from disk.
+ * Validation errors are labelled with the path the caller passed in.
  * @param path - path to the benchmark YAML file.
  * @returns the validated benchmark.
  */
@@ -266,5 +312,5 @@ export async function loadBenchmark(
   options: BenchmarkLoadOptions = {},
 ): Promise<Benchmark> {
   const absolute = resolve(path)
-  return parseBenchmark(await readFile(absolute, 'utf8'), dirname(absolute), options)
+  return parseBenchmarkText(await readFile(absolute, 'utf8'), dirname(absolute), options, path)
 }
