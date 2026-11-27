@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.23 — 2026-11-27
+
+### Added
+
+- The single-run HTML dashboard now includes a `Judge errors` summary listing
+  the affected case/trial and diagnostic, capped at ten entries with a `+N more`
+  marker. Control bytes and HTML markup are stripped/escaped as elsewhere.
+
 ## 0.5.22 — 2026-11-27
 
 ### Added

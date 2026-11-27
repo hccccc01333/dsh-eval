@@ -21,7 +21,7 @@
 | **面向 CI** | `--require-significance` 门禁 + 硬成本/延迟预算 |
 | **零外部资源报告** | 自包含、适配深色模式的 HTML 仪表盘 |
 
-`dsh-eval@0.5.22` · 449 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.5.23` · 450 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 本包同时是一个 bundle 和一个命令行应用。装进 profile 后即可运行评测：
 

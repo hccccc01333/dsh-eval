@@ -279,6 +279,10 @@ export function renderDashboard(runs: readonly EvalRun[], metric: LeaderboardMet
     const error = result.grade?.checkError
     return error === undefined ? [] : [{ caseId: result.caseId, trial: result.trial, error }]
   })
+  const judgeErrors = run.cases.flatMap(result => {
+    const error = result.judge?.judgeError
+    return error === undefined ? [] : [{ caseId: result.caseId, trial: result.trial, error }]
+  })
   const aggregate = run.aggregate
   const judge = run.judge
   const cards = [
@@ -358,6 +362,10 @@ export function renderDashboard(runs: readonly EvalRun[], metric: LeaderboardMet
   const checkErrorBlock = checkErrors.length === 0 ? '' : `<h2>Configuration errors</h2>`
     + `<p class="note">WARNING: a scripted check command could not be started. Fix the benchmark check configuration (check / checkArgv / checkShell: executable present and valid working directory) and rerun; graded results are unreliable.</p>`
     + `<ul>${checkErrors.map(item => `<li><code>${esc(item.caseId)}</code>#${item.trial}: ${esc(item.error)}</li>`).join('')}</ul>`
+  const judgeErrorBlock = judgeErrors.length === 0 ? '' : `<h2>Judge errors</h2>`
+    + `<ul>${judgeErrors.slice(0, 10).map(item =>
+      `<li><code>${esc(item.caseId)}</code>#${item.trial}: ${esc(item.error)}</li>`).join('')}</ul>`
+    + (judgeErrors.length > 10 ? `<p class="note">+${judgeErrors.length - 10} more</p>` : '')
   const clusters = clusterFailures(run)
   const clusterBlock = clusters.length === 0 ? '' : `<h2>Failure clusters</h2>${table(
     ['Pattern', 'Label', 'Count', 'Cases'],
@@ -421,6 +429,7 @@ ${agreementBlock}
 ${calibrationBlock}${segmentBlock}
 ${anomaliesBlock}
 ${checkErrorBlock}
+${judgeErrorBlock}
 ${clusterBlock}
 <h2>Trials</h2>
 ${table(['Case', 'Trial', 'Status', 'Steps', 'Tokens', 'Latency', 'Task', 'Tool', 'Score', 'Detail'], trialRows, 'Trials')}

@@ -360,6 +360,24 @@ describe('dsh-eval HTML dashboard', () => {
     expect(baseline).not.toContain('<h2>Configuration errors</h2>')
   })
 
+  it('renders a judge-error summary with escaped text and a truncation marker', () => {
+    const cases = Array.from({ length: 11 }, (_, index) => ({
+      caseId: `c|bad\u001b[2J${index}`, trial: index + 1,
+      status: 'completed' as const, exitCode: 0, timedOut: false,
+      judge: { finalAnswerScore: null, hallucination: null, judgeError: `boom|${index}\n` },
+    }))
+    const html = renderDashboard([buildRun({ cases })])
+    expect(html).toContain('<h2>Judge errors</h2>')
+    const block = html.slice(html.indexOf('<h2>Judge errors</h2>'), html.indexOf('<h2>Trials</h2>'))
+    expect(block).toContain('<code>c|bad [2J0</code>#1: boom|0 ')
+    expect(block).toContain('+1 more')
+    expect(html).not.toContain('\u001b')
+    const single = renderDashboard([buildRun({ cases: [cases[0]!] })])
+    expect(single).toContain('<h2>Judge errors</h2>')
+    expect(single).not.toContain('+1 more')
+    expect(renderDashboard([buildRun()])).not.toContain('<h2>Judge errors</h2>')
+  })
+
   it('renders a failure-cluster table with escaped text and a truncation marker', () => {
     const hostileId = '</code><b>x</b>'
     const html = renderDashboard([buildRun({
