@@ -41,6 +41,31 @@ describe('dsh-eval CI gate', () => {
     expect(markdown).toContain('- max tolerated drop: 0.0 percentage points')
   })
 
+  it('gates an absolute hallucination-rate increase', () => {
+    const grading = {
+      taskSuccessRate: 1, toolSelectionAccuracyRate: 1,
+      finalAnswerScore: 8, hallucinationRate: 0,
+    }
+    const baseline = buildRun({ grading })
+    const candidate = buildRun({ grading: { ...grading, hallucinationRate: 0.1 } })
+    const failed = evaluateGate(baseline, candidate, 0, false, { maxHallucinationIncrease: 0 })
+    expect(failed.passed).toBe(false)
+    expect(failed.checks.find(check => check.metric === 'hallucination rate'))
+      .toMatchObject({ baseline: 0, candidate: 0.1, passed: false })
+    const passed = evaluateGate(baseline, candidate, 0, false, { maxHallucinationIncrease: 0.2 })
+    expect(passed.passed).toBe(true)
+    expect(renderGateJson(passed)).toContain('"maxHallucinationIncrease":0.2')
+    expect(renderGate(passed)).toContain('max tolerated hallucination increase: 20.0 percentage points')
+
+    const ungraded = buildRun({ grading: null })
+    expect(evaluateGate(ungraded, ungraded, 0, false, { maxHallucinationIncrease: 0 })
+      .checks.find(check => check.metric === 'hallucination rate'))
+      .toMatchObject({ passed: true, note: 'baseline unjudged — check skipped' })
+    expect(evaluateGate(baseline, ungraded, 0, false, { maxHallucinationIncrease: 0 })
+      .checks.find(check => check.metric === 'hallucination rate'))
+      .toMatchObject({ passed: false, note: 'candidate unjudged' })
+  })
+
   it('compares per-tag judge scores on a normalized scale', () => {
     const judged = (score: number) => ({
       caseId: 'a', trial: 1, status: 'completed' as const, exitCode: 0, timedOut: false,

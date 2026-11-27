@@ -291,6 +291,8 @@ export async function executeEval(
       const budgets = {
         ...(values.maxCostIncrease === undefined ? {} : { maxCostIncrease: values.maxCostIncrease }),
         ...(values.maxLatencyIncrease === undefined ? {} : { maxLatencyIncrease: values.maxLatencyIncrease }),
+        ...(values.maxHallucinationIncrease === undefined ? {}
+          : { maxHallucinationIncrease: values.maxHallucinationIncrease }),
       }
       const gateOptions = {
         ...(values.requireSignificance === true ? { requireSignificance: true } : {}),

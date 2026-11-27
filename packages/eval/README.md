@@ -261,7 +261,10 @@ relative resource budgets, so a candidate that keeps quality but costs 2x more
 still fails. Budget rows print absolute values with a relative delta; a missing
 baseline metric skips that budget, while a missing candidate metric fails
 closed. A tiny relative tolerance absorbs floating-point noise at 1e-9 of the
-baseline without masking a real overrun. Add `--json` to emit the same verdict
+baseline without masking a real overrun. `--max-hallucination-increase 0.02` adds
+an absolute (percentage-point) budget for the pooled hallucination rate, so a
+candidate cannot trade factual reliability for a higher task score; a baseline
+rate of zero tolerates no new hallucinations. Add `--json` to emit the same verdict
 as a single JSON object (`passed`, thresholds, `checks`, `regressions`) for CI
 dashboards and automation. `--require-significance` adds a paired-sign-test
 row: a quality drop only fails the gate when the sign test confirms a

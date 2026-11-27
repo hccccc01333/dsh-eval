@@ -49,6 +49,8 @@ export interface GateResult {
   maxLatencyIncrease?: number
   /** Enabled per-tag quality tolerance, if any. */
   maxSegmentDrop?: number
+  /** Enabled absolute hallucination-rate increase budget, if any. */
+  maxHallucinationIncrease?: number
   /** Cases with a family-corrected, statistically confirmed paired regression. */
   confirmedCaseRegressions?: readonly ConfirmedCaseRegression[]
 }
@@ -64,6 +66,8 @@ export interface ConfirmedCaseRegression {
 export interface GateBudgets {
   maxCostIncrease?: number | null
   maxLatencyIncrease?: number | null
+  /** Largest tolerated absolute increase in hallucination rate (0..1). */
+  maxHallucinationIncrease?: number | null
 }
 
 /** Optional significance mode for a gate run. */
@@ -167,6 +171,26 @@ function compareBudget(
   // Floating-point noise at 1e-9 of the baseline must not fail an exact budget.
   const limit = baseline * maxIncrease + Math.abs(baseline) * 1e-9
   return { metric, baseline, candidate, delta, passed: delta <= limit, unit }
+}
+
+/**
+ * Compare a 0..1 rate against an absolute increase budget. Unlike the relative
+ * resource budgets, a baseline of zero must not license any new hallucinations.
+ */
+function compareIncrease(
+  metric: string,
+  baseline: number | null,
+  candidate: number | null,
+  maxIncrease: number,
+): GateCheck {
+  if (baseline === null) {
+    return { metric, baseline, candidate, delta: null, passed: true, note: 'baseline unjudged — check skipped' }
+  }
+  if (candidate === null) {
+    return { metric, baseline, candidate, delta: null, passed: false, note: 'candidate unjudged' }
+  }
+  const delta = candidate - baseline
+  return { metric, baseline, candidate, delta, passed: delta <= maxIncrease + 1e-9 }
 }
 
 /**
@@ -299,6 +323,12 @@ export function evaluateGate(
     checks.push(compareBudget('latency/trial', baseline.aggregate?.latencyMs ?? null,
       candidate.aggregate?.latencyMs ?? null, budgets.maxLatencyIncrease, 'ms'))
   }
+  if (budgets.maxHallucinationIncrease !== undefined && budgets.maxHallucinationIncrease !== null) {
+    checks.push(compareIncrease('hallucination rate',
+      baseline.grading?.hallucinationRate ?? null,
+      candidate.grading?.hallucinationRate ?? null,
+      budgets.maxHallucinationIncrease))
+  }
   // Per-case evidence uses each quality metric's own paired trials; the
   // default metric chosen by pickMetric() would miss tool/judge-only drops.
   const confirmedCaseRegressions = (['task success', 'tool selection accuracy', 'final answer score'] as const)
@@ -322,6 +352,8 @@ export function evaluateGate(
     ...(budgets.maxLatencyIncrease === undefined || budgets.maxLatencyIncrease === null
       ? {} : { maxLatencyIncrease: budgets.maxLatencyIncrease }),
     ...(options.maxSegmentDrop === undefined ? {} : { maxSegmentDrop: options.maxSegmentDrop }),
+    ...(budgets.maxHallucinationIncrease === undefined || budgets.maxHallucinationIncrease === null
+      ? {} : { maxHallucinationIncrease: budgets.maxHallucinationIncrease }),
     regressions: findRegressions(baseline, candidate, maxDrop)
       .filter(regression => suppressByMetric.get(regression.metric) !== true),
     confirmedCaseRegressions,
@@ -364,6 +396,8 @@ export function renderGateJson(result: GateResult): string {
     ...(result.maxCostIncrease === undefined ? {} : { maxCostIncrease: result.maxCostIncrease }),
     ...(result.maxLatencyIncrease === undefined ? {} : { maxLatencyIncrease: result.maxLatencyIncrease }),
     ...(result.maxSegmentDrop === undefined ? {} : { maxSegmentDrop: result.maxSegmentDrop }),
+    ...(result.maxHallucinationIncrease === undefined ? {}
+      : { maxHallucinationIncrease: result.maxHallucinationIncrease }),
     checks: result.checks,
     regressions: result.regressions ?? [],
     confirmedCaseRegressions: result.confirmedCaseRegressions ?? [],
@@ -394,6 +428,8 @@ export function renderGate(result: GateResult): string {
     `- max tolerated drop: ${(result.maxDrop * 100).toFixed(1)} percentage points`,
     ...(result.maxCostIncrease === undefined ? [] : [`- max tolerated cost increase: ${(result.maxCostIncrease * 100).toFixed(1)}%`]),
     ...(result.maxLatencyIncrease === undefined ? [] : [`- max tolerated latency increase: ${(result.maxLatencyIncrease * 100).toFixed(1)}%`]),
+    ...(result.maxHallucinationIncrease === undefined ? []
+      : [`- max tolerated hallucination increase: ${(result.maxHallucinationIncrease * 100).toFixed(1)} percentage points`]),
     '',
     '| check | baseline | candidate | Δ | result |',
     '|---|---|---|---|---|',

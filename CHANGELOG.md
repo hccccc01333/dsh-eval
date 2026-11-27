@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.30 — 2026-11-27
+
+### Added
+
+- `gate --max-hallucination-increase <ratio>` adds an absolute budget on the
+  pooled hallucination rate. The check appears in markdown/JSON verdicts; a
+  missing baseline hallucination rate skips it, a missing candidate rate fails
+  closed, and a zero baseline tolerates no new hallucinations.
+
 ## 0.5.29 — 2026-11-27
 
 ### Added

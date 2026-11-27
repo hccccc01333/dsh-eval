@@ -345,11 +345,15 @@ describe('dsh-eval command composition', () => {
     await parser.parseAsync([
       'node', 'eval', 'gate', candidatePath, '--baseline', baselinePath,
       '--max-cost-increase', '0.1', '--max-latency-increase', '0.2',
-      '--max-segment-drop', '0.05',
+      '--max-hallucination-increase', '0.03', '--max-segment-drop', '0.05',
     ])
     expect(published.at(-1)).toMatchObject({
-      maxCostIncrease: 0.1, maxLatencyIncrease: 0.2, maxSegmentDrop: 0.05,
+      maxCostIncrease: 0.1, maxLatencyIncrease: 0.2,
+      maxHallucinationIncrease: 0.03, maxSegmentDrop: 0.05,
     })
+    expect((await bootEval([
+      'gate', candidatePath, '--baseline', baselinePath, '--max-hallucination-increase', '0.5',
+    ])).exits).toEqual([0])
     expect((await bootEval([
       'gate', candidatePath, '--baseline', baselinePath, '--max-segment-drop', '2',
     ])).err).toContain('between 0 and 1')
