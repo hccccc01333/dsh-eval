@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.29 — 2026-11-27
+
+### Added
+
+- Trial CSV export gains `turns`, `toolSuccessRate`, `cacheReadTokens` and
+  `contextTokens`, appended after the existing columns so readers relying on
+  column positions are unaffected.
+
 ## 0.5.28 — 2026-11-27
 
 ### Added

@@ -339,7 +339,9 @@ the same rubric.
 `dsh eval export run.json [--out trials.csv]` flattens every trial into one CSV
 row: case id, trial, status, error, scripted and judge verdicts, folded token
 and latency metrics, cost, and the trace digest. Without `--out` the CSV goes
-to stdout. Agent-controlled strings are CSV-escaped and prefixed with `'` when
+to stdout, plus `turns`, `toolSuccessRate`, `cacheReadTokens` and `contextTokens`
+appended after the existing columns so positional readers keep their indices.
+Agent-controlled strings are CSV-escaped and prefixed with `'` when
 they start with a spreadsheet formula marker, so a hostile case id cannot
 execute on export. The `tags` column holds a JSON array of the case's
 dimensions, so segment membership survives spreadsheet round-trips. The

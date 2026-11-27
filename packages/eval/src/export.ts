@@ -20,6 +20,8 @@ const COLUMNS = [
   'judgeError', 'steps', 'toolCalls', 'toolSuccess', 'invalidToolCalls', 'retries',
   'inputTokens', 'outputTokens', 'totalTokens', 'costUsd', 'latencyMs',
   'llmMs', 'toolMs', 'ttftMs', 'traceSha256', 'tags', 'anomalies', 'failureCluster',
+  // Appended rather than inserted so positional consumers keep their indices.
+  'turns', 'toolSuccessRate', 'cacheReadTokens', 'contextTokens',
 ] as const
 
 type CellValue = string | number | boolean | null | undefined
@@ -52,6 +54,8 @@ function row(
     result.tags === undefined ? null : JSON.stringify(result.tags),
     anomalies === undefined ? null : JSON.stringify(anomalies),
     failureCluster ?? null,
+    metrics?.turns, metrics?.toolSuccessRate,
+    metrics?.tokens.cacheReadTokens, metrics?.contextTokens,
   ]
 }
 
