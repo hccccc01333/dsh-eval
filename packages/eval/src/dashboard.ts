@@ -385,12 +385,13 @@ export function renderDashboard(runs: readonly EvalRun[], metric: LeaderboardMet
     `<td>${segment.trials}</td>`,
     `<td>${rate(segment.taskSuccessRate)}</td>`,
     `<td>${segment.judgeScoreMean === null ? '–' : segment.judgeScoreMean.toFixed(1)}</td>`,
+    `<td>${rate(segment.judgeScoreRate)}</td>`,
     `<td>${rate(segment.hallucinationRate)}</td>`,
   ].join(''))
   // Keep the untagged page byte-for-byte identical: the newline is part of the
   // block, not of the surrounding template.
   const segmentBlock = segmentRows.length === 0 ? ''
-    : `\n<h2>Segments</h2>${table(['Tag', 'Cases', 'Trials', 'Task success', 'Judge score', 'Hallucination'], segmentRows, 'Segments')}`
+    : `\n<h2>Segments</h2>${table(['Tag', 'Cases', 'Trials', 'Task success', 'Judge score', 'Judge score %', 'Hallucination'], segmentRows, 'Segments')}`
 
   const trialRows = run.cases.map(result => [
     `<td><code>${esc(result.caseId)}</code></td>`,

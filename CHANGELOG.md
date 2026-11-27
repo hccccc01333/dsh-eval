@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.32 — 2026-11-27
+
+### Changed
+
+- The single-run dashboard's `Segments` table now has a `Judge score %` column
+  using the run's judge scale, completing the normalized-score view across the
+  CLI, gate and both HTML comparison modes.
+
 ## 0.5.31 — 2026-11-27
 
 ### Added

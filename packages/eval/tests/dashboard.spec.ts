@@ -613,9 +613,10 @@ describe('dsh-eval HTML dashboard', () => {
     expect(block).toContain('aria-label="Segments"')
     expect(block).toContain('<th scope="col">Tag</th>')
     expect(block).toContain('<th scope="col">Judge score</th>')
-    expect(block).toContain('<td>difficulty:easy</td><td>1</td><td>1</td><td>100.0%</td><td>6.0</td><td>0.0%</td>')
-    expect(block).toContain('<td>difficulty:hard</td><td>1</td><td>2</td><td>50.0%</td><td>6.0</td><td>50.0%</td>')
-    expect(block).toContain('<td>language:ts</td><td>1</td><td>2</td><td>50.0%</td><td>6.0</td><td>50.0%</td>')
+    expect(block).toContain('<th scope="col">Judge score %</th>')
+    expect(block).toContain('<td>difficulty:easy</td><td>1</td><td>1</td><td>100.0%</td><td>6.0</td><td>60.0%</td><td>0.0%</td>')
+    expect(block).toContain('<td>difficulty:hard</td><td>1</td><td>2</td><td>50.0%</td><td>6.0</td><td>60.0%</td><td>50.0%</td>')
+    expect(block).toContain('<td>language:ts</td><td>1</td><td>2</td><td>50.0%</td><td>6.0</td><td>60.0%</td><td>50.0%</td>')
     // Existing sections survive the new block.
     expect(html).toContain('<h2>Reliability</h2>')
     expect(html).toContain('<h2>Judge calibration</h2>')
@@ -643,8 +644,8 @@ describe('dsh-eval HTML dashboard', () => {
       ],
     })])
     const block = html.slice(html.indexOf('<h2>Segments</h2>'), html.indexOf('<h2>Trials</h2>'))
-    expect(block).toContain('<td>only</td><td>1</td><td>2</td><td>–</td><td>5.0</td><td>50.0%</td>')
-    expect(block).toContain('<td>ungraded</td><td>1</td><td>1</td><td>–</td><td>–</td><td>–</td>')
+    expect(block).toContain('<td>only</td><td>1</td><td>2</td><td>–</td><td>5.0</td><td>50.0%</td><td>50.0%</td>')
+    expect(block).toContain('<td>ungraded</td><td>1</td><td>1</td><td>–</td><td>–</td><td>–</td><td>–</td>')
   })
 
   it('escapes hostile tags and omits the segments table for untagged runs', () => {
