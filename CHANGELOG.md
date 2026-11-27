@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.10 — 2026-11-27
+
+### Added
+
+- `report --json` now includes `anomalies`, `failureClusters` and `segments`,
+  keeping the derived analytics machine-readable in the same shape markdown
+  and HTML already use.
+- Two-run HTML dashboards include a **Segment deltas** table, so a regression
+  concentrated in a tagged dimension is visible without opening a second report.
+
+### Fixed
+
+- Test-suite stability: cap Vitest workers at 4 on the 4-core CI machine and
+  give worker-spawning tests explicit budgets. Previously different
+  time-boxed tests failed on each full parallel run purely from CPU contention.
+
 ## 0.5.9 — 2026-11-27
 
 ### Added

@@ -416,6 +416,11 @@ export function renderReportJson(run: EvalRun): string {
     precision: computePrecision(run),
     agreement: computeAgreement(run),
     calibration: computeCalibration(run),
+    // Keep the derived analytics machine-readable too: markdown and HTML show
+    // them, so an --json consumer should not have to reimplement the same math.
+    anomalies: computeAnomalies(run),
+    failureClusters: clusterFailures(run),
+    segments: computeSegments(run),
     cases: run.cases,
   })}\n`
 }

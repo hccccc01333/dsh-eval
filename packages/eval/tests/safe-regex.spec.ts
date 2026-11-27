@@ -3,14 +3,16 @@ import { safeRegexTest, safeRegexTestAny } from '../src/safe-regex.ts'
 
 describe('dsh-eval time-boxed regex', () => {
   it('returns the match result for ordinary patterns', async () => {
-    expect(await safeRegexTest('answer\\s+42', 'the answer 42')).toBe(true)
-    expect(await safeRegexTest('^done$', 'still running')).toBe(false)
+    // Worker startup can be slow on a saturated CI machine; these are benign
+    // patterns, so give them a budget that measures correctness, not load.
+    expect(await safeRegexTest('answer\\s+42', 'the answer 42', 5000)).toBe(true)
+    expect(await safeRegexTest('^done$', 'still running', 5000)).toBe(false)
   })
 
   it('tests a batch of inputs in one worker', async () => {
-    expect(await safeRegexTestAny('^read_', ['list', 'read_file', 'write_file'])).toBe(true)
-    expect(await safeRegexTestAny('^read_', ['list', 'write_file'])).toBe(false)
-    expect(await safeRegexTestAny('^read_', [])).toBe(false)
+    expect(await safeRegexTestAny('^read_', ['list', 'read_file', 'write_file'], 5000)).toBe(true)
+    expect(await safeRegexTestAny('^read_', ['list', 'write_file'], 5000)).toBe(false)
+    expect(await safeRegexTestAny('^read_', [], 5000)).toBe(false)
   })
 
   it('does not let a pathological input hide a later match', async () => {

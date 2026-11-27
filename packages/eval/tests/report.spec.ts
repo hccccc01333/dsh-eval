@@ -91,6 +91,22 @@ describe('dsh-eval report persistence and rendering', () => {
     await expect(loadRunReport(root)).rejects.toThrow('(root)')
   })
 
+  it('includes anomaly, failure-cluster and segment analytics in JSON', () => {
+    const parsed = JSON.parse(renderReportJson(buildRun({
+      cases: [{
+        caseId: 'tag-a', trial: 1, status: 'error', error: 'boom',
+        exitCode: null, timedOut: false, tags: ['hard'],
+      }],
+    }))) as {
+      anomalies: unknown[]
+      failureClusters: { pattern: string; count: number }[]
+      segments: { tag: string; trials: number }[]
+    }
+    expect(parsed.anomalies).toEqual([])
+    expect(parsed.failureClusters).toMatchObject([{ pattern: 'trial-error', count: 1 }])
+    expect(parsed.segments).toMatchObject([{ tag: 'hard', trials: 1 }])
+  })
+
   it('renders a machine-readable report with the same derived blocks', () => {
     const run = buildRun({
       benchmark: 'structured',

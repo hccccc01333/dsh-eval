@@ -15,6 +15,7 @@ import { computeAnomalies } from './anomalies.ts'
 import { computeCalibration } from './calibration.ts'
 import { clusterFailures, type FailureCluster } from './clusters.ts'
 import { computeSegments } from './dimensions.ts'
+import { compareSegments } from './segment-compare.ts'
 import { compareRuns, formatCaseValue, formatPValue, pairedCases, pairedCaseSignificance, pairedCompare } from './compare.ts'
 import { buildLeaderboard, formatLeaderboardSignificance, type LeaderboardMetric } from './leaderboard.ts'
 import type { RateInterval } from './precision.ts'
@@ -67,6 +68,18 @@ function esc(value: string): string {
 /** Format a rate, or a dash when the metric is ungraded. */
 function rate(value: number | null): string {
   return value === null ? '–' : `${(value * 100).toFixed(1)}%`
+}
+
+/** Format a judge score, or a dash when the run has no judge verdicts. */
+function scoreOrDash(value: number | null): string {
+  return value === null ? '–' : value.toFixed(1)
+}
+
+/** Format a signed delta, or a dash when either side had no verdict. */
+function signedOrDash(value: number | null, scale = 1, suffix = ''): string {
+  if (value === null) return '–'
+  const scaled = value * scale
+  return `${scaled >= 0 ? '+' : ''}${scaled.toFixed(1)}${suffix}`
 }
 
 /** Format a USD price, or a dash when pricing was not configured. */
@@ -194,9 +207,23 @@ function renderComparison(a: EvalRun, b: EvalRun): string {
     + truncation
     + table(['Case', 'Pairs', 'B wins', 'A wins', 'Adjusted p', 'Result'], significanceRows,
       'Confirmed case changes')
+  const segmentRows = compareSegments(a, b).map(item => [
+    item.tag,
+    rate(item.baseline?.taskSuccessRate ?? null),
+    rate(item.candidate?.taskSuccessRate ?? null),
+    signedOrDash(item.taskSuccessDelta, 100, 'pp'),
+    scoreOrDash(item.baseline?.judgeScoreMean ?? null),
+    scoreOrDash(item.candidate?.judgeScoreMean ?? null),
+    signedOrDash(item.judgeScoreDelta),
+  ].map(value => `<td>${esc(value)}</td>`).join(''))
+  const segmentDeltaBlock = segmentRows.length === 0 ? ''
+    : `<h2>Segment deltas</h2>${table(
+      ['Tag', 'A task', 'B task', 'Δ task', 'A score', 'B score', 'Δ score'],
+      segmentRows, 'Segment deltas',
+    )}`
   return `<h2>Run comparison</h2>${table(['Metric', 'A', 'B', 'B − A'], rows, 'Run comparison')}`
     + (inferenceRows.length === 0 ? '' : `<h2>Paired inference</h2>${table(['Test', 'Result', 'Interval plot'], inferenceRows, 'Paired inference')}`)
-    + caseBlock + significanceBlock + powerNote
+    + caseBlock + significanceBlock + powerNote + segmentDeltaBlock
 }
 
 /** Render a standalone overview page for three or more runs. */

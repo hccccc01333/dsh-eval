@@ -638,4 +638,34 @@ describe('dsh-eval HTML dashboard', () => {
     expect(renderDashboard([buildRun()])).not.toContain('<h2>Segments</h2>')
     expect(renderDashboard([buildRun(), buildRun({ benchmark: 'second' })])).not.toContain('<h2>Segments</h2>')
   })
+
+  it('renders per-tag deltas in two-run comparisons', () => {
+    const baseline = buildRun({ cases: [
+      { caseId: 'a', trial: 1, status: 'completed', exitCode: 0, timedOut: false, tags: ['hard'],
+        grade: { taskSuccess: false, toolSelectionAccuracy: null },
+        judge: { finalAnswerScore: 4, hallucination: false } },
+      { caseId: 'b', trial: 1, status: 'completed', exitCode: 0, timedOut: false, tags: ['old'],
+        grade: { taskSuccess: true, toolSelectionAccuracy: null } },
+      { caseId: 'c', trial: 1, status: 'completed', exitCode: 0, timedOut: false, tags: ['slipped'],
+        grade: { taskSuccess: true, toolSelectionAccuracy: null },
+        judge: { finalAnswerScore: 8, hallucination: false } },
+    ] })
+    const candidate = buildRun({ cases: [
+      { caseId: 'a', trial: 1, status: 'completed', exitCode: 0, timedOut: false, tags: ['hard'],
+        grade: { taskSuccess: true, toolSelectionAccuracy: null },
+        judge: { finalAnswerScore: 6, hallucination: false } },
+      { caseId: 'd', trial: 1, status: 'completed', exitCode: 0, timedOut: false, tags: ['new'],
+        grade: { taskSuccess: false, toolSelectionAccuracy: null },
+        judge: { finalAnswerScore: 2, hallucination: false } },
+      { caseId: 'c', trial: 1, status: 'completed', exitCode: 0, timedOut: false, tags: ['slipped'],
+        grade: { taskSuccess: false, toolSelectionAccuracy: null },
+        judge: { finalAnswerScore: 5, hallucination: false } },
+    ] })
+    const html = renderDashboard([baseline, candidate])
+    const block = html.slice(html.indexOf('<h2>Segment deltas</h2>'))
+    expect(block).toContain('<td>hard</td><td>0.0%</td><td>100.0%</td><td>+100.0pp</td><td>4.0</td><td>6.0</td><td>+2.0</td>')
+    expect(block).toContain('<td>new</td><td>–</td><td>0.0%</td><td>–</td><td>–</td><td>2.0</td><td>–</td>')
+    expect(block).toContain('<td>old</td><td>100.0%</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td>')
+    expect(block).toContain('<td>slipped</td><td>100.0%</td><td>0.0%</td><td>-100.0pp</td><td>8.0</td><td>5.0</td><td>-3.0</td>')
+  })
 })
