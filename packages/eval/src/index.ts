@@ -13,6 +13,7 @@
  * @module dsh-eval
  */
 
+import { resolve } from 'node:path'
 import { writeTextAtomic } from './atomic-write.ts'
 import type { Context } from '@deepseek-ai/cordis'
 import { loadBenchmark } from './benchmark.ts'
@@ -148,6 +149,25 @@ async function emitText(io: EvalIo, text: string, outPath?: string, detail = '')
   io.stdout.write(`Wrote ${outPath}${detail}\n`)
 }
 
+/** Source files a command reads before writing its `--out` target. */
+function inputPaths(values: EvalStartupValues): readonly string[] {
+  switch (values.kind) {
+    case 'run': return [values.benchmarkPath]
+    case 'report':
+    case 'export': return [values.runPath]
+    case 'compare': return [values.runPathA, values.runPathB]
+    case 'validate': return [values.benchmarkPath]
+    case 'provenance': return [values.runPath, values.benchmarkPath]
+    case 'leaderboard':
+    case 'dashboard': return values.runPaths
+    case 'gate': return [values.candidatePath, values.baselinePath]
+    case 'rejudge': return [values.runPath]
+    case 'reproduce': return [values.runPath, values.benchmarkPath]
+    case 'segments': return [values.baselinePath, values.candidatePath]
+    case 'import': return [values.path]
+  }
+}
+
 /**
  * Execute one eval invocation to completion.
  * @param values - the resolved command-line invocation.
@@ -161,6 +181,15 @@ export async function executeEval(
   io: EvalIo,
   services: { judgeChat?: JudgeChat | undefined } = {},
 ): Promise<number> {
+  // A command must never overwrite the file it just read. Two paths that
+  // differ only by case or spelling still name the same file on Windows.
+  if (values.outPath !== undefined) {
+    const target = resolve(values.outPath).toLowerCase()
+    if (inputPaths(values).some(path => resolve(path).toLowerCase() === target)) {
+      io.stderr.write('dsh eval: --out must differ from the input file\n')
+      return 1
+    }
+  }
   try {
     if (values.kind === 'import') {
       const run = await importTraceFile(values.format, values.path, values.caseId)

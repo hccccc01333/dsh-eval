@@ -355,6 +355,41 @@ describe('dsh-eval reproduce execution', () => {
   })
 })
 
+describe('dsh-eval output path safety', () => {
+  it('refuses to overwrite a source file through --out', async () => {
+    const dir = tempDir()
+    const runPath = join(dir, 'run.json')
+    const stderr: string[] = []
+    const io = {
+      stdout: { write: () => true },
+      stderr: { write: (chunk: string) => { stderr.push(chunk); return true } },
+    }
+    expect(await executeEval({ kind: 'report', runPath, outPath: runPath }, io)).toBe(1)
+    expect(stderr.join('')).toContain('--out must differ from the input file')
+
+    // A case-only difference names the same file on Windows.
+    stderr.length = 0
+    expect(await executeEval({
+      kind: 'report', runPath, outPath: runPath.toUpperCase(),
+    }, io)).toBe(1)
+    expect(stderr.join('')).toContain('--out must differ')
+  })
+
+  it('guards both provenance inputs against the output path', async () => {
+    const dir = tempDir()
+    const stderr: string[] = []
+    const io = {
+      stdout: { write: () => true },
+      stderr: { write: (chunk: string) => { stderr.push(chunk); return true } },
+    }
+    expect(await executeEval({
+      kind: 'provenance', runPath: join(dir, 'b.yaml'),
+      benchmarkPath: join(dir, 'run.json'), outPath: join(dir, 'run.json'),
+    }, io)).toBe(1)
+    expect(stderr.join('')).toContain('--out must differ from the input file')
+  })
+})
+
 describe('dsh-eval segment comparison execution', () => {
   function io() {
     const stdout: string[] = []

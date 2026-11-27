@@ -74,11 +74,11 @@ With three or more runs, the same dashboard becomes a leaderboard. `--metric str
 
 ![CLI progress lines and a passing CI gate with confirmed case regressions](https://raw.githubusercontent.com/hccccc01333/dsh-eval/master/assets/cli.png)
 
-Progress lines are bounded and control-character safe, and `dsh eval gate` turns a comparison into a PASS/FAIL build step with hard resource budgets. In significance mode a confirmed case regression also fails the gate, so a green build never advertises a known regression.
+Progress lines are bounded and control-character safe, every command refuses an `--out` path that names one of its inputs, and `dsh eval gate` turns a comparison into a PASS/FAIL build step with hard resource budgets. In significance mode a confirmed case regression also fails the gate, so a green build never advertises a known regression.
 
 ## Status
 
-`dsh-eval@0.5.13` · 440 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.5.14` · 442 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 
@@ -208,7 +208,7 @@ scripts/          harness-closure.mjs — optional local-harness workspace closu
 Bump `version` in `packages/eval/package.json` and add a CHANGELOG section, then push a matching tag:
 
 ```sh
-git tag v0.5.13 && git push origin v0.5.13
+git tag v0.5.14 && git push origin v0.5.14
 ```
 
 `.github/workflows/release.yml` re-runs the gates and publishes to npm through **trusted publishing (OIDC)** with a provenance statement — no token on any machine. The npm Trusted Publisher entry (GitHub Actions, workflow `release.yml`) is already configured; every release from `0.5.0` onward has shipped this way. The account's second factor is a security key, so a long-lived token is neither stored nor needed.

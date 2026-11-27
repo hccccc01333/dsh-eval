@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.14 — 2026-11-27
+
+### Fixed
+
+- Every command now refuses an `--out` path that names one of its input files
+  (case-insensitive on Windows), instead of overwriting a source report or
+  benchmark after reading it. Previously only `rejudge` and `reproduce` had
+  this guard.
+
 ## 0.5.13 — 2026-11-27
 
 ### Added
