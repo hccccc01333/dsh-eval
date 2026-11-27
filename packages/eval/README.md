@@ -362,10 +362,11 @@ recorded in it, and writes a second report (the baseline is never overwritten).
 It first checks that the benchmark's digest still matches the one in the
 baseline; a changed YAML is rejected rather than reported as a reproduction.
 The CLI prints before/after completion counts, task-success rates and the
-signed judge-score delta (when both runs are judged), so a non-deterministic
+signed judge-score delta (when both runs are judged), plus cost, latency and
+hallucination-rate drift when both sides recorded them, so a non-deterministic
 agent is visible without diffing two JSON files.
-`--allow-external-paths` and `--quiet` mirror the `run` command; `--json`
-prints only the comparison object, with no progress lines or signpost text.
+`--allow-external-paths` and `--quiet` mirror the `run` command; with `--json`
+stdout is only the comparison object, with no progress lines or signpost text.
 Its `digestChecked` field is false for baseline reports written before digests
 existed, so `digestMatches: true` there is not mistaken for a verified match.
 

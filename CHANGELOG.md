@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.34 — 2026-11-27
+
+### Added
+
+- `reproduce` now reports before/after cost, latency and hallucination rate in
+  both the human summary and `--json`, each with a signed replay-minus-baseline
+  delta. Missing metrics stay null instead of being rendered as zero.
+
 ## 0.5.33 — 2026-11-27
 
 ### Changed

@@ -169,18 +169,21 @@ describe('dsh-eval reproduce execution', () => {
     const runPath = join(dir, 'baseline.json')
     const outPath = join(dir, 'replay.json')
     const benchmark = await loadBenchmark(benchmarkPath, { excludeFromDigest: [outPath] })
+    const pricedAggregate = { ...completedAggregate()!, costUsd: 0.001, latencyMs: 500 }
     await writeRunReport({
       benchmark: 'n', model: 'm', createdAt: 1, trials: 1, seed: 0, pricing: null,
       ...(benchmark.sourceSha256 === undefined ? {} : { benchmarkSha256: benchmark.sourceSha256 }),
       tempRoot: dir,
       cases: [{ caseId: 'a', trial: 1, status: 'completed', exitCode: 0, timedOut: false }],
-      aggregate: null, grading: { ...grading(0.5), finalAnswerScore: 7 },
+      aggregate: pricedAggregate,
+      grading: { ...grading(0.5), finalAnswerScore: 7, hallucinationRate: 0.1 },
     }, runPath)
     const replay: EvalRun = {
       benchmark: 'n', model: 'm', createdAt: 2, trials: 1, seed: 0, pricing: null,
       tempRoot: dir,
       cases: [{ caseId: 'a', trial: 1, status: 'completed', exitCode: 0, timedOut: false }],
-      aggregate: completedAggregate(), grading: { ...grading(0.75), finalAnswerScore: 9 },
+      aggregate: { ...pricedAggregate, costUsd: 0.003, latencyMs: 800 },
+      grading: { ...grading(0.75), finalAnswerScore: 9, hallucinationRate: 0.2 },
     }
     vi.mocked(runBenchmark).mockImplementation(async (_benchmark, options) => {
       options?.onProgress?.(
@@ -201,7 +204,7 @@ describe('dsh-eval reproduce execution', () => {
     )
     expect(code).toBe(0)
     expect(stdout.join('')).toBe(
-      `Wrote ${outPath} (baseline 1/1 completed, 50.0% → replay 1/1 completed, 75.0%, judge 7.0 → 9.0 (+2.0); digest not verifiable (legacy report))\n`
+      `Wrote ${outPath} (baseline 1/1 completed, 50.0% → replay 1/1 completed, 75.0%, judge 7.0 → 9.0 (+2.0), cost $0.001000 → $0.003000, latency 500 → 800 ms, hallucination 10.0% → 20.0%; digest not verifiable (legacy report))\n`
       + `Next: dsh eval report ${outPath} --brief\n`,
     )
     expect(stderr.join('')).toBe('[eval] 1/1 a #1 task n/a, ? ms\n')

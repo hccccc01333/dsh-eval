@@ -35,10 +35,25 @@ export interface ReproduceComparison {
   replayJudgeScore: number | null
   /** Replay minus baseline; null when either run is unjudged. */
   judgeScoreDelta: number | null
+  /** Resource and safety drift; null when either side did not record the metric. */
+  baselineCostUsd: number | null
+  replayCostUsd: number | null
+  costDelta: number | null
+  baselineLatencyMs: number | null
+  replayLatencyMs: number | null
+  latencyDelta: number | null
+  baselineHallucinationRate: number | null
+  replayHallucinationRate: number | null
+  hallucinationDelta: number | null
 }
 
 function completedCount(run: EvalRun): number {
   return run.cases.filter(result => result.status === 'completed').length
+}
+
+/** Signed replay-minus-baseline delta, or null when either side is missing. */
+function drift(before: number | null, after: number | null): number | null {
+  return before === null || after === null ? null : after - before
 }
 
 /** The judge configuration a faithful replay must use. */
@@ -66,6 +81,16 @@ export function compareReproduce(baseline: EvalRun, replay: EvalRun): ReproduceC
     replayJudgeScore,
     judgeScoreDelta: baselineJudgeScore === null || replayJudgeScore === null
       ? null : replayJudgeScore - baselineJudgeScore,
+    baselineCostUsd: baseline.aggregate?.costUsd ?? null,
+    replayCostUsd: replay.aggregate?.costUsd ?? null,
+    costDelta: drift(baseline.aggregate?.costUsd ?? null, replay.aggregate?.costUsd ?? null),
+    baselineLatencyMs: baseline.aggregate?.latencyMs ?? null,
+    replayLatencyMs: replay.aggregate?.latencyMs ?? null,
+    latencyDelta: drift(baseline.aggregate?.latencyMs ?? null, replay.aggregate?.latencyMs ?? null),
+    baselineHallucinationRate: baseline.grading?.hallucinationRate ?? null,
+    replayHallucinationRate: replay.grading?.hallucinationRate ?? null,
+    hallucinationDelta: drift(baseline.grading?.hallucinationRate ?? null,
+      replay.grading?.hallucinationRate ?? null),
   }
 }
 

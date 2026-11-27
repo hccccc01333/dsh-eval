@@ -363,7 +363,14 @@ export async function executeEval(
         const judge = before === null || after === null ? ''
           : `, judge ${before.toFixed(1)} → ${after.toFixed(1)} (${SIGNED_ONE.format(comparison.judgeScoreDelta!)})`
         const digest = comparison.digestChecked ? '' : '; digest not verifiable (legacy report)'
-        io.stdout.write(`Wrote ${values.outPath} (baseline ${comparison.baselineCompleted}/${baseline.cases.length} completed, ${rate(comparison.baselineTaskSuccessRate)} → replay ${comparison.replayCompleted}/${replay.cases.length} completed, ${rate(comparison.replayTaskSuccessRate)}${judge}${digest})\n`)
+        const cost = comparison.baselineCostUsd === null || comparison.replayCostUsd === null ? ''
+          : `, cost $${comparison.baselineCostUsd.toFixed(6)} → $${comparison.replayCostUsd.toFixed(6)}`
+        const latency = comparison.baselineLatencyMs === null || comparison.replayLatencyMs === null ? ''
+          : `, latency ${comparison.baselineLatencyMs.toFixed(0)} → ${comparison.replayLatencyMs.toFixed(0)} ms`
+        const hallucination = comparison.baselineHallucinationRate === null
+          || comparison.replayHallucinationRate === null ? ''
+          : `, hallucination ${rate(comparison.baselineHallucinationRate)} → ${rate(comparison.replayHallucinationRate)}`
+        io.stdout.write(`Wrote ${values.outPath} (baseline ${comparison.baselineCompleted}/${baseline.cases.length} completed, ${rate(comparison.baselineTaskSuccessRate)} → replay ${comparison.replayCompleted}/${replay.cases.length} completed, ${rate(comparison.replayTaskSuccessRate)}${judge}${cost}${latency}${hallucination}${digest})\n`)
         io.stdout.write(`Next: dsh eval report ${values.outPath} --brief\n`)
       }
       const failed = replay.cases.filter(result => result.status === 'error')

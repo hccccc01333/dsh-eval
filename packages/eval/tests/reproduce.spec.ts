@@ -201,7 +201,40 @@ describe('compareReproduce', () => {
       baselineJudgeScore: null,
       replayJudgeScore: null,
       judgeScoreDelta: null,
+      baselineCostUsd: null,
+      replayCostUsd: null,
+      costDelta: null,
+      baselineLatencyMs: null,
+      replayLatencyMs: null,
+      latencyDelta: null,
+      baselineHallucinationRate: null,
+      replayHallucinationRate: null,
+      hallucinationDelta: null,
     })
+  })
+
+  it('reports cost, latency and hallucination drift when both sides record them', () => {
+    const aggregate = (costUsd: number | null, latencyMs: number): EvalRun['aggregate'] => ({
+      turns: 1, steps: 1, toolCalls: 0, toolResults: 0, toolSuccess: 0, toolSuccessRate: null,
+      invalidToolCalls: 0, retries: 0,
+      tokens: { inputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 },
+      totalTokens: 0, contextTokens: 0, llmMs: 0, toolMs: 0, ttftMs: 0,
+      latencyMs, costUsd,
+    })
+    const grading = (hallucinationRate: number | null): EvalRun['grading'] => ({
+      taskSuccessRate: null, toolSelectionAccuracyRate: null,
+      finalAnswerScore: null, hallucinationRate,
+    })
+    const baseline = buildRun({ aggregate: aggregate(0.001, 500), grading: grading(0.1) })
+    const replay = buildRun({ aggregate: aggregate(0.003, 800), grading: grading(0.2) })
+    const comparison = compareReproduce(baseline, replay)
+    expect(comparison).toMatchObject({
+      baselineCostUsd: 0.001, replayCostUsd: 0.003, costDelta: 0.002,
+      baselineLatencyMs: 500, replayLatencyMs: 800, latencyDelta: 300,
+      baselineHallucinationRate: 0.1, replayHallucinationRate: 0.2,
+      hallucinationDelta: expect.closeTo(0.1, 10),
+    })
+    expect(compareReproduce(buildRun(), replay).costDelta).toBeNull()
   })
 
   it('reports the signed judge-score delta for judged runs', () => {
@@ -229,6 +262,15 @@ describe('compareReproduce', () => {
       baselineJudgeScore: null,
       replayJudgeScore: null,
       judgeScoreDelta: null,
+      baselineCostUsd: null,
+      replayCostUsd: null,
+      costDelta: null,
+      baselineLatencyMs: null,
+      replayLatencyMs: null,
+      latencyDelta: null,
+      baselineHallucinationRate: null,
+      replayHallucinationRate: null,
+      hallucinationDelta: null,
     })
   })
 })
