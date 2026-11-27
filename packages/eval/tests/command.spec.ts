@@ -504,6 +504,23 @@ describe('dsh-eval command composition', () => {
     expect(published[0]).toMatchObject({ kind: 'reproduce', allowExternalPaths: true, quiet: true })
   })
 
+  it('parses segments with optional json and out', async () => {
+    const dir = tempDir()
+    const published: EvalStartupValues[] = []
+    const program = evalCommand(value => published.push(value))
+    const base = join(dir, 'base.json')
+    const cand = join(dir, 'cand.json')
+    await program.parseAsync(['node', 'dsh', 'segments', base, cand])
+    expect(published[0]).toEqual({
+      kind: 'segments', baselinePath: base, candidatePath: cand, json: false,
+    })
+    await program.parseAsync(['node', 'dsh', 'segments', base, cand, '--json', '--out', join(dir, 's.json')])
+    expect(published[1]).toEqual({
+      kind: 'segments', baselinePath: base, candidatePath: cand,
+      json: true, outPath: join(dir, 's.json'),
+    })
+  })
+
   it('prints help and exits 0 without running', async () => {
     const observed = await bootEval(['--help'])
     expect(observed.exits).toEqual([0])

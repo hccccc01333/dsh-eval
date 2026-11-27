@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.9 — 2026-11-27
+
+### Added
+
+- **`dsh eval segments <baseline.json> <candidate.json>`.** Aligns two runs on
+  their case tags and prints a per-dimension delta table for task success and
+  judge score (`--json` for machine-readable output, `--out` to write a file).
+  Tags present in only one run are kept with null deltas rather than treated as
+  zero, so a newly added dimension is visible instead of looking like a regression.
+
 ## 0.5.8 — 2026-11-27
 
 ### Added

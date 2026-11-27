@@ -317,3 +317,74 @@ describe('dsh-eval reproduce execution', () => {
     expect(await executeEval({ kind: 'reproduce', runPath, benchmarkPath, outPath }, io)).toBe(1)
   })
 })
+
+describe('dsh-eval segment comparison execution', () => {
+  function io() {
+    const stdout: string[] = []
+    const stderr: string[] = []
+    return {
+      stdout: { write: (chunk: string) => { stdout.push(chunk); return true } },
+      stderr: { write: (chunk: string) => { stderr.push(chunk); return true } },
+      stdoutText: () => stdout.join(''),
+      stderrText: () => stderr.join(''),
+    }
+  }
+
+  async function writeTaggedRuns(dir: string): Promise<[string, string]> {
+    const baselinePath = join(dir, 'baseline.json')
+    const candidatePath = join(dir, 'candidate.json')
+    const base: EvalRun = {
+      benchmark: 'n', model: 'm', createdAt: 1, trials: 1, seed: 0, pricing: null,
+      tempRoot: dir,
+      cases: [{
+        caseId: 'a', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        tags: ['hard'], grade: { taskSuccess: false, toolSelectionAccuracy: null },
+      }],
+      aggregate: null, grading: null,
+    }
+    await writeRunReport(base, baselinePath)
+    await writeRunReport({
+      ...base, createdAt: 2,
+      cases: [{
+        ...base.cases[0]!,
+        grade: { taskSuccess: true, toolSelectionAccuracy: null },
+      }],
+    }, candidatePath)
+    return [baselinePath, candidatePath]
+  }
+
+  it('renders a markdown delta table to stdout', async () => {
+    const dir = tempDir()
+    const [baselinePath, candidatePath] = await writeTaggedRuns(dir)
+    const output = io()
+    expect(await executeEval({ kind: 'segments', baselinePath, candidatePath }, output)).toBe(0)
+    expect(output.stdoutText()).toContain('## Segment comparison')
+    expect(output.stdoutText()).toContain('+100.0pp')
+    expect(output.stderrText()).toBe('')
+  })
+
+  it('emits JSON and supports --out', async () => {
+    const dir = tempDir()
+    const [baselinePath, candidatePath] = await writeTaggedRuns(dir)
+    const jsonOutput = io()
+    expect(await executeEval({ kind: 'segments', baselinePath, candidatePath, json: true }, jsonOutput)).toBe(0)
+    expect(JSON.parse(jsonOutput.stdoutText())[0]).toMatchObject({
+      tag: 'hard', taskSuccessDelta: 1,
+    })
+
+    const outPath = join(dir, 'segments.md')
+    const fileOutput = io()
+    expect(await executeEval({ kind: 'segments', baselinePath, candidatePath, outPath }, fileOutput)).toBe(0)
+    expect(fileOutput.stdoutText()).toBe(`Wrote ${outPath}\n`)
+    expect(existsSync(outPath)).toBe(true)
+  })
+
+  it('propagates a missing run report with a nonzero exit', async () => {
+    const dir = tempDir()
+    const output = io()
+    expect(await executeEval({
+      kind: 'segments', baselinePath: join(dir, 'missing.json'), candidatePath: join(dir, 'missing-2.json'),
+    }, output)).toBe(1)
+    expect(output.stderrText()).toContain('dsh eval:')
+  })
+})

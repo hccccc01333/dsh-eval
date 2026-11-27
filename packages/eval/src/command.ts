@@ -110,6 +110,13 @@ export type EvalStartupValues =
     quiet?: boolean
   }
   | {
+    kind: 'segments'
+    baselinePath: string
+    candidatePath: string
+    json?: boolean
+    outPath?: string
+  }
+  | {
     kind: 'import'
     format: ImportFormat
     path: string
@@ -236,9 +243,10 @@ Examples:
   dsh --profile eval dashboard base.json candidate.json --out eval.html
   dsh --profile eval gate candidate.json --baseline base.json --max-drop 0.05
   dsh --profile eval gate candidate.json --baseline base.json --require-significance --json
+  dsh --profile eval segments base.json candidate.json
 `)
     .action(() => {
-      program.error('error: eval needs a subcommand: run <benchmark.yaml>, validate <benchmark.yaml>, provenance <run.json> <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, export <run.json>, rejudge <run.json>, reproduce <run.json> <benchmark.yaml>, dashboard <run.json>, leaderboard <run.json>..., gate <candidate.json>, or import <format> <log.jsonl>')
+      program.error('error: eval needs a subcommand: run <benchmark.yaml>, validate <benchmark.yaml>, provenance <run.json> <benchmark.yaml>, report <run.json>, compare <a.json> <b.json>, export <run.json>, rejudge <run.json>, reproduce <run.json> <benchmark.yaml>, dashboard <run.json>, leaderboard <run.json>..., gate <candidate.json>, segments <base.json> <candidate.json>, or import <format> <log.jsonl>')
     })
   const run = program.command('run').description('run a benchmark and write its JSON report')
   run
@@ -446,6 +454,19 @@ Examples:
         kind: 'reproduce', runPath, benchmarkPath, outPath: options.out,
         allowExternalPaths: options.allowExternalPaths === true,
         quiet: options.quiet === true,
+      })
+    })
+  const segments = program.command('segments').description('compare two runs by case tag, with per-dimension deltas')
+  segments
+    .argument('<baseline.json>', 'path to the baseline run report')
+    .argument('<candidate.json>', 'path to the candidate run report')
+    .option('--json', 'emit machine-readable JSON instead of markdown')
+    .option('--out <path>', 'write the comparison to a file instead of stdout')
+    .action((baselinePath: string, candidatePath: string, options: { json?: boolean; out?: string }) => {
+      publish({
+        kind: 'segments', baselinePath, candidatePath,
+        json: options.json === true,
+        ...optionalOut(options),
       })
     })
   const importer = program.command('import').description('import an external harness session log as a run report')

@@ -345,6 +345,11 @@ The CLI prints before/after completion counts and task-success rates so a
 non-deterministic agent is visible without diffing two JSON files.
 `--allow-external-paths` and `--quiet` mirror the `run` command.
 
+To compare runs by dimension, `dsh eval segments base.json candidate.json`
+prints a per-tag delta table for task success and judge score, with `--json`
+and `--out` options. Tags present in only one run get null deltas, so a newly
+added dimension is not mistaken for a regression.
+
 ## Importing external traces
 
 `dsh eval import codex|claude-code <session.jsonl> --out run.json` imports a

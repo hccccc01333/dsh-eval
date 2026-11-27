@@ -31,6 +31,9 @@ import { llmJudgeChat, type JudgeChat } from './judge.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
 import { rejudgeRun } from './rejudge.ts'
 import { compareReproduce, reproduceRun } from './reproduce.ts'
+import {
+  compareSegments, renderSegmentComparison, renderSegmentComparisonJson,
+} from './segment-compare.ts'
 import { renderBenchmarkJson, renderBenchmarkSummary } from './validate.ts'
 import { renderBriefReport, renderMarkdownReport, renderReportJson, writeRunReport, loadRunReport } from './report.ts'
 import { runBenchmark } from './runner.ts'
@@ -271,6 +274,21 @@ export async function executeEval(
         result.judge?.finalAnswerScore !== null && result.judge?.finalAnswerScore !== undefined,
       ).length
       io.stdout.write(`Wrote ${values.outPath} (${judgedCount}/${rejudged.cases.length} judged)\n`)
+      return 0
+    }
+    if (values.kind === 'segments') {
+      const [baseline, candidate] = await Promise.all([
+        loadRunReport(values.baselinePath), loadRunReport(values.candidatePath),
+      ])
+      const deltas = compareSegments(baseline, candidate)
+      const text = values.json === true
+        ? renderSegmentComparisonJson(deltas)
+        : renderSegmentComparison(deltas)
+      if (values.outPath === undefined) io.stdout.write(text)
+      else {
+        await writeTextAtomic(values.outPath, text)
+        io.stdout.write(`Wrote ${values.outPath}\n`)
+      }
       return 0
     }
     if (values.kind === 'reproduce') {

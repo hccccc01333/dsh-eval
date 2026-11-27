@@ -21,7 +21,7 @@
 | **面向 CI** | `--require-significance` 门禁 + 硬成本/延迟预算 |
 | **零外部资源报告** | 自包含、适配深色模式的 HTML 仪表盘 |
 
-`dsh-eval@0.5.8` · 421 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.5.9` · 432 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 本包同时是一个 bundle 和一个命令行应用。装进 profile 后即可运行评测：
 
@@ -200,6 +200,8 @@ dsh eval reproduce recorded-run.json benchmark.yaml --out replay.json
 ```
 
 `reproduce` 用报告里记录的 seed、trial 数与 CLI 覆盖项重跑，并写入第二份报告（基线不会被覆盖）。它会先校验 benchmark 的 digest 与基线一致；YAML 已变化时直接拒绝，而不是冒充一次成功复现。CLI 会打印前后完成数与任务成功率，便于发现非确定性，而不必手工 diff 两份 JSON。`--allow-external-paths` 与 `--quiet` 与 `run` 命令保持一致。
+
+`dsh eval segments base.json candidate.json` 按 case tag 对齐两次 run，输出任务成功率与判官分数的逐维度差值表，支持 `--json` 与 `--out`。只出现在一侧的 tag 差值为 null，新加的维度不会被误判为退化。
 
 ## 导入外部 trace
 
