@@ -13,7 +13,7 @@
 
 import { hashBenchmarkOverrides } from './digest.ts'
 import { runBenchmark, type RunOptions } from './runner.ts'
-import type { Benchmark, EvalRun } from './types.ts'
+import type { Benchmark, BenchmarkJudge, EvalRun } from './types.ts'
 
 /** Dialects accepted from the caller; the runner owns the actual seams. */
 export interface ReproduceOptions {
@@ -37,6 +37,13 @@ export interface ReproduceComparison {
 
 function completedCount(run: EvalRun): number {
   return run.cases.filter(result => result.status === 'completed').length
+}
+
+/** The judge configuration a faithful replay must use. */
+export function replayJudge(baseline: EvalRun, benchmark: Benchmark): BenchmarkJudge | undefined {
+  // A re-judged baseline carries its effective judge config on the run itself;
+  // replaying with the YAML's config would score against a different rubric.
+  return baseline.judge ?? benchmark.judge
 }
 
 /**
@@ -87,7 +94,8 @@ export async function reproduceRun(
   const baselineScore = baseline.grading?.finalAnswerScore
   const baselineJudged = (baselineScore !== null && baselineScore !== undefined)
     || baseline.cases.some(result => result.judge !== undefined)
-  if (baselineJudged && benchmark.judge !== undefined && options.judgeChat === undefined) {
+  const judge = replayJudge(baseline, benchmark)
+  if (baselineJudged && judge !== undefined && options.judgeChat === undefined) {
     throw new Error(
       'reproduce: the baseline run used an LLM judge but no LLM chat seam is available — ' +
       'configure the eval profile\'s LLM provider before reproducing',
@@ -97,7 +105,11 @@ export async function reproduceRun(
   // Pass exactly the recorded overrides: adding a "harmless" default here
   // would change the replay's digest and make every reproduction look like a
   // mismatch. The benchmark file itself supplies whatever was not overridden.
-  return runBenchmark(benchmark, {
+  // The digest is derived from the benchmark source and CLI overrides, not
+  // from the judge object, so swapping in the baseline's judge is safe here.
+  const effectiveBenchmark = judge === undefined || judge === benchmark.judge
+    ? benchmark : { ...benchmark, judge }
+  return runBenchmark(effectiveBenchmark, {
     ...(overrides?.trials === undefined ? {} : { trials: overrides.trials }),
     ...(overrides?.seed === undefined ? {} : { seed: overrides.seed }),
     ...(overrides?.concurrency === undefined ? {} : { concurrency: overrides.concurrency }),

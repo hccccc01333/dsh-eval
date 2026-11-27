@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { hashBenchmarkOverrides } from '../src/digest.ts'
-import { compareReproduce, reproduceRun } from '../src/reproduce.ts'
+import { compareReproduce, replayJudge, reproduceRun } from '../src/reproduce.ts'
 import type { Benchmark, EvalRun } from '../src/types.ts'
 
 const FAKE_SCRIPT = fileURLToPath(new URL('./fixtures/fake-dsh.mjs', import.meta.url))
@@ -133,6 +133,32 @@ describe('reproduceRun', () => {
     })
     const replay = await reproduceRun(baseline, benchmark, { judgeChat: async () => '{}' })
     expect(replay.cases).toHaveLength(1)
+  })
+
+  it('replays a re-judged baseline with the judge config recorded in it', async () => {
+    process.env.FAKE_DASH_MODE = 'log'
+    process.env.FAKE_DASH_LOG = FIXTURE_LOG
+    const benchmarkJudge = { provider: 'deepseek', model: 'original', maxScore: 10 }
+    const baselineJudge = {
+      provider: 'deepseek', model: 'rejudged', maxScore: 20, rubric: 'Prefer brevity.',
+    }
+    const benchmark = buildBenchmark({ judge: benchmarkJudge })
+    const baseline = buildRun({
+      judge: baselineJudge,
+      grading: {
+        taskSuccessRate: null, toolSelectionAccuracyRate: null,
+        finalAnswerScore: null, hallucinationRate: null,
+      },
+      cases: [{
+        caseId: 'a', trial: 1, status: 'completed', exitCode: 0, timedOut: false,
+        judge: { finalAnswerScore: 16, hallucination: false },
+      }],
+    })
+    expect(replayJudge(baseline, benchmark)).toEqual(baselineJudge)
+    expect(replayJudge(buildRun(), benchmark)).toBe(benchmarkJudge)
+    const replay = await reproduceRun(baseline, benchmark, { judgeChat: async () => '{}' })
+    expect(replay.judge).toEqual(baselineJudge)
+    expect(replay.benchmarkSha256).toBe(SHA)
   })
 
   it('forwards the judge seam and progress observer', async () => {

@@ -324,7 +324,10 @@ dsh eval rejudge recorded-run.json --out judged.json \
 Only `--judge-model` is required to override; the other flags default to
 `deepseek`, `10`, and no rubric. The effective config is written into the new
 report. If a judge call fails, an already usable verdict is kept with a
-`judgeError` marker instead of being erased by an outage.
+`judgeError` marker instead of being erased by an outage. When that report is
+later passed to `reproduce`, the replay uses the judge config recorded in the
+report rather than the one in the benchmark YAML, so the compared scores use
+the same rubric.
 
 ## Trial-level CSV export
 

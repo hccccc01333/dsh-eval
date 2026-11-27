@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.18 — 2026-11-27
+
+### Fixed
+
+- `reproduce` now replays a re-judged baseline with the judge configuration
+  recorded in that report, instead of silently falling back to the benchmark
+  YAML's judge. A baseline re-scored with a different model, rubric or max score
+  would otherwise be compared against scores produced by a different rubric.
+  Adds the exported `replayJudge()` helper.
+
 ## 0.5.17 — 2026-11-27
 
 ### Fixed
