@@ -343,8 +343,9 @@ dsh eval reproduce recorded-run.json benchmark.yaml --out replay.json
 recorded in it, and writes a second report (the baseline is never overwritten).
 It first checks that the benchmark's digest still matches the one in the
 baseline; a changed YAML is rejected rather than reported as a reproduction.
-The CLI prints before/after completion counts and task-success rates so a
-non-deterministic agent is visible without diffing two JSON files.
+The CLI prints before/after completion counts, task-success rates and the
+signed judge-score delta (when both runs are judged), so a non-deterministic
+agent is visible without diffing two JSON files.
 `--allow-external-paths` and `--quiet` mirror the `run` command; `--json`
 prints only the comparison object, with no progress lines or signpost text.
 

@@ -75,7 +75,7 @@
 
 ## 状态
 
-`dsh-eval@0.5.14` · 442 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.5.15` · 443 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 `0.3.1` 起可安装：`0.3.0` 的 tarball 漏掉了入口 import 的运行时模块，导致每次安装都报 `ERR_MODULE_NOT_FOUND`。详见 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -199,7 +199,7 @@ scripts/          harness-closure.mjs —— 可选的本地 harness workspace �
 改 `packages/eval/package.json` 的 `version` 并在 CHANGELOG 里加一节，然后推同名 tag：
 
 ```sh
-git tag v0.5.14 && git push origin v0.5.14
+git tag v0.5.15 && git push origin v0.5.15
 ```
 
 `.github/workflows/release.yml` 会重跑各道闸门，再通过 **trusted publishing（OIDC）** 带 provenance 发布到 npm，任何机器上都不需要存 token。npm 的 Trusted Publisher 登记（GitHub Actions，workflow 填 `release.yml`）已完成，自 `0.5.0` 起的所有版本均由此发布。账号的第二因子是安全密钥，因此既不存储也不依赖长期 token。

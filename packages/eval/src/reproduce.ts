@@ -29,6 +29,10 @@ export interface ReproduceComparison {
   replayCompleted: number
   baselineTaskSuccessRate: number | null
   replayTaskSuccessRate: number | null
+  baselineJudgeScore: number | null
+  replayJudgeScore: number | null
+  /** Replay minus baseline; null when either run is unjudged. */
+  judgeScoreDelta: number | null
 }
 
 function completedCount(run: EvalRun): number {
@@ -40,12 +44,18 @@ function completedCount(run: EvalRun): number {
  * block, so an ungraded run reports null rather than a misleading zero.
  */
 export function compareReproduce(baseline: EvalRun, replay: EvalRun): ReproduceComparison {
+  const baselineJudgeScore = baseline.grading?.finalAnswerScore ?? null
+  const replayJudgeScore = replay.grading?.finalAnswerScore ?? null
   return {
     digestMatches: baseline.benchmarkSha256 === replay.benchmarkSha256,
     baselineCompleted: completedCount(baseline),
     replayCompleted: completedCount(replay),
     baselineTaskSuccessRate: baseline.grading?.taskSuccessRate ?? null,
     replayTaskSuccessRate: replay.grading?.taskSuccessRate ?? null,
+    baselineJudgeScore,
+    replayJudgeScore,
+    judgeScoreDelta: baselineJudgeScore === null || replayJudgeScore === null
+      ? null : replayJudgeScore - baselineJudgeScore,
   }
 }
 

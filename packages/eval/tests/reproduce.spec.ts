@@ -171,7 +171,24 @@ describe('compareReproduce', () => {
       replayCompleted: 1,
       baselineTaskSuccessRate: 0.75,
       replayTaskSuccessRate: 0.5,
+      baselineJudgeScore: null,
+      replayJudgeScore: null,
+      judgeScoreDelta: null,
     })
+  })
+
+  it('reports the signed judge-score delta for judged runs', () => {
+    const graded = (score: number) => buildRun({
+      grading: {
+        taskSuccessRate: 0.5, toolSelectionAccuracyRate: null,
+        finalAnswerScore: score, hallucinationRate: null,
+      },
+    })
+    expect(compareReproduce(graded(7), graded(9)).judgeScoreDelta).toBe(2)
+    const dropped = compareReproduce(graded(9), graded(7))
+    expect(dropped.baselineJudgeScore).toBe(9)
+    expect(dropped.replayJudgeScore).toBe(7)
+    expect(dropped.judgeScoreDelta).toBe(-2)
   })
 
   it('reports null rates for ungraded runs with no digest', () => {
@@ -181,6 +198,9 @@ describe('compareReproduce', () => {
       replayCompleted: 0,
       baselineTaskSuccessRate: null,
       replayTaskSuccessRate: null,
+      baselineJudgeScore: null,
+      replayJudgeScore: null,
+      judgeScoreDelta: null,
     })
   })
 })

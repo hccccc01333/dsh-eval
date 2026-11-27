@@ -139,6 +139,10 @@ function summary(run: Awaited<ReturnType<typeof runBenchmark>>): string {
   return `tool success ${rate}${task}${score}${passes}${unscored}, ${aggregate.steps.toFixed(1)} steps/trial`
 }
 
+const SIGNED_ONE = new Intl.NumberFormat('en-US', {
+  signDisplay: 'always', minimumFractionDigits: 1, maximumFractionDigits: 1,
+})
+
 /** Print derived text, or write it to a file and confirm the path. */
 async function emitText(io: EvalIo, text: string, outPath?: string, detail = ''): Promise<void> {
   if (outPath === undefined) {
@@ -342,7 +346,11 @@ export async function executeEval(
         io.stdout.write(`${JSON.stringify(comparison)}\n`)
       } else {
         const rate = (value: number | null): string => value === null ? 'n/a' : `${(value * 100).toFixed(1)}%`
-        io.stdout.write(`Wrote ${values.outPath} (baseline ${comparison.baselineCompleted}/${baseline.cases.length} completed, ${rate(comparison.baselineTaskSuccessRate)} → replay ${comparison.replayCompleted}/${replay.cases.length} completed, ${rate(comparison.replayTaskSuccessRate)})\n`)
+        const before = comparison.baselineJudgeScore
+        const after = comparison.replayJudgeScore
+        const judge = before === null || after === null ? ''
+          : `, judge ${before.toFixed(1)} → ${after.toFixed(1)} (${SIGNED_ONE.format(comparison.judgeScoreDelta!)})`
+        io.stdout.write(`Wrote ${values.outPath} (baseline ${comparison.baselineCompleted}/${baseline.cases.length} completed, ${rate(comparison.baselineTaskSuccessRate)} → replay ${comparison.replayCompleted}/${replay.cases.length} completed, ${rate(comparison.replayTaskSuccessRate)}${judge})\n`)
         io.stdout.write(`Next: dsh eval report ${values.outPath} --brief\n`)
       }
       const failed = replay.cases.filter(result => result.status === 'error')

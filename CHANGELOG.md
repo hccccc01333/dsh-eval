@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.15 — 2026-11-27
+
+### Added
+
+- `reproduce` now reports the judge-score delta alongside completion counts and
+  task-success rates. `ReproduceComparison` gains `baselineJudgeScore`,
+  `replayJudgeScore` and `judgeScoreDelta` (null when either run is unjudged),
+  so both the CLI summary and `--json` expose whether scores reproduced.
+
 ## 0.5.14 — 2026-11-27
 
 ### Fixed

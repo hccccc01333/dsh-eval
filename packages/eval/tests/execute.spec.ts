@@ -174,13 +174,13 @@ describe('dsh-eval reproduce execution', () => {
       ...(benchmark.sourceSha256 === undefined ? {} : { benchmarkSha256: benchmark.sourceSha256 }),
       tempRoot: dir,
       cases: [{ caseId: 'a', trial: 1, status: 'completed', exitCode: 0, timedOut: false }],
-      aggregate: null, grading: grading(0.5),
+      aggregate: null, grading: { ...grading(0.5), finalAnswerScore: 7 },
     }, runPath)
     const replay: EvalRun = {
       benchmark: 'n', model: 'm', createdAt: 2, trials: 1, seed: 0, pricing: null,
       tempRoot: dir,
       cases: [{ caseId: 'a', trial: 1, status: 'completed', exitCode: 0, timedOut: false }],
-      aggregate: completedAggregate(), grading: grading(0.75),
+      aggregate: completedAggregate(), grading: { ...grading(0.75), finalAnswerScore: 9 },
     }
     vi.mocked(runBenchmark).mockImplementation(async (_benchmark, options) => {
       options?.onProgress?.(
@@ -201,7 +201,7 @@ describe('dsh-eval reproduce execution', () => {
     )
     expect(code).toBe(0)
     expect(stdout.join('')).toBe(
-      `Wrote ${outPath} (baseline 1/1 completed, 50.0% → replay 1/1 completed, 75.0%)\n`
+      `Wrote ${outPath} (baseline 1/1 completed, 50.0% → replay 1/1 completed, 75.0%, judge 7.0 → 9.0 (+2.0))\n`
       + `Next: dsh eval report ${outPath} --brief\n`,
     )
     expect(stderr.join('')).toBe('[eval] 1/1 a #1 task n/a, ? ms\n')
