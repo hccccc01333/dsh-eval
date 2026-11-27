@@ -10,6 +10,7 @@
  */
 
 import { formatPValue, pairedCaseSignificance, pairedSigns, type PairedMetric } from './compare.ts'
+import { compareSegments } from './segment-compare.ts'
 import { computeCoverage, computeReliability } from './reliability.ts'
 import { signTest, signTestPower } from './stats.ts'
 import type { EvalRun } from './types.ts'
@@ -46,6 +47,8 @@ export interface GateResult {
   maxCostIncrease?: number
   /** Enabled relative latency budget, if any. */
   maxLatencyIncrease?: number
+  /** Enabled per-tag quality tolerance, if any. */
+  maxSegmentDrop?: number
   /** Cases with a family-corrected, statistically confirmed paired regression. */
   confirmedCaseRegressions?: readonly ConfirmedCaseRegression[]
 }
@@ -70,6 +73,8 @@ export interface GateOptions {
    * regression. Insufficient or underpowered evidence fails closed.
    */
   requireSignificance?: boolean
+  /** Also fail when a tag shared by both runs drops by more than this ratio. */
+  maxSegmentDrop?: number
 }
 
 /** Normalized judge score for a run, or null when ungraded. */
@@ -264,6 +269,24 @@ export function evaluateGate(
     compareRate('judge score', scoreRate(baseline), scoreRate(candidate), maxDrop,
       suppressByMetric.get('judge score')),
   )
+  if (options.maxSegmentDrop !== undefined) {
+    // A flat pooled rate can hide a regression concentrated in one tag. Only
+    // tags present on both sides are checked: a new or retired dimension is
+    // not a drop, and compareSegments already keeps its deltas null.
+    for (const segment of compareSegments(baseline, candidate)) {
+      if (!segment.baseline || !segment.candidate) continue
+      checks.push(compareRate(
+        `tag:${segment.tag} task success`,
+        segment.baseline.taskSuccessRate, segment.candidate.taskSuccessRate,
+        options.maxSegmentDrop,
+      ))
+      checks.push(compareRate(
+        `tag:${segment.tag} judge score`,
+        segment.baseline.judgeScoreMean, segment.candidate.judgeScoreMean,
+        options.maxSegmentDrop,
+      ))
+    }
+  }
   if (budgets.maxCostIncrease !== undefined && budgets.maxCostIncrease !== null) {
     checks.push(compareBudget('cost/trial', baseline.aggregate?.costUsd ?? null,
       candidate.aggregate?.costUsd ?? null, budgets.maxCostIncrease, 'usd'))
@@ -294,6 +317,7 @@ export function evaluateGate(
       ? {} : { maxCostIncrease: budgets.maxCostIncrease }),
     ...(budgets.maxLatencyIncrease === undefined || budgets.maxLatencyIncrease === null
       ? {} : { maxLatencyIncrease: budgets.maxLatencyIncrease }),
+    ...(options.maxSegmentDrop === undefined ? {} : { maxSegmentDrop: options.maxSegmentDrop }),
     regressions: findRegressions(baseline, candidate, maxDrop)
       .filter(regression => suppressByMetric.get(regression.metric) !== true),
     confirmedCaseRegressions,
@@ -335,6 +359,7 @@ export function renderGateJson(result: GateResult): string {
     maxDrop: result.maxDrop,
     ...(result.maxCostIncrease === undefined ? {} : { maxCostIncrease: result.maxCostIncrease }),
     ...(result.maxLatencyIncrease === undefined ? {} : { maxLatencyIncrease: result.maxLatencyIncrease }),
+    ...(result.maxSegmentDrop === undefined ? {} : { maxSegmentDrop: result.maxSegmentDrop }),
     checks: result.checks,
     regressions: result.regressions ?? [],
     confirmedCaseRegressions: result.confirmedCaseRegressions ?? [],

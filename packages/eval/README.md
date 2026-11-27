@@ -247,6 +247,11 @@ trial per case, no case can clear the corrected threshold. In significance
 mode a confirmed case regression also fails the gate, so a PASS report can
 never advertise one.
 
+`--max-segment-drop 0.02` adds one task-success and one judge-score row for
+each tag present in both runs. A regression confined to a single tag is caught
+even when the pooled rate stays flat; tags that exist on only one side are
+skipped because appearing or disappearing is not a drop.
+
 Optional `--max-cost-increase 0.1` and `--max-latency-increase 0.2` add
 relative resource budgets, so a candidate that keeps quality but costs 2x more
 still fails. Budget rows print absolute values with a relative delta; a missing

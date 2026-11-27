@@ -315,6 +315,10 @@ describe('dsh-eval command composition', () => {
     expect(await executeEval({
       kind: 'gate', candidatePath: regressedPath, baselinePath, maxDrop: 0, allowIncomplete: false,
     }, io)).toBe(1)
+    expect(await executeEval({
+      kind: 'gate', candidatePath, baselinePath, maxDrop: 0,
+      maxSegmentDrop: 0.05, allowIncomplete: false,
+    }, io)).toBe(0)
 
     expect((await bootEval(['gate', candidatePath])).err).toContain('--baseline')
     expect((await bootEval(['gate', candidatePath, '--baseline', baselinePath, '--max-drop', '2'])).err)
@@ -330,8 +334,14 @@ describe('dsh-eval command composition', () => {
     await parser.parseAsync([
       'node', 'eval', 'gate', candidatePath, '--baseline', baselinePath,
       '--max-cost-increase', '0.1', '--max-latency-increase', '0.2',
+      '--max-segment-drop', '0.05',
     ])
-    expect(published.at(-1)).toMatchObject({ maxCostIncrease: 0.1, maxLatencyIncrease: 0.2 })
+    expect(published.at(-1)).toMatchObject({
+      maxCostIncrease: 0.1, maxLatencyIncrease: 0.2, maxSegmentDrop: 0.05,
+    })
+    expect((await bootEval([
+      'gate', candidatePath, '--baseline', baselinePath, '--max-segment-drop', '2',
+    ])).err).toContain('between 0 and 1')
     await parser.parseAsync([
       'node', 'eval', 'gate', candidatePath, '--baseline', baselinePath, '--require-significance',
     ])

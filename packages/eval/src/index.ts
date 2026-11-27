@@ -285,8 +285,11 @@ export async function executeEval(
         ...(values.maxCostIncrease === undefined ? {} : { maxCostIncrease: values.maxCostIncrease }),
         ...(values.maxLatencyIncrease === undefined ? {} : { maxLatencyIncrease: values.maxLatencyIncrease }),
       }
-      const result = evaluateGate(baseline, candidate, values.maxDrop, values.allowIncomplete, budgets,
-        values.requireSignificance === true ? { requireSignificance: true } : {})
+      const gateOptions = {
+        ...(values.requireSignificance === true ? { requireSignificance: true } : {}),
+        ...(values.maxSegmentDrop === undefined ? {} : { maxSegmentDrop: values.maxSegmentDrop }),
+      }
+      const result = evaluateGate(baseline, candidate, values.maxDrop, values.allowIncomplete, budgets, gateOptions)
       await emitText(io, values.json === true ? renderGateJson(result) : renderGate(result), values.outPath)
       return result.passed ? 0 : 1
     }

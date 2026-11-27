@@ -81,6 +81,7 @@ export type EvalStartupValues =
     maxDrop: number
     maxCostIncrease?: number
     maxLatencyIncrease?: number
+    maxSegmentDrop?: number
     allowIncomplete: boolean
     requireSignificance?: boolean
     json?: boolean
@@ -369,6 +370,7 @@ Examples:
     .option('--max-drop <ratio>', 'largest tolerated quality regression, 0..1', unitRatio(program, '--max-drop'), 0)
     .option('--max-cost-increase <ratio>', 'largest tolerated cost/trial increase over baseline, 0..1', unitRatio(program, '--max-cost-increase'))
     .option('--max-latency-increase <ratio>', 'largest tolerated latency/trial increase over baseline, 0..1', unitRatio(program, '--max-latency-increase'))
+    .option('--max-segment-drop <ratio>', 'also fail on a per-tag quality drop larger than this, 0..1', unitRatio(program, '--max-segment-drop'))
     .option('--allow-incomplete', 'do not fail on extra unscored trials')
     .option('--require-significance', 'only fail quality drops confirmed by a paired sign test')
     .option('--json', 'emit a machine-readable JSON verdict instead of markdown')
@@ -378,6 +380,7 @@ Examples:
       maxDrop: number
       maxCostIncrease?: number
       maxLatencyIncrease?: number
+      maxSegmentDrop?: number
       allowIncomplete?: boolean
       requireSignificance?: boolean
       json?: boolean
@@ -391,6 +394,7 @@ Examples:
         maxDrop: options.maxDrop,
         ...(options.maxCostIncrease === undefined ? {} : { maxCostIncrease: options.maxCostIncrease }),
         ...(options.maxLatencyIncrease === undefined ? {} : { maxLatencyIncrease: options.maxLatencyIncrease }),
+        ...(options.maxSegmentDrop === undefined ? {} : { maxSegmentDrop: options.maxSegmentDrop }),
         allowIncomplete: options.allowIncomplete === true,
         requireSignificance: options.requireSignificance === true,
         json: options.json === true,

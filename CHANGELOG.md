@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.16 — 2026-11-27
+
+### Added
+
+- `gate --max-segment-drop <ratio>` adds a task-success and judge-score check
+  for every tag shared by the baseline and candidate. A regression confined to
+  one tag now fails CI even when the pooled rate is flat; one-sided tags are
+  skipped. The threshold is recorded in `GateResult` and `--json` output.
+
 ## 0.5.15 — 2026-11-27
 
 ### Added

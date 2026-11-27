@@ -38,7 +38,7 @@ Run benchmarks against headless `dsh` profiles, harvest persisted session logs a
 - `dsh eval validate benchmark.yaml [--json]` — preflight a benchmark and warn about weak evidence before spending tokens
 - `dsh eval provenance run.json benchmark.yaml [--json]` — verify the stored benchmark digest against the current YAML, prompts, workspaces and replay inputs; a mismatch or missing digest exits 1
 - `dsh eval leaderboard a.json b.json c.json` — rank any number of runs by task success with gap-to-leader and a Bonferroni-corrected paired verdict against the leader; `--metric strictPassAt1` ranks by the error-inclusive rate instead, and `--json` supports automation
-- `dsh eval gate candidate.json --baseline base.json --max-drop 0.05 [--require-significance] [--json]` — CI quality and resource-budget gate; significance mode only fails on statistically confirmed regressions, and the output also lists family-corrected per-case regressions
+- `dsh eval gate candidate.json --baseline base.json --max-drop 0.05 [--max-segment-drop 0.02] [--require-significance] [--json]` — CI quality and resource-budget gate; significance mode only fails on statistically confirmed regressions, and `--max-segment-drop` catches a regression concentrated in one case tag even when the pooled rate is flat
 - `dsh eval compare v1.json v2.json` — signed `B - A` table plus paired inference; `--json` for structured output
 - `dsh eval rejudge run.json --out rejudged.json` — re-judge stored traces with a new judge model or rubric, without re-running the agent; a recorded SHA-256 trace digest rejects tampered logs
 - `dsh eval reproduce run.json benchmark.yaml --out replay.json` — replay a recorded run with its seed and overrides, refuse a changed benchmark digest, and print before/after completion and success rates; `--json` emits the comparison for automation
@@ -78,7 +78,7 @@ Progress lines are bounded and control-character safe, every command refuses an 
 
 ## Status
 
-`dsh-eval@0.5.15` · 443 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
+`dsh-eval@0.5.16` · 444 tests · 100% statement/branch/function/line coverage on `src` · typecheck clean · CI on Linux and Windows.
 
 Installable since `0.3.1`: the `0.3.0` tarball omitted the runtime modules its entry imports, so every install failed with `ERR_MODULE_NOT_FOUND`. See [CHANGELOG.md](CHANGELOG.md).
 
@@ -175,7 +175,7 @@ are recorded separately in the run's option fields.
 | `dsh eval validate benchmark.yaml [--json] [--out file]` | Preflight a benchmark with evidence warnings |
 | `dsh eval provenance run.json benchmark.yaml [--json] [--out file]` | Verify the run's benchmark SHA-256 against the current inputs; mismatches exit 1 |
 | `dsh eval leaderboard a.json b.json ... [--metric taskSuccess\|strictPassAt1] [--json] [--out file]` | Rank runs by pooled or error-inclusive success |
-| `dsh eval gate candidate.json --baseline base.json [--max-drop 0.05] [--json] [--out file]` | Fail CI on regressions; `--max-drop` is the tolerated fractional drop (default `0` = any drop fails), `--json` emits a machine-readable verdict |
+| `dsh eval gate candidate.json --baseline base.json [--max-drop 0.05] [--max-segment-drop 0.02] [--json] [--out file]` | Fail CI on regressions; `--max-drop` is the tolerated fractional drop (default `0` = any drop fails), `--max-segment-drop` also gates each shared case tag, `--json` emits a machine-readable verdict |
 | `dsh eval compare base.json candidate.json [--json] [--out file]` | Compare two runs with deltas and paired inference |
 | `dsh eval rejudge run.json --out rejudged.json` | Re-judge stored traces offline and write a new report |
 | `dsh eval reproduce run.json benchmark.yaml [--out replay.json] [--json]` | Replay with the baseline's recorded settings; a changed benchmark digest is rejected |
@@ -208,7 +208,7 @@ scripts/          harness-closure.mjs — optional local-harness workspace closu
 Bump `version` in `packages/eval/package.json` and add a CHANGELOG section, then push a matching tag:
 
 ```sh
-git tag v0.5.15 && git push origin v0.5.15
+git tag v0.5.16 && git push origin v0.5.16
 ```
 
 `.github/workflows/release.yml` re-runs the gates and publishes to npm through **trusted publishing (OIDC)** with a provenance statement — no token on any machine. The npm Trusted Publisher entry (GitHub Actions, workflow `release.yml`) is already configured; every release from `0.5.0` onward has shipped this way. The account's second factor is a security key, so a long-lived token is neither stored nor needed.

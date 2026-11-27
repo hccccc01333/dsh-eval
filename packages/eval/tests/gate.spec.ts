@@ -41,6 +41,44 @@ describe('dsh-eval CI gate', () => {
     expect(markdown).toContain('- max tolerated drop: 0.0 percentage points')
   })
 
+  it('catches a tag-local regression hidden by a flat pooled rate', () => {
+    const ungraded = {
+      taskSuccessRate: 4 / 6, toolSelectionAccuracyRate: null,
+      finalAnswerScore: null, hallucinationRate: null,
+    }
+    const trial = (caseId: string, tags: string[], pass: boolean) => ({
+      caseId, trial: 1, status: 'completed' as const, exitCode: 0, timedOut: false,
+      tags,
+      grade: { taskSuccess: pass, toolSelectionAccuracy: null },
+    })
+    const baseline = buildRun({
+      grading: ungraded,
+      cases: [
+        trial('a1', ['fragile'], true), trial('a2', ['fragile'], true),
+        trial('b1', ['stable'], true), trial('b2', ['stable'], false),
+        trial('b3', ['stable'], false), trial('b4', ['stable'], true),
+      ],
+    })
+    const candidate = buildRun({
+      grading: ungraded,
+      cases: [
+        trial('a1', ['fragile'], false), trial('a2', ['fragile'], false),
+        trial('b1', ['stable', 'candidate-only'], true),
+        trial('b2', ['stable'], true), trial('b3', ['stable'], true),
+        trial('b4', ['stable'], true),
+      ],
+    })
+    expect(evaluateGate(baseline, candidate, 0).passed).toBe(true)
+    const gated = evaluateGate(baseline, candidate, 0, false, {}, { maxSegmentDrop: 0 })
+    expect(gated.passed).toBe(false)
+    expect(gated.maxSegmentDrop).toBe(0)
+    expect(gated.checks.find(check => check.metric === 'tag:fragile task success'))
+      .toMatchObject({ baseline: 1, candidate: 0, delta: -1, passed: false })
+    expect(gated.checks.some(check => check.metric.startsWith('tag:candidate-only '))).toBe(false)
+    expect(renderGateJson(gated)).toContain('"maxSegmentDrop":0')
+    expect(renderGate(gated)).toContain('tag:fragile task success')
+  })
+
   it('checks relative cost and latency budgets when enabled', () => {
     const baseline = buildRun({ aggregate: METRICS })
     const candidate = buildRun({
