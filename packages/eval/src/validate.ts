@@ -112,6 +112,9 @@ export function summarizeBenchmark(benchmark: Benchmark): BenchmarkSummary {
   if (benchmark.replay !== undefined && benchmark.judge === undefined) {
     warnings.push('replay runs have no live judge; use `dsh eval rejudge` after the run if judge scores are needed')
   }
+  if (benchmark.replay !== undefined && benchmark.judge !== undefined) {
+    warnings.push('judge and replay cannot be combined in one run — `dsh eval run` will reject this benchmark')
+  }
   const judge = benchmark.judge
   return {
     name: benchmark.name,

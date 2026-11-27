@@ -21,7 +21,7 @@
 | **面向 CI** | `--require-significance` 门禁 + 硬成本/延迟预算 |
 | **零外部资源报告** | 自包含、适配深色模式的 HTML 仪表盘 |
 
-`dsh-eval@0.5.18` · 445 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
+`dsh-eval@0.5.19` · 446 个测试 · `src` 语句/分支/函数/行覆盖率 100% · 类型检查干净 · Linux 与 Windows 双平台 CI。
 
 本包同时是一个 bundle 和一个命令行应用。装进 profile 后即可运行评测：
 
@@ -193,7 +193,7 @@ dsh eval rejudge recorded-run.json --out judged.json \
   --judge-rubric "答案正确且简洁" --judge-max-score 10
 ```
 
-覆盖配置只需 `--judge-model`，其余默认 `deepseek`、`10` 与无 rubric；实际使用的配置会写入新报告。若判官调用失败，已有的有效裁决会被保留并标注 `judgeError`，不会被一次故障抹掉。该报告再交给 `reproduce` 时，重放会使用报告里记录的判官配置而不是 benchmark YAML 里的，确保对比的两组分数使用同一套 rubric。
+覆盖配置只需 `--judge-model`，其余默认 `deepseek`、`10` 与无 rubric；不带 `--judge-model` 单独传这些参数会被直接拒绝，不会静默忽略。实际使用的配置会写入新报告。若判官调用失败，已有的有效裁决会被保留并标注 `judgeError`，不会被一次故障抹掉。该报告再交给 `reproduce` 时，重放会使用报告里记录的判官配置而不是 benchmark YAML 里的，确保对比的两组分数使用同一套 rubric。
 
 ## 复现一次 run
 

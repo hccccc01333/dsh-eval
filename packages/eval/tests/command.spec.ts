@@ -288,6 +288,17 @@ describe('dsh-eval command composition', () => {
     const noLlm = await bootEval(['rejudge', runPath, '--out', outPath])
     expect(noLlm.exits).toEqual([1])
     expect(noLlm.err).toContain('no LLM chat seam')
+
+    const orphanJudge = await bootEval([
+      'rejudge', runPath, '--out', outPath, '--judge-rubric', 'Be strict.',
+    ])
+    expect(orphanJudge.exits).toEqual([1])
+    expect(orphanJudge.err).toContain('require --judge-model')
+
+    const orphanScore = await bootEval([
+      'rejudge', runPath, '--out', outPath, '--judge-max-score', '20',
+    ])
+    expect(orphanScore.err).toContain('require --judge-model')
   })
 
   it('gates a candidate run through the CLI', async () => {

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.19 — 2026-11-27
+
+### Added
+
+- `validate` now warns when a benchmark combines `replay` with a `judge`;
+  `dsh eval run` rejects that combination after tokens have been budgeted.
+
+### Fixed
+
+- `rejudge --judge-provider`, `--judge-rubric` and `--judge-max-score` without
+  `--judge-model` are now rejected, instead of silently re-judging with the
+  stored judge config.
+
 ## 0.5.18 — 2026-11-27
 
 ### Fixed

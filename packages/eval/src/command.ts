@@ -426,6 +426,15 @@ Examples:
       if (samePath) {
         program.error('error: --out must differ from the input run report')
       }
+      // These flags only have an effect when they build a judge override;
+      // accepting them alone would silently re-judge with the stored config.
+      if (options.judgeModel === undefined && (
+        options.judgeProvider !== undefined
+        || options.judgeRubric !== undefined
+        || options.judgeMaxScore !== undefined
+      )) {
+        program.error('error: --judge-provider, --judge-rubric and --judge-max-score require --judge-model')
+      }
       publish({
         kind: 'rejudge',
         runPath,

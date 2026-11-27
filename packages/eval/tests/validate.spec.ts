@@ -161,6 +161,14 @@ describe('dsh-eval benchmark preflight', () => {
     expect(summary).toContain('- replay runs have no live judge; use `dsh eval rejudge`')
   })
 
+  it('warns when replay is combined with a judge', () => {
+    const summary = renderBenchmarkSummary(benchmark({
+      replay: { dir: '/tmp/replay' },
+      judge: { provider: 'p', model: 'j', maxScore: 10 },
+    }))
+    expect(summary).toContain('- judge and replay cannot be combined in one run')
+  })
+
   it('warns when a benchmark has no scripted grading at all', () => {
     const summary = renderBenchmarkSummary(benchmark({ cases: [{ id: 'raw', prompt: 'p' }] }))
     expect(summary).toContain('- judge: none')
